@@ -49,6 +49,12 @@ API: The Odds API v4 — key in .streamlit/secrets.toml (never commit)
   nemesis, simulation fields.
 - Full pipeline live-tested: fetch → parse_game_markets → rank_bets → format_bet_table ✓
 
+## WHAT'S BUILT AND WORKING (as of Session 5, partial)
+- data/efficiency_feed.py: get_efficiency_gap(), build_efficiency_data(), get_team_data(),
+  list_teams() — promoted from R&D, alias fix applied (Texas Southern Tigers), live tested ✓
+- run_pipeline.py: full end-to-end CLI test: fetch → efficiency → edge → rank → format ✓
+- PROJECT_INDEX.md: repo index created (94% token reduction for future sessions)
+
 ## WHAT'S STUBBED (TODO in Session 5+)
 - edge_calculator.py: calculate_edges() routing stub, all kill switch stubs
 - app.py: full Streamlit UI wiring
@@ -105,15 +111,18 @@ This works because books occasionally misprice relative to the consensus.
 - efficiency_gap defaults to 8.0 (moderate) — real values come from KenPom in Session 5.
 - Kill switches (nba/nfl/ncaab/soccer) still stubbed — Session 5 work.
 
-## SESSION 5 GOAL
-1. Wire Streamlit app.py: button → fetch → edge → rank → display table
-2. Implement kill switches in edge_calculator.py
-3. Wire calculate_edges() routing function
-4. Mobile view polish (iPhone layout)
-5. Deployment checklist + push to Streamlit Cloud
+## SESSION 5 GOAL (IN PROGRESS)
+1. ✅ Promote efficiency_feed.py (KenPom mock) — wired into rank_bets, live tested
+2. ✅ PROJECT_INDEX.md created (repo index for 94% token reduction)
+3. 🔲 Implement kill switches in edge_calculator.py
+4. 🔲 Wire calculate_edges() routing function
+5. 🔲 Wire Streamlit app.py: button → fetch → edge → rank → display table
+6. 🔲 Mobile view polish (iPhone layout)
+7. 🔲 Deployment checklist + push to Streamlit Cloud
 
 ## CURRENT STATE
-Last completed: Session 4 — bet_ranker.py promoted, full pipeline working end-to-end
+Last completed: Session 5 (partial) — efficiency_feed promoted, run_pipeline.py built, PROJECT_INDEX.md created
 Last git commit: pending (commit after updating this file)
 Tests: 65 total (45 math + 20 fetcher), all passing
-Next: Session 5 — see SESSION 5 GOAL above
+Quota: ~18,322 remaining
+Next: Kill switches → calculate_edges() → Streamlit UI → deploy
