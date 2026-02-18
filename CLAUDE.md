@@ -34,7 +34,18 @@ Table with max 10 rows, **sorted by Sharp Score descending** (NOT Edge% — chan
 `Time | Matchup | Type | Target | Line | Price | Edge% | Kelly_Size | Signal`
 
 Sharp Score tiers: NUCLEAR (≥90) = 2.0u | STANDARD (≥80) = 1.0u | LEAN (else) = 0.5u
-Threshold: 40 pts pre-nemesis (temporary — raise to 75 when KenPom/Barttorvik wired in Session 5+)
+Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Raise to 50–55 after RLM fully activates.
+
+## Model Philosophy (non-negotiable)
+**Math > Narrative. Always.**
+- Nemesis is display-only annotation. It NEVER removes bets or adjusts scores.
+- Kill switches operate on structural mathematical inputs only (rest days, wind, 3PT rate, drift).
+- Situational Sharp Score inputs must have a live computable source to be non-zero.
+  - rest_edge: ✅ live (schedule-derived rest days, NBA only)
+  - injury_leverage: ❌ not wired — always 0
+  - motivation: ❌ not wired — always 0
+  - matchup_score: ❌ not wired — always 0
+- Do NOT add narrative-driven inputs (home crowd, "hostile environment", "young roster") to any scoring component. These are rat poison.
 
 ## API Notes
 - Key: `os.environ.get("ODDS_API_KEY")` — never hardcode
@@ -56,14 +67,18 @@ Threshold: 40 pts pre-nemesis (temporary — raise to 75 when KenPom/Barttorvik 
 | 2 | ✅ Done | odds_fetcher.py fetch_batch_odds() — live-tested, 20/20 tests passing |
 | 3 | ✅ Done | odds_fetcher upgrade, originator_engine (Trinity MC), ncaab_parser, consensus edge detection |
 | 4 | ✅ Done | bet_ranker.py, Sharp Score, run_nemesis, BetCandidate updated, full pipeline live-tested |
-| 5 | 🔲 Next | efficiency_feed.py (KenPom mock), Streamlit UI wired, kill switches, Streamlit Cloud deploy |
+| 5–10 | ✅ Done | efficiency_feed, kill switches, UI, multi-page scaffold, NCAAB expansion, Streamlit Cloud |
+| 11 | ✅ Done | compute_rest_days_from_schedule(), _apply_nba_kill() live rest, st.navigation() scaffold |
+| 12 | ✅ Done | Nemesis demoted to display-only, rest_edge wired to Sharp Score (NBA), NCAAB 3P to 80 teams, tempo sourced from efficiency_feed |
+| 13 | ✅ Done | SHARP_THRESHOLD 40→45, compute_rlm() (passive RLM, 3% implied prob, zero API cost), wired into run_pipeline() — 85/85 tests |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
 - Only promote code that has been live-tested in R&D
 - Known R&D bugs — DO NOT promote until fixed:
   - run_trinity_simulation receives bet.line as mean instead of projected margin (unfixed)
-  - RLM component of Sharp Score always returns 0 (unfixed — no line movement data source)
+  - RLM Sharp Score component: passive RLM now wired (Session 13). Activates when open-price cache
+    has data AND a 3% implied prob shift is detected. Will score 0 on first run (cold cache).
 - Fixed in R&D, ready for promotion review:
   - Props edge bug: fixed (consensus fair_prob across books, same pattern as game lines)
 - Edge detection method (PROVEN): consensus vig-free mean across all books = model.

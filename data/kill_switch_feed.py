@@ -260,65 +260,107 @@ def get_nfl_kill_inputs(
 # ---------------------------------------------------------------------------
 # NCAAB stubs
 # ---------------------------------------------------------------------------
+#
+# Tempo: sourced live from efficiency_feed._TEAM_DATA (already 80-team coverage).
+#        No duplicate dict here — single source of truth.
+# 3PT reliance: Barttorvik 3PA% approximation, expanded to 80 teams (Session 12).
+#        Kill switch fires at > 40% reliance AND away game.
+# ---------------------------------------------------------------------------
 
-# Fraction of team's offense derived from 3-point shooting.
-# Source in production: Barttorvik 3PA rate * 3 / team_ppg approximation.
+# 3-point reliance — fraction of offense from 3PT shooting (Barttorvik 3PA rate approx).
+# Kill switch spec: > 0.40 reliance AND away game → FADE.
+# Coverage matches efficiency_feed 80-team roster exactly.
 _NCAAB_THREE_POINT_RELIANCE: dict[str, float] = {
-    "Gonzaga":        0.31,
+    # ----- ACC -----
     "Duke":           0.35,
-    "Kansas":         0.33,
-    "Kentucky":       0.30,
-    "Houston":        0.28,   # paint-heavy
     "UConn":          0.32,
-    "Auburn":         0.38,
-    "Michigan St":    0.29,
+    "Creighton":      0.44,   # over threshold — 3PT heavy
     "Marquette":      0.36,
-    "Purdue":         0.27,   # post-heavy
-    "Tennessee":      0.30,
-    "Texas":          0.34,
-    "Illinois":       0.33,
-    "Baylor":         0.37,
-    "Indiana":        0.38,
-    "Ole Miss":       0.36,
-    "Virginia":       0.31,
+    "Virginia":       0.31,   # pack-line, paint-oriented
     "Miami FL":       0.39,
+    "NC State":       0.37,
+    "Pitt":           0.34,
+    "Notre Dame":     0.36,
+    "Syracuse":       0.41,   # zone-offense, 3PT reliant
+    "Wake Forest":    0.38,
+    "Georgia Tech":   0.35,
+    "Louisville":     0.33,
+    "Clemson":        0.34,
+    "Boston College": 0.38,
+    "Stanford":       0.36,
+    "California":     0.39,
+    # ----- Big 12 -----
+    "Kansas":         0.33,
+    "Houston":        0.28,   # paint-heavy
+    "Baylor":         0.37,
+    "Texas":          0.34,
+    "Texas Tech":     0.30,   # defense-first, low 3PT
+    "Iowa St":        0.38,
+    "Kansas St":      0.35,
+    "BYU":            0.37,
+    "Oklahoma St":    0.36,
+    "TCU":            0.38,
+    "UCF":            0.39,
+    "West Virginia":  0.34,
+    "Cincinnati":     0.33,
+    # ----- Big Ten -----
+    "Purdue":         0.27,   # post-heavy (Edey era)
+    "Michigan St":    0.29,
+    "Illinois":       0.33,
+    "Indiana":        0.38,
     "Nebraska":       0.40,   # right at threshold
+    "Wisconsin":      0.32,   # methodical, paint-oriented
+    "Michigan":       0.36,
+    "Ohio St":        0.37,
+    "Maryland":       0.35,
+    "Iowa":           0.41,   # perimeter-heavy offense
+    "Minnesota":      0.36,
+    "Penn St":        0.37,
+    "Northwestern":   0.38,
+    "Rutgers":        0.31,   # grind-it-out, low 3PT
+    # ----- SEC -----
+    "Auburn":         0.38,
+    "Kentucky":       0.30,
+    "Tennessee":      0.30,
+    "Ole Miss":       0.36,
+    "Alabama":        0.43,   # over threshold — fast, perimeter-heavy
+    "Florida":        0.37,
+    "Arkansas":       0.36,
+    "Missouri":       0.38,
+    "Texas A&M":      0.33,
+    "LSU":            0.39,
+    "Mississippi St": 0.35,
+    "Georgia":        0.36,
+    "South Carolina": 0.33,
+    "Vanderbilt":     0.37,
+    # ----- Big East -----
     "DePaul":         0.43,   # over threshold
+    "St. John's":     0.37,
+    "Providence":     0.35,
+    "Xavier":         0.38,
+    "Villanova":      0.39,
+    "Georgetown":     0.40,   # right at threshold
+    "Butler":         0.34,
+    "Seton Hall":     0.36,
+    # ----- WCC / Mountain West / A-10 -----
+    "Gonzaga":        0.31,
+    "Saint Mary's":   0.34,
+    "San Diego St":   0.29,   # defensive identity, low 3PT
+    "Utah St":        0.37,
+    "Dayton":         0.36,
+    "VCU":            0.33,
+    "UNLV":           0.38,
+    "New Mexico":     0.39,
+    "Drake":          0.40,   # right at threshold
+    "Richmond":       0.37,
+    "Davidson":       0.42,   # over threshold — 3PT system
+    # ----- Low-major -----
     "Bryant":         0.45,   # over threshold
     "Alabama St":     0.41,
     "Texas Southern": 0.42,
-    "Creighton":      0.44,   # over threshold
 }
 
-# Adjusted tempo (possessions per 40 min) — mirrors efficiency_feed data
-_NCAAB_TEMPO: dict[str, float] = {
-    "Gonzaga":        72.1,
-    "Duke":           70.2,
-    "Kansas":         68.9,
-    "Kentucky":       67.4,
-    "Houston":        64.1,
-    "UConn":          65.8,
-    "Auburn":         71.3,
-    "Michigan St":    66.5,
-    "Marquette":      69.8,
-    "Purdue":         63.2,
-    "Tennessee":      64.7,
-    "Texas":          65.3,
-    "Illinois":       67.1,
-    "Baylor":         66.8,
-    "Indiana":        68.2,
-    "Ole Miss":       65.9,
-    "Virginia":       58.1,   # slowest in dataset
-    "Miami FL":       66.3,
-    "Nebraska":       67.4,
-    "DePaul":         69.1,
-    "Bryant":         70.8,
-    "Alabama St":     66.7,
-    "Texas Southern": 68.9,
-    "Creighton":      68.4,
-}
-
-_DEFAULT_THREE_POINT_RELIANCE = 0.33   # NCAA average
+_DEFAULT_THREE_POINT_RELIANCE = 0.33   # NCAA average — unknown teams
 _DEFAULT_TEMPO = 67.0
 
 
@@ -330,10 +372,19 @@ def get_ncaab_three_point_reliance(team: str) -> tuple[float, bool]:
 
 
 def get_ncaab_tempo(team: str) -> tuple[float, bool]:
-    """Return (tempo, is_live) for an NCAAB team."""
-    val = _NCAAB_TEMPO.get(team, _DEFAULT_TEMPO)
-    is_live = team in _NCAAB_TEMPO
-    return val, is_live
+    """
+    Return (tempo, is_live) sourced from efficiency_feed._TEAM_DATA.
+    Falls back to _DEFAULT_TEMPO for unknown teams.
+    Single source of truth — no duplicate tempo dict in this file.
+    """
+    try:
+        from data.efficiency_feed import get_team_data
+        data = get_team_data(team)
+        if data and data.get("tempo") is not None:
+            return float(data["tempo"]), True
+    except (ImportError, KeyError, TypeError):
+        pass
+    return _DEFAULT_TEMPO, False
 
 
 def get_ncaab_kill_inputs(

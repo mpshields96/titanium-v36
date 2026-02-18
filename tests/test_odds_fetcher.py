@@ -21,7 +21,14 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from odds_fetcher import fetch_batch_odds, preferred_book as _preferred_book
+from odds_fetcher import (
+    fetch_batch_odds,
+    preferred_book as _preferred_book,
+    compute_rest_days_from_schedule,
+    cache_open_prices,
+    compute_rlm,
+    clear_open_price_cache,
+)
 
 # ---------------------------------------------------------------------------
 # Shared sample data
@@ -279,3 +286,253 @@ class TestPreferredBook:
         assert result["key"] == "draftkings"
         # Confirm markets are still attached to the returned dict
         assert "markets" in result
+
+
+# ============================================================================
+# compute_rest_days_from_schedule — schedule-derived rest days
+# ============================================================================
+
+class TestComputeRestDaysFromSchedule:
+
+    def _make_game(self, home: str, away: str, commence_time: str) -> dict:
+        """Minimal game dict with the fields compute_rest_days needs."""
+        return {
+            "id": f"{home}_{commence_time}",
+            "home_team": home,
+            "away_team": away,
+            "commence_time": commence_time,
+            "bookmakers": [],
+        }
+
+    def test_empty_input_returns_empty_dict(self):
+        """No games → no rest days."""
+        result = compute_rest_days_from_schedule([])
+        assert result == {}
+
+    def test_single_game_all_teams_return_none(self):
+        """Teams appearing only once get None (stub fallback required)."""
+        games = [self._make_game("Lakers", "Celtics", "2026-02-18T00:00:00Z")]
+        result = compute_rest_days_from_schedule(games)
+        assert result["Lakers"] is None
+        assert result["Celtics"] is None
+
+    def test_back_to_back_same_day_returns_zero(self):
+        """Team playing twice same day → rest_days = 0."""
+        games = [
+            self._make_game("Lakers", "Warriors", "2026-02-18T13:00:00Z"),
+            self._make_game("Celtics", "Lakers",  "2026-02-18T22:00:00Z"),
+        ]
+        result = compute_rest_days_from_schedule(games)
+        assert result["Lakers"] == 0   # same calendar day, delta < 86400s → 0
+
+    def test_one_day_rest_returns_one(self):
+        """24 hours between games → rest_days = 1."""
+        games = [
+            self._make_game("Lakers", "Warriors", "2026-02-18T20:00:00Z"),
+            self._make_game("Celtics", "Lakers",  "2026-02-19T20:00:00Z"),
+        ]
+        result = compute_rest_days_from_schedule(games)
+        assert result["Lakers"] == 1
+
+    def test_two_day_rest_returns_two(self):
+        """48 hours between games → rest_days = 2."""
+        games = [
+            self._make_game("Lakers", "Warriors", "2026-02-18T20:00:00Z"),
+            self._make_game("Celtics", "Lakers",  "2026-02-20T20:00:00Z"),
+        ]
+        result = compute_rest_days_from_schedule(games)
+        assert result["Lakers"] == 2
+
+    def test_same_day_games_returns_zero(self):
+        """Two games on the same calendar day → rest_days = 0."""
+        games = [
+            self._make_game("Lakers", "Warriors", "2026-02-18T00:00:00Z"),
+            self._make_game("Celtics", "Lakers",  "2026-02-18T19:00:00Z"),
+        ]
+        result = compute_rest_days_from_schedule(games)
+        assert result["Lakers"] == 0
+
+    def test_multiple_teams_resolved_independently(self):
+        """Each team's rest days are computed separately."""
+        games = [
+            self._make_game("Heat",   "Nets",   "2026-02-18T00:00:00Z"),
+            self._make_game("Nets",   "Bulls",  "2026-02-18T23:00:00Z"),  # Nets B2B
+            self._make_game("Heat",   "Bulls",  "2026-02-20T00:00:00Z"),  # Heat 2-day rest
+        ]
+        result = compute_rest_days_from_schedule(games)
+        assert result["Nets"] == 0    # less than 1 day between games
+        assert result["Heat"] == 2
+
+    def test_teams_appearing_once_return_none(self):
+        """A team in only one game returns None regardless of other teams."""
+        games = [
+            self._make_game("Warriors", "Celtics", "2026-02-18T00:00:00Z"),
+            self._make_game("Warriors", "Lakers",  "2026-02-20T00:00:00Z"),
+        ]
+        result = compute_rest_days_from_schedule(games)
+        assert result["Warriors"] == 2   # Warriors plays twice
+        assert result["Celtics"] is None  # only plays once
+        assert result["Lakers"] is None   # only plays once
+
+    def test_invalid_commence_time_skipped(self):
+        """Games with unparseable commence_time are silently skipped."""
+        games = [
+            self._make_game("Bucks", "Raptors", "NOT_A_DATE"),
+            self._make_game("Bucks", "Heat",    "2026-02-20T00:00:00Z"),
+        ]
+        result = compute_rest_days_from_schedule(games)
+        # Only one valid game for Bucks → None (stub fallback)
+        assert result["Bucks"] is None
+
+    def test_missing_commence_time_skipped(self):
+        """Games with missing commence_time key are silently skipped."""
+        games = [
+            {"id": "x", "home_team": "Knicks", "away_team": "Sixers", "bookmakers": []},
+            self._make_game("Knicks", "Bulls", "2026-02-20T00:00:00Z"),
+        ]
+        result = compute_rest_days_from_schedule(games)
+        # Only one valid game per team → None
+        assert result["Knicks"] is None
+
+
+# ============================================================================
+# compute_rlm — passive Reverse Line Movement detection
+# ============================================================================
+
+def _make_h2h_game(event_id: str, home: str, away: str,
+                   home_price: int, away_price: int) -> dict:
+    """Minimal game dict with one h2h bookmaker for RLM tests."""
+    return {
+        "id": event_id,
+        "home_team": home,
+        "away_team": away,
+        "commence_time": "2026-02-18T20:00:00Z",
+        "bookmakers": [
+            {
+                "key": "draftkings",
+                "title": "DraftKings",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "outcomes": [
+                            {"name": home, "price": home_price},
+                            {"name": away, "price": away_price},
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+
+class TestComputeRlm:
+
+    def setup_method(self):
+        """Clear the open price cache before each test to ensure isolation."""
+        clear_open_price_cache()
+
+    def test_empty_games_returns_empty_dict(self):
+        """No games → empty result."""
+        result = compute_rlm([])
+        assert result == {}
+
+    def test_no_cache_returns_false(self):
+        """If cache_open_prices was never called, all events return False."""
+        game = _make_h2h_game("g1", "Lakers", "Celtics", -130, 110)
+        result = compute_rlm([game])
+        assert result["g1"] is False
+
+    def test_no_movement_returns_false(self):
+        """Prices unchanged from open → no RLM."""
+        game = _make_h2h_game("g2", "Lakers", "Celtics", -150, 130)
+        cache_open_prices([game])
+        result = compute_rlm([game])   # same prices = no drift
+        assert result["g2"] is False
+
+    def test_rlm_fires_when_public_on_home_and_line_moves_to_away(self):
+        """
+        Public on home favourite (-150). Line moves: away drifts from +130 → +105
+        (away implied prob: 43% → 49%, shift = +6% > 3% threshold). RLM = True.
+        """
+        open_game    = _make_h2h_game("g3", "Celtics", "Wizards", -150,  130)
+        current_game = _make_h2h_game("g3", "Celtics", "Wizards", -120,  100)
+        cache_open_prices([open_game])
+        result = compute_rlm([current_game])
+        assert result["g3"] is True
+
+    def test_rlm_does_not_fire_on_small_drift(self):
+        """
+        Line moves by only ~1% implied prob shift — below 3% threshold. No RLM.
+        -150 → -148: trivially small movement.
+        """
+        open_game    = _make_h2h_game("g4", "Celtics", "Wizards", -150, 130)
+        current_game = _make_h2h_game("g4", "Celtics", "Wizards", -148, 128)
+        cache_open_prices([open_game])
+        result = compute_rlm([current_game])
+        assert result["g4"] is False
+
+    def test_rlm_fires_on_away_favourite_line_move_to_home(self):
+        """
+        Away is the favourite (-140). Line moves to favour home team.
+        Home implied prob increases > 3% → RLM fires.
+        """
+        open_game    = _make_h2h_game("g5", "Knicks", "Heat", 120, -140)
+        current_game = _make_h2h_game("g5", "Knicks", "Heat",  90, -110)
+        cache_open_prices([open_game])
+        result = compute_rlm([current_game])
+        assert result["g5"] is True
+
+    def test_pick_em_game_no_rlm_signal(self):
+        """
+        Neither team is a clear favourite (both at -105 or longer). No RLM signal.
+        Public side heuristic only applies when price < -105.
+        """
+        open_game    = _make_h2h_game("g6", "Celtics", "Sixers", -104, -104)
+        current_game = _make_h2h_game("g6", "Celtics", "Sixers", -110, 100)
+        cache_open_prices([open_game])
+        result = compute_rlm([current_game])
+        assert result["g6"] is False
+
+    def test_cache_is_frozen_second_call_does_not_overwrite(self):
+        """
+        Open price cache uses first-seen values. Calling cache_open_prices again
+        with different prices must NOT overwrite the original baseline.
+        """
+        open_game    = _make_h2h_game("g7", "Bucks", "Nets", -150, 130)
+        # "Different prices" — simulating a refresh call
+        refresh_game = _make_h2h_game("g7", "Bucks", "Nets", -110, 100)
+        cache_open_prices([open_game])
+        cache_open_prices([refresh_game])   # must not overwrite
+        # Now compute RLM using the refresh prices as current
+        result = compute_rlm([refresh_game])
+        # Bucks at -150 open → public on Bucks. Nets prob drifts from ~43% to ~50% → RLM.
+        assert result["g7"] is True
+
+    def test_multiple_events_resolved_independently(self):
+        """RLM is computed per-event; one event firing does not affect others."""
+        game_a_open = _make_h2h_game("ga", "Lakers",  "Celtics",  -150, 130)
+        game_b_open = _make_h2h_game("gb", "Nuggets", "Warriors", -150, 130)
+
+        game_a_curr = _make_h2h_game("ga", "Lakers",  "Celtics",  -115, 95)   # big move → RLM
+        game_b_curr = _make_h2h_game("gb", "Nuggets", "Warriors", -148, 128)  # tiny move → no RLM
+
+        cache_open_prices([game_a_open, game_b_open])
+        result = compute_rlm([game_a_curr, game_b_curr])
+
+        assert result["ga"] is True
+        assert result["gb"] is False
+
+    def test_game_with_no_bookmakers_returns_false(self):
+        """Games with empty bookmakers list cannot produce RLM signal."""
+        open_game = _make_h2h_game("g8", "Heat", "Magic", -130, 110)
+        cache_open_prices([open_game])
+        # Current game has no bookmakers
+        empty_game = {
+            "id": "g8",
+            "home_team": "Heat",
+            "away_team": "Magic",
+            "commence_time": "2026-02-18T20:00:00Z",
+            "bookmakers": [],
+        }
+        result = compute_rlm([empty_game])
+        assert result["g8"] is False

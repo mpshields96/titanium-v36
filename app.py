@@ -21,7 +21,7 @@ import streamlit as st
 from edge_calculator import calculate_edges, _SPORT_ROUTING
 from bet_ranker import rank_bets, format_bet_table
 from data.efficiency_feed import build_efficiency_data
-from odds_fetcher import fetch_game_lines, get_quota_status
+from odds_fetcher import fetch_game_lines, get_quota_status, cache_open_prices, compute_rlm
 
 
 # ---------------------------------------------------------------------------
@@ -755,6 +755,7 @@ def run_pipeline(selected_sports: list[str]):
     """Execute the full edge-detection pipeline for selected sports."""
     all_candidates = []
     eff_data       = {}
+    rlm_data       = {}   # event_id → bool: True = RLM confirmed
     n              = len(selected_sports)
 
     progress = st.progress(0, text="")
@@ -765,7 +766,18 @@ def run_pipeline(selected_sports: list[str]):
 
         with st.status(f"{sport}", expanded=False) as status:
             try:
-                candidates = calculate_edges(sport)
+                # Fetch raw games once — reuse for RLM detection + calculate_edges
+                routing   = _SPORT_ROUTING.get(sport, {})
+                sport_key = routing.get("sport_key", "")
+                raw_games = fetch_game_lines(sport_key) if sport_key else []
+
+                # Passive RLM: freeze open prices on first fetch; detect movement on refresh
+                cache_open_prices(raw_games)
+                sport_rlm = compute_rlm(raw_games)
+                rlm_data.update(sport_rlm)
+
+                # Pass pre-fetched games so calculate_edges doesn't call the API again
+                candidates = calculate_edges(sport, raw_games=raw_games)
                 all_candidates.extend(candidates)
                 status.update(
                     label=f"{sport} — {len(candidates)} candidates",
@@ -774,10 +786,7 @@ def run_pipeline(selected_sports: list[str]):
                 )
 
                 if sport == "NCAAB":
-                    routing   = _SPORT_ROUTING.get("NCAAB", {})
-                    sport_key = routing.get("sport_key", "basketball_ncaab")
-                    raw_ncaab = fetch_game_lines(sport_key)
-                    eff_data  = build_efficiency_data(raw_ncaab)
+                    eff_data = build_efficiency_data(raw_games)
 
             except ValueError as exc:
                 status.update(label=f"{sport} — {exc}", state="error")
@@ -793,7 +802,7 @@ def run_pipeline(selected_sports: list[str]):
                 status.update(label=f"{sport} — fetch error: {err}", state="error")
 
     progress.progress(100, text="Ranking...")
-    ranked = rank_bets(all_candidates, efficiency_data=eff_data)
+    ranked = rank_bets(all_candidates, efficiency_data=eff_data, rlm_data=rlm_data)
 
     st.session_state["results"]     = ranked
     st.session_state["last_run"]    = datetime.now()
@@ -803,16 +812,11 @@ def run_pipeline(selected_sports: list[str]):
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Page: Live Analysis (current working app — fully functional)
 # ---------------------------------------------------------------------------
 
-def main():
-    st.set_page_config(
-        page_title="TITANIUM",
-        layout="centered",
-        initial_sidebar_state="collapsed",
-    )
-
+def page_live_analysis():
+    """Live edge-detection analysis — the core product."""
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
     # Session defaults
@@ -909,6 +913,63 @@ def main():
   <span class="t-footer-item">Last run {run_ts}</span>
 </div>
 """, unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Page stubs — future sessions
+# ---------------------------------------------------------------------------
+
+def page_bet_history():
+    """Bet History — log of past bets and outcomes. (Coming soon)"""
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    st.markdown("""
+<div class="empty-state" style="padding-top: 5rem;">
+  <div class="empty-state-icon">◈</div>
+  <div class="empty-state-text">Bet History<br><br>Track recorded bets and outcomes.<br>Coming in a future session.</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+def page_pnl_tracker():
+    """P&L Tracker — running profit/loss by sport and bet type. (Coming soon)"""
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    st.markdown("""
+<div class="empty-state" style="padding-top: 5rem;">
+  <div class="empty-state-icon">◈</div>
+  <div class="empty-state-text">P&amp;L Tracker<br><br>Running profit and loss by sport and bet type.<br>Coming in a future session.</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+def page_odds_comparison():
+    """Odds Comparison — side-by-side line shopping across books. (Coming soon)"""
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    st.markdown("""
+<div class="empty-state" style="padding-top: 5rem;">
+  <div class="empty-state-icon">◈</div>
+  <div class="empty-state-text">Odds Comparison<br><br>Side-by-side line shopping across all books.<br>Coming in a future session.</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Entry point — st.navigation() multi-page scaffold (Streamlit 1.36+)
+# ---------------------------------------------------------------------------
+
+def main():
+    st.set_page_config(
+        page_title="TITANIUM",
+        layout="centered",
+        initial_sidebar_state="collapsed",
+    )
+
+    pg = st.navigation([
+        st.Page(page_live_analysis, title="Live Analysis",    icon="◈", default=True),
+        st.Page(page_bet_history,   title="Bet History",      icon="◇"),
+        st.Page(page_pnl_tracker,   title="P&L Tracker",      icon="◆"),
+        st.Page(page_odds_comparison, title="Odds Comparison", icon="◉"),
+    ])
+    pg.run()
 
 
 if __name__ == "__main__":

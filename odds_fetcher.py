@@ -19,6 +19,7 @@ DO NOT add betting math or Streamlit calls to this file.
 import logging
 import os
 import time
+from datetime import datetime, timezone
 from typing import Optional
 
 import requests
@@ -432,3 +433,244 @@ def clear_open_price_cache() -> None:
     """Clear all cached open prices. Call at session start if needed."""
     _OPEN_PRICE_CACHE.clear()
     logger.info("cache_open_prices: cache cleared")
+
+
+# ---------------------------------------------------------------------------
+# Passive RLM detection (zero additional API calls)
+# ---------------------------------------------------------------------------
+#
+# Reverse Line Movement (RLM): price moves AGAINST public betting direction.
+# If the public is on Team A but the line moves in favour of Team A's opponent,
+# sharp money is pushing it back. That's a sharp signal worth +25 pts.
+#
+# Algorithm:
+#   1. Open price is the baseline (frozen at first fetch via cache_open_prices).
+#   2. On each refresh, compute current implied probability from the h2h price.
+#   3. If implied prob shifted ≥ RLM_THRESHOLD against the public's side → RLM.
+#
+# public_on_side heuristic (Phase 1 — no public % data from Odds API):
+#   Assume public bets favorites. Price < -105 → public_on_side = True.
+#   Threshold: -105 is the approximate line where casual bettors stop fading
+#   and start backing the favourite. This is a heuristic; upgrade when
+#   a public % data source is wired in.
+#
+# RLM_THRESHOLD: 3% implied probability shift.
+#   At -110, 5 cents is only ~1.1% shift — market noise.
+#   3% implied shift ≈ 3–4 cents at typical prices: material, not noise.
+#   R&D validated Feb 2026.
+#
+# Returns: dict[event_id → bool]
+#   True  = RLM confirmed for this event (pass as rlm_data to rank_bets()).
+#   False = no RLM detected or insufficient data.
+# ---------------------------------------------------------------------------
+
+RLM_THRESHOLD = 0.03   # 3% implied probability shift = material sharp signal
+_PUBLIC_FAVORITE_THRESHOLD = -105   # prices shorter than this → assume public side
+
+
+def _american_to_implied(american: float) -> float:
+    """
+    Convert American odds to implied probability (vig included).
+    Inline to avoid circular import with edge_calculator.
+    """
+    if american < 0:
+        return (-american) / (-american + 100)
+    else:
+        return 100 / (american + 100)
+
+
+def compute_rlm(games: list[dict]) -> dict[str, bool]:
+    """
+    Detect Reverse Line Movement for a list of games by comparing current
+    h2h prices against cached opening prices.
+
+    Call AFTER cache_open_prices() has been called at least once this session.
+    Safe to call with an empty cache — returns all False.
+
+    Args:
+        games: Current raw game dicts from fetch_game_lines() / fetch_batch_odds().
+               Each game must have: id, home_team, away_team, bookmakers.
+
+    Returns:
+        Dict mapping event_id → bool.
+        True  = RLM confirmed (sharp money moving line against public side).
+        False = no RLM, or not enough data (open price not cached).
+
+    Example:
+        raw = fetch_game_lines("basketball_nba")
+        cache_open_prices(raw)   # first fetch — freeze open prices
+        # ... later in same session after prices update ...
+        raw2 = fetch_game_lines("basketball_nba")
+        rlm_data = compute_rlm(raw2)
+        ranked = rank_bets(candidates, rlm_data=rlm_data)
+    """
+    result: dict[str, bool] = {}
+
+    for game in games:
+        event_id = game.get("id")
+        if not event_id:
+            continue
+
+        open_entry = _OPEN_PRICE_CACHE.get(event_id)
+        if open_entry is None:
+            result[event_id] = False   # no baseline — skip
+            continue
+
+        # Get current h2h price from preferred book
+        bookmakers = game.get("bookmakers", [])
+        home_team = game.get("home_team", "")
+        away_team = game.get("away_team", "")
+
+        current_home: Optional[float] = None
+        current_away: Optional[float] = None
+
+        book_map = {b["key"]: b for b in bookmakers if "markets" in b}
+        for book_key in PREFERRED_BOOKS:
+            if book_key in book_map:
+                for market in book_map[book_key].get("markets", []):
+                    if market.get("key") == "h2h":
+                        for outcome in market.get("outcomes", []):
+                            name = outcome.get("name", "")
+                            price = outcome.get("price")
+                            if price is None:
+                                continue
+                            if name == home_team:
+                                current_home = float(price)
+                            elif name == away_team:
+                                current_away = float(price)
+                        break
+                if current_home is not None:
+                    break
+
+        if current_home is None or current_away is None:
+            result[event_id] = False
+            continue
+
+        open_home = open_entry["home"]
+        open_away = open_entry["away"]
+
+        # Implied probability at open and now (vig-inclusive — directional signal only)
+        open_home_prob  = _american_to_implied(open_home)
+        open_away_prob  = _american_to_implied(open_away)
+        curr_home_prob  = _american_to_implied(current_home)
+        curr_away_prob  = _american_to_implied(current_away)
+
+        # Public side heuristic: public backs the favourite (price < _PUBLIC_FAVORITE_THRESHOLD)
+        # If home is the favourite, public_on_home = True; RLM fires if line moves TOWARD away.
+        home_is_fav = open_home < _PUBLIC_FAVORITE_THRESHOLD
+        away_is_fav = open_away < _PUBLIC_FAVORITE_THRESHOLD
+
+        rlm_detected = False
+
+        if home_is_fav:
+            # Public on home. RLM = away's implied prob increased ≥ threshold
+            # (line moved toward away despite public money on home).
+            shift = curr_away_prob - open_away_prob
+            if shift >= RLM_THRESHOLD:
+                rlm_detected = True
+                logger.debug(
+                    "RLM: %s — public on home, away prob +%.1f%% (open %.0f → curr %.0f)",
+                    event_id, shift * 100, open_away, current_away,
+                )
+        elif away_is_fav:
+            # Public on away. RLM = home's implied prob increased ≥ threshold.
+            shift = curr_home_prob - open_home_prob
+            if shift >= RLM_THRESHOLD:
+                rlm_detected = True
+                logger.debug(
+                    "RLM: %s — public on away, home prob +%.1f%% (open %.0f → curr %.0f)",
+                    event_id, shift * 100, open_home, current_home,
+                )
+        # else: neither team is a clear favourite — no RLM signal (pick'em games are noise)
+
+        result[event_id] = rlm_detected
+
+    rlm_count = sum(1 for v in result.values() if v)
+    logger.info("compute_rlm: %d/%d events show RLM", rlm_count, len(result))
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Schedule-derived rest days (zero additional API calls)
+# ---------------------------------------------------------------------------
+#
+# The Odds API returns commence_time (ISO 8601) on every game.
+# By diffing consecutive game times per team across the full raw_games list,
+# we can compute real rest days without any extra API call.
+#
+# Usage:
+#   raw_games = fetch_game_lines("basketball_nba")
+#   schedule_rest = compute_rest_days_from_schedule(raw_games)
+#   # Pass to _apply_nba_kill() for live rest data instead of stubs.
+#
+# Return value: dict[team_name, int | None]
+#   int  = days of rest before the NEXT game in the window (≥0, 0 = B2B)
+#   None = team appears only once in window; caller falls back to stub
+# ---------------------------------------------------------------------------
+
+
+def compute_rest_days_from_schedule(
+    raw_games: list[dict],
+) -> dict[str, Optional[int]]:
+    """
+    Derive rest days for every team from commence_time diffs in raw_games.
+
+    Logic:
+      1. Build a list of game commence_times for each team (home + away).
+      2. Sort each team's games chronologically.
+      3. For teams with >= 2 games: rest_days = diff between game[0] and game[1]
+         rounded down to whole days (0 = B2B / same day, 1 = one day rest, etc.).
+      4. For teams with exactly 1 game in the window: return None → caller uses
+         kill_switch_feed stub value instead.
+
+    Args:
+        raw_games: Raw game list from fetch_game_lines() for a single sport.
+                   Each game must have: home_team, away_team, commence_time (ISO 8601).
+
+    Returns:
+        Dict mapping team name → rest_days (int) or None.
+        rest_days=0 means back-to-back (played yesterday or today).
+        rest_days=None means only one game found — use stub fallback.
+    """
+    # team → sorted list of commence_time datetimes
+    team_times: dict[str, list[datetime]] = {}
+
+    for game in raw_games:
+        home = game.get("home_team", "")
+        away = game.get("away_team", "")
+        ct_str = game.get("commence_time", "")
+        if not ct_str:
+            continue
+
+        try:
+            # Parse ISO 8601 — handles "2026-02-18T23:00:00Z" and "+00:00" variants
+            ct_str_clean = ct_str.replace("Z", "+00:00")
+            ct = datetime.fromisoformat(ct_str_clean)
+            if ct.tzinfo is None:
+                ct = ct.replace(tzinfo=timezone.utc)
+        except (ValueError, AttributeError):
+            logger.warning("compute_rest_days: could not parse commence_time %r", ct_str)
+            continue
+
+        for team in (home, away):
+            if team:
+                team_times.setdefault(team, []).append(ct)
+
+    result: dict[str, Optional[int]] = {}
+    for team, times in team_times.items():
+        times.sort()
+        if len(times) < 2:
+            result[team] = None  # only one game in window → use stub
+            continue
+
+        # Diff between the two nearest consecutive games
+        delta = times[1] - times[0]
+        rest_days = max(0, int(delta.total_seconds() // 86400))
+        result[team] = rest_days
+
+    logger.info(
+        "compute_rest_days: %d teams resolved (%d None/stub fallback)",
+        sum(1 for v in result.values() if v is not None),
+        sum(1 for v in result.values() if v is None),
+    )
+    return result

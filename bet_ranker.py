@@ -11,8 +11,10 @@ V36.1 NON-NEGOTIABLE RULES:
 - Nemesis protocol applied: remove if counter >40%, penalize if 30-40%
 - Final sort: Sharp Score descending
 
-Sharp Score threshold: 40 pts (temporary — raise to 75 when KenPom/Barttorvik
-efficiency data and situational data are wired in Session 5+).
+Sharp Score threshold: 45 pts (Session 13).
+Rationale: 6% edge with live situational data scores ~38–40; that's too marginal.
+45 correctly requires ~7.8% real edge before a bet is promoted.
+Next raise → 50–55 after RLM is wired (adds 25 pts to genuine sharp bets).
 
 DO NOT add API calls, betting math, or Streamlit calls to this file.
 """
@@ -30,7 +32,7 @@ from edge_calculator import (
 MAX_TOTAL_BETS = 10
 MAX_PER_SPORT = 3                   # V36.1 spec: 3 (not 4)
 SPORT_CONCENTRATION_CAP = 0.60      # Max 60% of bets from one sport
-SHARP_THRESHOLD = 40.0              # Pre-nemesis floor — raise to 75 in Session 5
+SHARP_THRESHOLD = 45.0              # Session 13: raised 40→45. Raise to 50–55 after RLM wired.
 SHARP_FLOOR_POST_NEMESIS = 0.0      # No second cutoff — sort handles final ranking
 
 
@@ -79,7 +81,19 @@ def rank_bets(
         eff_gap = efficiency_data.get(bet.event_id, 8.0)   # default moderate
 
         sit = situational_data.get(bet.event_id, {})
-        rest = sit.get("rest_edge", 0.0)
+
+        # rest_edge: derived from live schedule rest days when available (NBA only).
+        # +3 = rested vs B2B opponent. -3 = B2B vs rested opponent. 0 = neutral/unknown.
+        # Formula: (opp_rest - bet_rest) clamped to [-3, +3], scaled to 0-5pt range.
+        # This is the only situational input with a live data source.
+        live_rest = getattr(bet, "rest_days", None)
+        live_opp_rest = getattr(bet, "opp_rest_days", None)
+        if live_rest is not None and live_opp_rest is not None:
+            rest_delta = live_opp_rest - live_rest   # positive = we're more rested
+            rest = max(-3.0, min(3.0, float(rest_delta)))
+        else:
+            rest = sit.get("rest_edge", 0.0)
+
         injury = sit.get("injury_leverage", 0.0)
         motivation = sit.get("motivation", 0.0)
         matchup = sit.get("matchup_score", 0.0)
@@ -102,19 +116,16 @@ def rank_bets(
 
         scored.append(bet)
 
-    # --- Step 2: Nemesis protocol ---
+    # --- Step 2: Nemesis — annotation only, no score adjustment ---
+    # Nemesis counter-theses are narrative-driven and not mathematically grounded.
+    # They are displayed on bet cards for awareness but do NOT affect Sharp Score
+    # or remove bets. Edge detection, kill switches, and efficiency gap handle
+    # the mathematical filtering. Narrative should not veto math.
     post_nemesis = []
     for bet in scored:
         nemesis = run_nemesis(bet, bet.sport)
         bet.nemesis = nemesis
-
-        if nemesis.get("remove", False):
-            continue  # Counter prob > 40% — drop entirely
-
-        # Apply score penalty for 30-40% counter
-        adj = nemesis.get("adjustment", 0)
-        bet.sharp_score = max(0.0, bet.sharp_score + adj)
-
+        # No removal, no score adjustment — annotation only
         post_nemesis.append(bet)
 
     # --- Step 3: Deduplicate markets ---

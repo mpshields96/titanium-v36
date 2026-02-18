@@ -53,6 +53,9 @@ class BetCandidate:
     simulation: object = None   # Optional SimulationResult from originator_engine
     # Set by calculate_edges() kill switch routing — Session 7
     kill_reason: str = ""       # "" = no kill. "FLAG: ..." = warning kept. "KILL: ..." = dropped (won't appear)
+    # Set by _apply_nba_kill() when live schedule data is available — Session 12
+    rest_days: Optional[int] = None   # Bet team's rest days. None = stub used. 0 = B2B.
+    opp_rest_days: Optional[int] = None   # Opponent's rest days.
 
 
 # ---------------------------------------------------------------------------
@@ -822,18 +825,42 @@ _SPORT_ROUTING: dict[str, dict] = {
 }
 
 
-def _apply_nba_kill(bet: BetCandidate) -> tuple[bool, str]:
-    """Route an NBA BetCandidate through the kill switch via stub feed."""
+def _apply_nba_kill(
+    bet: BetCandidate,
+    schedule_rest: Optional[dict] = None,
+) -> tuple[bool, str]:
+    """Route an NBA BetCandidate through the kill switch.
+
+    Args:
+        bet:           The candidate to evaluate.
+        schedule_rest: dict[team_name, int | None] from
+                       compute_rest_days_from_schedule(). When provided and the
+                       team has a non-None value, live rest days override the stub.
+                       None teams (only 1 game in window) still fall back to stub.
+    """
     from data.kill_switch_feed import get_nba_kill_inputs
     parts = bet.matchup.split(" @ ", 1)
     away = parts[0].strip() if len(parts) == 2 else ""
     home = parts[1].strip() if len(parts) == 2 else ""
     bet_team = home if bet.target.startswith(home) else away
     opp_team = away if bet_team == home else home
+
+    # Start from stub inputs, then overlay live rest data where available
     inputs = get_nba_kill_inputs(
         bet_team=bet_team, opp_team=opp_team,
         spread=bet.line, market_type=bet.market_type,
     )
+
+    if schedule_rest is not None:
+        bet_rest = schedule_rest.get(bet_team)
+        opp_rest = schedule_rest.get(opp_team)
+        if bet_rest is not None and opp_rest is not None:
+            inputs["rest_disadvantage"] = bet_rest < opp_rest
+            inputs["b2b"] = bet_rest == 0
+            # Store on bet for rank_bets() rest_edge scoring
+            bet.rest_days = bet_rest
+            bet.opp_rest_days = opp_rest
+
     return nba_kill_switch(**{k: v for k, v in inputs.items() if k != "data_live"})
 
 
@@ -937,13 +964,22 @@ def calculate_edges(
     if not all_candidates:
         return []
 
+    # Step 2b: For NBA, derive live rest days from the schedule (zero extra API calls)
+    schedule_rest: Optional[dict] = None
+    if kill_family == "nba":
+        from odds_fetcher import compute_rest_days_from_schedule
+        schedule_rest = compute_rest_days_from_schedule(raw_games)
+
     # Step 3: Run kill switches, tag and filter
     kill_fn = _KILL_ROUTER.get(kill_family) if kill_family else None
     live: list[BetCandidate] = []
 
     for bet in all_candidates:
         if kill_fn is not None:
-            killed, reason = kill_fn(bet)
+            if kill_family == "nba":
+                killed, reason = _apply_nba_kill(bet, schedule_rest=schedule_rest)
+            else:
+                killed, reason = kill_fn(bet)
             if killed:
                 bet.kill_reason = reason
                 continue  # drop — excluded from output

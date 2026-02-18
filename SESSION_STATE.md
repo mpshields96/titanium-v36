@@ -96,6 +96,18 @@ API: The Odds API v4 — key in .streamlit/secrets.toml (never commit)
   Full mascot-name aliases for all 80 teams. 110 total (30 NBA + 80 NCAAB).
   Unknown teams still fall back to _DEFAULT_GAP (8.0). Drop-in replacement, no API changes.
 
+## WHAT'S BUILT AND WORKING (as of Session 11)
+- odds_fetcher.py: compute_rest_days_from_schedule(raw_games) → dict[str, int | None]
+  Derives live rest days from commence_time diffs. Zero extra API calls.
+  int = rest days before next game (0 = B2B). None = 1 game in window → stub fallback.
+- edge_calculator.py: _apply_nba_kill(bet, schedule_rest=None)
+  Accepts optional schedule_rest dict. Overlays live rest/B2B data when both teams present.
+  Falls back to kill_switch_feed stub when schedule_rest=None or team has None rest value.
+  calculate_edges("NBA") automatically derives + passes schedule_rest. Zero code change in app.py.
+- app.py: st.navigation() + st.Page() multi-page scaffold
+  4 pages: Live Analysis (fully functional), Bet History, P&L Tracker, Odds Comparison (stubs).
+  Live Analysis is default page. No functionality broken. Sidebar hidden as before.
+
 ## WHAT'S STUBBED (TODO)
 - Streamlit Cloud deploy: DONE (auto-deploys from main branch push)
 
@@ -173,23 +185,64 @@ This works because books occasionally misprice relative to the consensus.
 2. 🔲 Architecture advisory: commence_time diffs for NBA rest days (R&D researched, v36 code TBD)
 3. 🔲 Multi-page planning: st.navigation() + st.Page() structure for future expansion
 
-## SESSION 11 GOAL (NEXT)
-1. 🔲 NBA rest days: implement compute_rest_days_from_schedule(raw_games) → dict[str, int | None]
-     Logic: sort each team's games by commence_time, diff between consecutive games → rest days
-     Wire into _apply_nba_kill() in edge_calculator.py — 2-line signature change
-     Fallback: if team has only 1 game in fetch window → use kill_switch_feed stub
-     Zero additional API calls. Use raw_games already fetched by calculate_edges().
-2. 🔲 Multi-page planning: st.navigation() + st.Page() — advisory + scaffold only
-     Pages: Live Analysis (current app), Bet History, P&L Tracker, Odds Comparison
-     Deliverable: updated app.py with st.navigation() wired, stub pages, no broken functionality
+## SESSION 11 GOAL ✅ COMPLETE
+1. ✅ NBA rest days: compute_rest_days_from_schedule() in odds_fetcher.py
+     Derives live rest from commence_time diffs. None = stub fallback. Zero extra API calls.
+2. ✅ Wire into _apply_nba_kill(): optional schedule_rest param, overlays live data over stubs.
+     calculate_edges("NBA") auto-computes + passes schedule_rest. No app.py changes required.
+3. ✅ Multi-page scaffold: st.navigation() + st.Page() in app.py
+     Live Analysis (working), Bet History / P&L Tracker / Odds Comparison (stubs).
+     All 75 tests passing.
+
+## SESSION 13 GOAL (NEXT)
+1. 🔲 TBD — user to define
+
+## WHAT'S BUILT AND WORKING (as of Session 12)
+- bet_ranker.py: Nemesis demoted to display-only annotation. No score adjustment, no removal.
+  Math (edge, efficiency, kill switches) is the sole filter. Narrative never vetoes math.
+- bet_ranker.py: rest_edge wired into Sharp Score situational component for NBA.
+  Derived from bet.rest_days / bet.opp_rest_days (live schedule data from Session 11).
+  Formula: (opp_rest - bet_rest) clamped [-3, +3]. Rested vs B2B opp = +3pts. B2B vs rested = -3pts.
+- data/kill_switch_feed.py: NCAAB 3PT reliance expanded from 24 → 80 teams (matches efficiency_feed).
+  _NCAAB_TEMPO dict removed — tempo now sourced live from efficiency_feed.get_team_data(). No duplicate data.
+- CLAUDE.md: Model Philosophy section added. Math > Narrative is now a permanent documented rule.
+
+## WHAT'S BUILT AND WORKING (as of Session 13)
+- bet_ranker.py: SHARP_THRESHOLD raised 40 → 45.
+  Rationale: 6% edge with live situational data scores ~38–40 — too marginal to promote.
+  45 correctly requires ~7.8% real edge. Next raise: 50–55 after RLM wired.
+- odds_fetcher.py: compute_rlm(games) → dict[event_id, bool].
+  Passive RLM detection. Zero API calls. Uses _OPEN_PRICE_CACHE baseline from cache_open_prices().
+  Threshold: 3% implied probability shift (not raw cents — R&D validated Feb 2026).
+  Public side heuristic: price < -105 = favourite = public is on that side.
+  Pick-em games (neither side < -105) → no RLM signal.
+- app.py: run_pipeline() now pre-fetches raw_games explicitly, calls cache_open_prices() + compute_rlm()
+  on each sport, passes rlm_data to rank_bets(). calculate_edges() receives pre-fetched raw_games
+  (no double API call). One API call per sport, as before.
+- tests/test_odds_fetcher.py: 10 new compute_rlm() tests. 85 total, all passing.
 
 ## CURRENT STATE
-Last completed: Session 10 — NCAAB efficiency expansion, pushed to GitHub
-Last git commit: db4b843 (efficiency_feed NCAAB 24→80)
-Tests: 65 total (45 math + 20 fetcher), all passing
-Quota: ~18,307 remaining (unchanged this session — no API calls)
+Last completed: Session 13 — threshold 40→45, passive RLM wired end-to-end
+Last git commit: db4b843 (pre-session; Sessions 11–13 changes pending commit)
+Tests: 85 total, all passing
+Quota: ~18,307 remaining (no API calls this session)
 Streamlit Cloud: deployed, auto-deploys from main
-Next: Session 11 — NBA rest days from schedule + multi-page scaffold
+Next: Session 14 — TBD
+
+## SESSION 12 GOAL ✅ COMPLETE
+1. ✅ Nemesis demoted to display-only (bet_ranker.py) — no veto power over math
+2. ✅ rest_edge wired into Sharp Score for NBA — live rest days feed situational component
+3. ✅ NCAAB kill switch 3PT reliance expanded to 80 teams
+4. ✅ NCAAB tempo sourced from efficiency_feed — duplicate dict removed
+5. ✅ CLAUDE.md Math > Narrative rule documented permanently
+6. ✅ 75/75 tests passing
+
+## SESSION 13 GOAL ✅ COMPLETE
+1. ✅ SHARP_THRESHOLD raised 40 → 45 (R&D validated — requires ~7.8% real edge)
+2. ✅ compute_rlm() implemented in odds_fetcher.py — 3% implied prob threshold, pick-em guard
+3. ✅ RLM wired into run_pipeline() — feeds rlm_data to rank_bets() on every execution
+4. ✅ No double API calls — raw_games pre-fetched, passed to calculate_edges(raw_games=...)
+5. ✅ 10 new compute_rlm tests — 85/85 passing
 
 ## UI RESEARCH FINDINGS (Session 9 — for future multi-page build)
 - Stay with Streamlit until genuinely outgrown. Deployment solved, Claude Code iteration fastest.
