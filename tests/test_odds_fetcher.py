@@ -21,7 +21,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from odds_fetcher import fetch_batch_odds, _preferred_book
+from odds_fetcher import fetch_batch_odds, preferred_book as _preferred_book
 
 # ---------------------------------------------------------------------------
 # Shared sample data

@@ -27,26 +27,31 @@ API: The Odds API v4 — key in .streamlit/secrets.toml (never commit)
 - originator_engine.py → Monte Carlo (working, touch only if asked)
 - data/team_stats_bunker.py → Static fallback stats
 
-## WHAT'S BUILT AND WORKING (as of Session 2)
-- odds_fetcher.py: fetch_batch_odds(sport_key, api_key) — live tested, returns real data
-- odds_fetcher.py: _preferred_book() — DraftKings first, fallback to first available
+## WHAT'S BUILT AND WORKING (as of Session 3)
+- odds_fetcher.py: QuotaTracker, _get_api_key(), _get() (retry+errors), all_books(),
+  preferred_book(), fetch_game_lines(), fetch_batch_odds() (legacy), fetch_sport(),
+  get_quota_status() — live tested 60 NCAAB games, DraftKings present
 - edge_calculator.py: passes_collar, _implied_probability, no_vig_probability,
-  calculate_edge, calculate_profit, fractional_kelly — all implemented + 45 tests passing
-- tests/validation_tests.py: 45 tests, all passing
+  calculate_edge, calculate_profit, fractional_kelly — 45 tests passing
+- edge_calculator.py: BetCandidate dataclass, _consensus_fair_prob(),
+  parse_game_markets() — live tested, 0 false positives on well-priced market ✓
+- originator_engine.py: run_trinity_simulation(), run_poisson_matrix(),
+  simulate_prop() — ported from R&D, full Trinity weighting (20/20/60)
+- ncaab_parser.py: parse_ncaab_games() — live tested: 60 games → 280 bets pass collar
+- tests/test_validation.py: 45 tests, all passing
 - tests/test_odds_fetcher.py: 20 tests, all passing
 
-## WHAT'S STUBBED (TODO in Session 3+)
-- edge_calculator.py: calculate_edges(), all kill switches
-- originator_engine.py: run_trinity_simulation(), run_poisson_matrix()
+## WHAT'S STUBBED (TODO in Session 4+)
+- edge_calculator.py: calculate_edges() routing stub, all kill switch stubs
 - bet_ranker.py: rank_bets(), _deduplicate_markets(), _apply_diversity()
 - app.py: full pipeline wiring
 
-## SESSION 3 GOAL
-1. Upgrade odds_fetcher.py: add all_books(), fetch_game_lines(), QuotaTracker, retry logic
-2. Port originator_engine.py from R&D (trinity simulation + poisson matrix — working)
-3. Build ncaab_parser.py (new file — collar filter + best-price extraction across all books)
-4. Wire edge_calculator.parse_game_markets() — multi-book consensus edge detection
-5. Live end-to-end pipeline test against real NCAAB data
+## SESSION 3 GOAL ✅ COMPLETE
+1. ✅ Upgrade odds_fetcher.py: all_books(), fetch_game_lines(), QuotaTracker, retry logic
+2. ✅ Port originator_engine.py from R&D (trinity simulation + poisson matrix)
+3. ✅ Build ncaab_parser.py (collar filter + best-price extraction across all books)
+4. ✅ Wire edge_calculator.parse_game_markets() — multi-book consensus edge detection
+5. ✅ Live end-to-end pipeline test against real NCAAB data
 
 ## EDGE DETECTION METHOD (critical — proven in R&D)
 Problem solved: single-book comparison always returns ~0 edge (market prices itself out)
@@ -58,7 +63,9 @@ Solution: multi-book consensus
 This works because books occasionally misprice relative to the consensus.
 
 ## KNOWN R&D BUGS (do not promote to v36 until fixed)
-- Props edge ~0: model_prob uses best_price fair_prob instead of cross-book consensus
+- Props edge ~0: FIXED in R&D (Feb 2026) — model_prob now uses avg consensus fair_prob
+  across all books, same pattern as _consensus_fair_prob(). Ready for Session 4 promotion review.
+  Verified: 8 books, 78 props, no false positives, correct distribution.
 - Trinity simulation: receives bet.line as mean input — should be projected margin
 - RLM Sharp Score component always returns 0 (no line movement data source yet)
 
@@ -78,8 +85,15 @@ This works because books occasionally misprice relative to the consensus.
          Run: pytest tests/ -v and confirm all tests pass before we start."
 5. Wait for test confirmation, then state what you want to build
 
+## SESSION 4 GOAL
+1. Review R&D prop edge fix → promote parse_prop_markets() to v36 if clean
+2. Build bet_ranker.py: rank_bets(), _deduplicate_markets(), _apply_diversity(), top-10 output
+3. Implement kill switches in edge_calculator.py (nba, nfl, ncaab, soccer stubs → real logic)
+4. Wire calculate_edges() routing — calls parse_game_markets() per sport
+5. Full end-to-end pipeline test: fetch → parse → edge → rank → output table
+
 ## CURRENT STATE
-Last completed: Session 2 — odds_fetcher.py live-tested against real NHL/NCAAB data
-Last git commit: "Session 1+2 complete: scaffold, math validation, odds fetcher live-tested"
+Last completed: Session 3 — full pipeline live-tested end-to-end against real NCAAB data
+Last git commit: pending (commit after updating this file)
 Tests: 65 total (45 math + 20 fetcher), all passing
-Next: Session 3 — see SESSION 3 GOAL above
+Next: Session 4 — see SESSION 4 GOAL above
