@@ -33,7 +33,7 @@ class BetCandidate:
     """A single bet candidate produced by parse_game_markets()."""
     sport: str
     matchup: str            # "Away @ Home"
-    market_type: str        # "spread", "total", "moneyline"
+    market_type: str        # "spread", "total", "moneyline", "prop"
     target: str             # e.g. "Duke Blue Devils -4.5" or "Over 148.5"
     line: float             # Numeric line value (0.0 for moneylines)
     price: int              # American odds (best price found)
@@ -42,10 +42,15 @@ class BetCandidate:
     market_implied: float   # Market implied probability (vig-inclusive)
     fair_implied: float     # Vig-free consensus probability
     kelly_size: float       # Fractional Kelly bet size in units
-    signal: str = ""        # Human-readable signal summary
+    signal: str = ""        # Human-readable tier label (set by bet_ranker)
     event_id: str = ""
     commence_time: str = ""
     book: str = ""          # Source book + n-books note
+    # Set by bet_ranker after scoring
+    sharp_score: float = 0.0
+    sharp_breakdown: dict = field(default_factory=dict)
+    nemesis: dict = field(default_factory=dict)
+    simulation: object = None   # Optional SimulationResult from originator_engine
 
 
 # ---------------------------------------------------------------------------
@@ -275,6 +280,161 @@ def soccer_kill_switch(market_drift_pct: float) -> bool:
     """
     # TODO Session 4: Implement
     pass
+
+
+# ---------------------------------------------------------------------------
+# Sharp Score (Session 4 — ported from R&D)
+# ---------------------------------------------------------------------------
+
+def calculate_sharp_score(
+    edge_pct: float,
+    rlm_confirmed: bool,
+    efficiency_gap: float,
+    rest_edge: float = 0.0,
+    injury_leverage: float = 0.0,
+    motivation: float = 0.0,
+    matchup_score: float = 0.0,
+) -> tuple[float, dict]:
+    """
+    Sharp Score: unified 0-100 composite ranking.
+
+    Components (V36.1 spec):
+      EDGE (40 pts):        (edge% / 10%) × 40, capped at 40
+      RLM (25 pts):         25 if reverse line movement confirmed, else 0
+      EFFICIENCY (20 pts):  caller-provided 0-20 scaled gap (KenPom/Barttorvik)
+      SITUATIONAL (15 pts): rest + injury + motivation + matchup, capped at 15
+
+    NOTE: RLM always 0 until line movement tracking is implemented (known gap).
+    NOTE: efficiency_gap defaults to 8.0 in bet_ranker (moderate) when no data.
+
+    Returns:
+        (sharp_score, breakdown_dict)
+    """
+    edge_pts = min(40.0, (edge_pct / 0.10) * 40)
+    rlm_pts = 25.0 if rlm_confirmed else 0.0
+    eff_pts = max(0.0, min(20.0, efficiency_gap))
+
+    sit_pts = min(5.0, rest_edge) + min(5.0, injury_leverage) + \
+              min(3.0, motivation) + min(2.0, matchup_score)
+    sit_pts = min(15.0, sit_pts)
+
+    total = edge_pts + rlm_pts + eff_pts + sit_pts
+
+    breakdown = {
+        "edge": round(edge_pts, 1),
+        "rlm": round(rlm_pts, 1),
+        "efficiency": round(eff_pts, 1),
+        "situational": round(sit_pts, 1),
+    }
+
+    return round(total, 1), breakdown
+
+
+def sharp_to_size(sharp_score: float, is_prop: bool = False) -> str:
+    """
+    Map Sharp Score to bet tier label.
+
+    Thresholds (V36.1 — temporary until efficiency/situational data wired):
+      >= 90 → NUCLEAR_2.0U
+      >= 80 → STANDARD_1.0U
+      else  → LEAN_0.5U   (all bets that survived pipeline get at least LEAN)
+
+    NOTE: PASS is never returned here — bets that didn't survive are simply
+    not in the list. This function only labels surviving bets.
+    """
+    if sharp_score >= 90:
+        return "NUCLEAR_2.0U"
+    if sharp_score >= 80:
+        return "STANDARD_1.0U"
+    return "LEAN_0.5U"
+
+
+def run_nemesis(bet: BetCandidate, sport: str) -> dict:
+    """
+    Generate adversarial counter-thesis for a bet.
+
+    Cases are tagged by applicable market_type. Selects the highest-probability
+    case relevant to this bet's market_type. Falls back to all cases if no
+    market-specific match.
+
+    Returns dict with: counter, probability, adjustment, remove.
+    remove=True means nemesis counter prob > 40% — drop the bet entirely.
+    """
+    # Each entry: (counter_text, probability, adjustment, applicable_market_types)
+    nemesis_cases = {
+        "NBA": [
+            ("Line movement suggests sharp money on other side",
+             0.30, -15, {"spread", "moneyline"}),
+            ("Team relies on 3PT shooting, opponent defends arc well",
+             0.25, -15, {"spread", "moneyline"}),
+            ("Total variance high — pace mismatch creates unpredictable scoring",
+             0.25, -15, {"total"}),
+            ("B2B fatigue not fully captured in ratings",
+             0.20, -10, {"any"}),
+            ("Road team in hostile environment, young roster",
+             0.20, -10, {"spread", "moneyline"}),
+            ("Player workload managed — prop line may not reflect rest decision",
+             0.25, -15, {"prop"}),
+        ],
+        "NCAAB": [
+            ("Road favorite in hostile environment, pressure on young team",
+             0.30, -15, {"spread", "moneyline"}),
+            ("3PT variance could eliminate efficiency edge",
+             0.25, -15, {"spread", "moneyline", "total"}),
+            ("Underdog at home often outperforms ratings",
+             0.20, -10, {"spread", "moneyline"}),
+            ("Tempo mismatch makes total unreliable",
+             0.25, -15, {"total"}),
+        ],
+        "NFL": [
+            ("Line through key number (3, 7, 10) — extra caution",
+             0.25, -15, {"spread"}),
+            ("Weather variance not fully modeled",
+             0.25, -15, {"total"}),
+            ("Injury report could change within 24 hours",
+             0.20, -10, {"any"}),
+            ("Moneyline juice on favorite often overpriced",
+             0.20, -10, {"moneyline"}),
+        ],
+        "NHL": [
+            ("Goalie variance is the dominant factor",
+             0.30, -15, {"moneyline", "spread"}),
+            ("PDO regression — hot team due for correction",
+             0.25, -15, {"moneyline", "spread"}),
+            ("Shot quality vs quantity mismatch clouds total",
+             0.25, -15, {"total"}),
+        ],
+        "SOCCER": [
+            ("High draw probability (~28%) not fully priced in",
+             0.25, -15, {"moneyline"}),
+            ("Must-attack team vulnerable on counter",
+             0.30, -15, {"spread", "moneyline"}),
+            ("Low xG variance inflates total uncertainty",
+             0.25, -10, {"total"}),
+            ("Lineup not confirmed — key player status unknown",
+             0.20, -10, {"any"}),
+        ],
+    }
+
+    cases = nemesis_cases.get(sport.upper(), nemesis_cases.get("NBA", []))
+    if not cases:
+        return {"counter": "No standard nemesis for this sport",
+                "probability": 0.10, "adjustment": 0, "remove": False}
+
+    market = bet.market_type
+    relevant = [c for c in cases if market in c[3] or "any" in c[3]]
+    if not relevant:
+        relevant = cases  # fallback
+
+    best = max(relevant, key=lambda x: x[1])
+    counter, prob, adj, _ = best
+
+    return {
+        "counter": counter,
+        "probability": prob,
+        "adjustment": adj if prob >= 0.30 else (adj // 2 if prob >= 0.20 else 0),
+        "remove": prob > 0.40,
+    }
 
 
 # ---------------------------------------------------------------------------

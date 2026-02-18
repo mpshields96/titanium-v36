@@ -41,10 +41,17 @@ API: The Odds API v4 — key in .streamlit/secrets.toml (never commit)
 - tests/test_validation.py: 45 tests, all passing
 - tests/test_odds_fetcher.py: 20 tests, all passing
 
-## WHAT'S STUBBED (TODO in Session 4+)
+## WHAT'S BUILT AND WORKING (as of Session 4)
+- bet_ranker.py: rank_bets(), _deduplicate_markets(), _apply_diversity(),
+  format_bet_table() — promoted from R&D, synthetic test + live pipeline clean
+- edge_calculator.py: calculate_sharp_score(), run_nemesis(), sharp_to_size()
+  added (ported from R&D). BetCandidate now has sharp_score, sharp_breakdown,
+  nemesis, simulation fields.
+- Full pipeline live-tested: fetch → parse_game_markets → rank_bets → format_bet_table ✓
+
+## WHAT'S STUBBED (TODO in Session 5+)
 - edge_calculator.py: calculate_edges() routing stub, all kill switch stubs
-- bet_ranker.py: rank_bets(), _deduplicate_markets(), _apply_diversity()
-- app.py: full pipeline wiring
+- app.py: full Streamlit UI wiring
 
 ## SESSION 3 GOAL ✅ COMPLETE
 1. ✅ Upgrade odds_fetcher.py: all_books(), fetch_game_lines(), QuotaTracker, retry logic
@@ -85,15 +92,28 @@ This works because books occasionally misprice relative to the consensus.
          Run: pytest tests/ -v and confirm all tests pass before we start."
 5. Wait for test confirmation, then state what you want to build
 
-## SESSION 4 GOAL
-1. Review R&D prop edge fix → promote parse_prop_markets() to v36 if clean
-2. Build bet_ranker.py: rank_bets(), _deduplicate_markets(), _apply_diversity(), top-10 output
-3. Implement kill switches in edge_calculator.py (nba, nfl, ncaab, soccer stubs → real logic)
-4. Wire calculate_edges() routing — calls parse_game_markets() per sport
-5. Full end-to-end pipeline test: fetch → parse → edge → rank → output table
+## SESSION 4 GOAL ✅ COMPLETE
+1. ✅ Promote bet_ranker.py from R&D (MAX_PER_SPORT=3, threshold=40, Sharp Score sort)
+2. ✅ Add calculate_sharp_score, run_nemesis, sharp_to_size to edge_calculator.py
+3. ✅ BetCandidate updated with sharp_score/sharp_breakdown/nemesis/simulation fields
+4. ✅ Full pipeline live-tested: fetch → edge → rank → format
+
+## CALIBRATION NOTES (important for Session 5)
+- Sharp Score threshold: 40 pre-nemesis (temp). Raise to 75 when KenPom/Barttorvik wired.
+- Nemesis penalty (-15 pts) is applied but no post-nemesis threshold — sort handles ranking.
+- RLM component always 0 — no line movement tracking yet.
+- efficiency_gap defaults to 8.0 (moderate) — real values come from KenPom in Session 5.
+- Kill switches (nba/nfl/ncaab/soccer) still stubbed — Session 5 work.
+
+## SESSION 5 GOAL
+1. Wire Streamlit app.py: button → fetch → edge → rank → display table
+2. Implement kill switches in edge_calculator.py
+3. Wire calculate_edges() routing function
+4. Mobile view polish (iPhone layout)
+5. Deployment checklist + push to Streamlit Cloud
 
 ## CURRENT STATE
-Last completed: Session 3 — full pipeline live-tested end-to-end against real NCAAB data
+Last completed: Session 4 — bet_ranker.py promoted, full pipeline working end-to-end
 Last git commit: pending (commit after updating this file)
 Tests: 65 total (45 math + 20 fetcher), all passing
-Next: Session 4 — see SESSION 4 GOAL above
+Next: Session 5 — see SESSION 5 GOAL above

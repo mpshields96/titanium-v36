@@ -1,70 +1,263 @@
 """
 bet_ranker.py — TITANIUM V36.1
 =================================
-Diversity engine and final bet selection logic. No API calls, no math, no UI.
+Diversity engine and final bet selection. No API calls, no math, no UI.
 
-Responsibilities:
-- Remove duplicate markets (never both sides of the same bet)
-- Rank all passing bets by edge % descending
-- Apply sport diversity rules so one sport doesn't dominate the slate
-- Return the top 10 bets maximum for display
+V36.1 NON-NEGOTIABLE RULES:
+- No duplicate markets: never both sides of the same bet
+- Max 10 bets returned total
+- Max 3 bets per sport
+- Max 60% of day's action from single sport
+- Nemesis protocol applied: remove if counter >40%, penalize if 30-40%
+- Final sort: Sharp Score descending
 
-NON-NEGOTIABLE RULES ENFORCED HERE:
-- No duplicate markets: if Patriots -3 appears, Seahawks +3 is dropped
-- Maximum 10 bets returned regardless of how many pass the edge filter
+Sharp Score threshold: 40 pts (temporary — raise to 75 when KenPom/Barttorvik
+efficiency data and situational data are wired in Session 5+).
 
 DO NOT add API calls, betting math, or Streamlit calls to this file.
 """
 
+from typing import Optional
 
-def rank_bets(bet_candidates: list) -> list:
+from edge_calculator import (
+    BetCandidate,
+    calculate_sharp_score,
+    run_nemesis,
+    sharp_to_size,
+)
+
+
+MAX_TOTAL_BETS = 10
+MAX_PER_SPORT = 3                   # V36.1 spec: 3 (not 4)
+SPORT_CONCENTRATION_CAP = 0.60      # Max 60% of bets from one sport
+SHARP_THRESHOLD = 40.0              # Pre-nemesis floor — raise to 75 in Session 5
+SHARP_FLOOR_POST_NEMESIS = 0.0      # No second cutoff — sort handles final ranking
+
+
+def rank_bets(
+    candidates: list[BetCandidate],
+    rlm_data: Optional[dict] = None,
+    efficiency_data: Optional[dict] = None,
+    situational_data: Optional[dict] = None,
+) -> list[BetCandidate]:
     """
-    Main entry point called by app.py.
-    Takes all bets that passed edge_calculator, deduplicates markets,
-    ranks by edge %, and returns the top 10.
+    Full ranking pipeline per V36.1.
+
+    Steps:
+    1. Score each candidate (Sharp Score)
+    2. Filter below SHARP_THRESHOLD
+    3. Apply nemesis protocol (remove >40% counter, penalise 30-40%)
+    4. Deduplicate markets (keep higher edge side)
+    5. Sort by sharp_score descending
+    6. Apply diversity cap (max 3 per sport, 60% concentration)
+    7. Return top 10
 
     Args:
-        bet_candidates: List of bet dicts from edge_calculator.calculate_edges().
-            Each dict has: {matchup, type, target, line, price, edge_pct,
-                            win_prob, kelly_size, signal, sport}
+        candidates:       All BetCandidates passing collar + 3.5% edge.
+        rlm_data:         Dict mapping event_id → bool (RLM confirmed).
+                          Pass None when no line movement data available.
+        efficiency_data:  Dict mapping event_id → float (efficiency gap 0-20).
+                          Defaults to 8.0 per game (moderate) when None.
+        situational_data: Dict mapping event_id → dict with rest/injury/etc.
+                          Defaults to zeros when None.
 
     Returns:
-        List of up to 10 bet dicts, sorted by edge_pct descending.
-        Suitable for direct display as a Streamlit dataframe.
+        Ranked list of up to 10 BetCandidates with sharp_score,
+        sharp_breakdown, nemesis, and signal fields populated.
     """
-    # TODO Session 4: Implement full ranking pipeline
-    pass
+    if not candidates:
+        return []
+
+    rlm_data = rlm_data or {}
+    efficiency_data = efficiency_data or {}
+    situational_data = situational_data or {}
+
+    # --- Step 1: Score all candidates ---
+    scored = []
+    for bet in candidates:
+        rlm = rlm_data.get(bet.event_id, False)
+        eff_gap = efficiency_data.get(bet.event_id, 8.0)   # default moderate
+
+        sit = situational_data.get(bet.event_id, {})
+        rest = sit.get("rest_edge", 0.0)
+        injury = sit.get("injury_leverage", 0.0)
+        motivation = sit.get("motivation", 0.0)
+        matchup = sit.get("matchup_score", 0.0)
+
+        score, breakdown = calculate_sharp_score(
+            edge_pct=bet.edge_pct,
+            rlm_confirmed=rlm,
+            efficiency_gap=eff_gap,
+            rest_edge=rest,
+            injury_leverage=injury,
+            motivation=motivation,
+            matchup_score=matchup,
+        )
+
+        bet.sharp_score = score
+        bet.sharp_breakdown = breakdown
+
+        if score < SHARP_THRESHOLD:
+            continue
+
+        scored.append(bet)
+
+    # --- Step 2: Nemesis protocol ---
+    post_nemesis = []
+    for bet in scored:
+        nemesis = run_nemesis(bet, bet.sport)
+        bet.nemesis = nemesis
+
+        if nemesis.get("remove", False):
+            continue  # Counter prob > 40% — drop entirely
+
+        # Apply score penalty for 30-40% counter
+        adj = nemesis.get("adjustment", 0)
+        bet.sharp_score = max(0.0, bet.sharp_score + adj)
+
+        post_nemesis.append(bet)
+
+    # --- Step 3: Deduplicate markets ---
+    deduped = _deduplicate_markets(post_nemesis)
+
+    # --- Step 4: Sort by sharp score ---
+    deduped.sort(key=lambda b: b.sharp_score, reverse=True)
+
+    # --- Step 5: Apply diversity cap ---
+    diversified = _apply_diversity(deduped, max_per_sport=MAX_PER_SPORT)
+
+    # --- Step 6: Return top 10 with tier labels ---
+    final = diversified[:MAX_TOTAL_BETS]
+    for bet in final:
+        bet.signal = sharp_to_size(bet.sharp_score, is_prop=(bet.market_type == "prop"))
+
+    return final
 
 
-def _deduplicate_markets(bets: list) -> list:
+def _deduplicate_markets(bets: list[BetCandidate]) -> list[BetCandidate]:
     """
-    Remove one side of any bet where both sides of the same market appear.
-    Rule: keep the side with the higher edge_pct. Drop the other.
+    Remove one side when both sides of the same market appear.
+    Rule: keep the side with higher edge_pct.
 
-    Example: If Patriots -3 (edge 4.2%) and Seahawks +3 (edge 3.8%) both pass,
-    keep Patriots -3 and drop Seahawks +3.
-
-    Args:
-        bets: List of bet dicts, potentially containing both sides of markets.
-
-    Returns:
-        List of bet dicts with no duplicate markets.
+    Market identity: (event_id, market_type, abs(line))
+    Example: Celtics -4.5 and Wizards +4.5 → same market, keep higher edge.
+    Moneylines: both ML bets from same game share event_id + "moneyline" + 0.0 → deduped.
     """
-    # TODO Session 4: Implement
-    pass
+    market_groups: dict[tuple, list[BetCandidate]] = {}
+    for bet in bets:
+        key = (bet.event_id, bet.market_type, round(abs(bet.line), 1))
+        market_groups.setdefault(key, []).append(bet)
+
+    result = []
+    for group in market_groups.values():
+        if len(group) == 1:
+            result.append(group[0])
+        else:
+            result.append(max(group, key=lambda b: b.edge_pct))
+
+    return result
 
 
-def _apply_diversity(bets: list, max_per_sport: int = 4) -> list:
+def _apply_diversity(
+    bets: list[BetCandidate],
+    max_per_sport: int = MAX_PER_SPORT,
+) -> list[BetCandidate]:
     """
-    Ensure no single sport dominates the final output.
-    After deduplication and ranking, cap each sport at max_per_sport entries.
+    Cap each sport at max_per_sport bets.
+    Also enforce concentration cap: no sport >60% of final slate.
 
-    Args:
-        bets: Deduplicated, ranked list of bet dicts.
-        max_per_sport: Maximum bets from any single sport (default 4).
+    Assumes bets are already sorted by sharp_score descending so
+    we always drop the lowest-scoring bet when a sport hits its cap.
 
-    Returns:
-        Filtered list respecting per-sport cap.
+    Concentration cap only enforced once slate has 5+ bets — at lower
+    counts the per-sport cap is the effective guard.
     """
-    # TODO Session 4: Implement
-    pass
+    sport_counts: dict[str, int] = {}
+    result = []
+
+    for bet in bets:
+        sport = bet.sport
+        count = sport_counts.get(sport, 0)
+
+        if count >= max_per_sport:
+            continue
+
+        count_after = count + 1
+        total_after = len(result) + 1
+        if total_after >= 5:
+            if count_after / total_after > SPORT_CONCENTRATION_CAP:
+                continue
+
+        sport_counts[sport] = count + 1
+        result.append(bet)
+
+    return result
+
+
+def format_bet_table(bets: list[BetCandidate]) -> str:
+    """
+    Format ranked bets as a CLI/Streamlit-ready string.
+    One block per bet with Sharp Score breakdown and nemesis note.
+    """
+    if not bets:
+        return "No bets passed all filters today."
+
+    lines = []
+    lines.append("=" * 90)
+    lines.append("TITANIUM V36.1 | RANKED BET SLATE")
+    lines.append("=" * 90)
+
+    tier_labels = {
+        "NUCLEAR_2.0U": "[NUCLEAR]",
+        "STANDARD_1.0U": "[STANDARD]",
+        "LEAN_0.5U": "[LEAN]",
+        "PASS": "[PASS]",
+    }
+
+    for i, bet in enumerate(bets, 1):
+        tier = sharp_to_size(bet.sharp_score, bet.market_type == "prop")
+        label = tier_labels.get(tier, "")
+
+        lines.append(f"\n#{i} {label} {bet.matchup}")
+        lines.append(f"   {bet.sport} | {bet.market_type.upper()} | {bet.target}")
+        lines.append(f"   Price: {bet.price:+d}  |  Book: {bet.book}")
+        lines.append(
+            f"   Edge: Model {bet.win_prob:.1%} vs Market {bet.market_implied:.1%}"
+            f" | EDGE {bet.edge_pct:+.1%}"
+        )
+        lines.append(
+            f"   Sharp Score: {bet.sharp_score:.0f}/100"
+            f" | Edge:{bet.sharp_breakdown.get('edge', 0):.0f}"
+            f" RLM:{bet.sharp_breakdown.get('rlm', 0):.0f}"
+            f" Eff:{bet.sharp_breakdown.get('efficiency', 0):.0f}"
+            f" Sit:{bet.sharp_breakdown.get('situational', 0):.0f}"
+        )
+        lines.append(f"   Kelly Size: {bet.kelly_size:.2f}u")
+
+        if bet.simulation:
+            sim = bet.simulation
+            lines.append(
+                f"   Monte Carlo: Cover {sim.cover_probability:.1%}"
+                f" | CI [{sim.ci_10:+.1f}, {sim.ci_90:+.1f}]"
+                f" | Vol {sim.volatility:.1f}"
+            )
+
+        if bet.nemesis:
+            nem = bet.nemesis
+            lines.append(
+                f"   Nemesis: {nem.get('counter', '?')}"
+                f" | Prob {nem.get('probability', 0):.0%}"
+                f" | Adj {nem.get('adjustment', 0):+d}pts"
+            )
+
+        if bet.commence_time:
+            lines.append(f"   Game time: {bet.commence_time}")
+
+    lines.append("\n" + "=" * 90)
+    lines.append(
+        f"Total bets: {len(bets)} | Sizes: "
+        + ", ".join(f"{b.kelly_size:.2f}u" for b in bets)
+    )
+    lines.append("=" * 90)
+
+    return "\n".join(lines)
