@@ -51,6 +51,8 @@ class BetCandidate:
     sharp_breakdown: dict = field(default_factory=dict)
     nemesis: dict = field(default_factory=dict)
     simulation: object = None   # Optional SimulationResult from originator_engine
+    # Set by calculate_edges() kill switch routing — Session 7
+    kill_reason: str = ""       # "" = no kill. "FLAG: ..." = warning kept. "KILL: ..." = dropped (won't appear)
 
 
 # ---------------------------------------------------------------------------
@@ -796,3 +798,157 @@ def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
             ))
 
     return candidates
+
+
+# ---------------------------------------------------------------------------
+# calculate_edges — main pipeline entry point (Session 7)
+# ---------------------------------------------------------------------------
+
+# Sport routing: friendly name → odds_fetcher sport_key + kill switch family.
+# family=None means no kill switch for that sport (NHL, MLB pass through).
+_SPORT_ROUTING: dict[str, dict] = {
+    "NBA":        {"sport_key": "basketball_nba",            "family": "nba"},
+    "NCAAB":      {"sport_key": "basketball_ncaab",          "family": "ncaab"},
+    "NFL":        {"sport_key": "americanfootball_nfl",      "family": "nfl"},
+    "NCAAF":      {"sport_key": "americanfootball_ncaaf",    "family": "nfl"},
+    "NHL":        {"sport_key": "icehockey_nhl",             "family": None},
+    "MLB":        {"sport_key": "baseball_mlb",              "family": None},
+    "EPL":        {"sport_key": "soccer_epl",                "family": "soccer"},
+    "LIGUE1":     {"sport_key": "soccer_france_ligue_one",   "family": "soccer"},
+    "BUNDESLIGA": {"sport_key": "soccer_germany_bundesliga", "family": "soccer"},
+    "SERIE_A":    {"sport_key": "soccer_italy_serie_a",      "family": "soccer"},
+    "LA_LIGA":    {"sport_key": "soccer_spain_la_liga",      "family": "soccer"},
+    "MLS":        {"sport_key": "soccer_usa_mls",            "family": "soccer"},
+}
+
+
+def _apply_nba_kill(bet: BetCandidate) -> tuple[bool, str]:
+    """Route an NBA BetCandidate through the kill switch via stub feed."""
+    from data.kill_switch_feed import get_nba_kill_inputs
+    parts = bet.matchup.split(" @ ", 1)
+    away = parts[0].strip() if len(parts) == 2 else ""
+    home = parts[1].strip() if len(parts) == 2 else ""
+    bet_team = home if bet.target.startswith(home) else away
+    opp_team = away if bet_team == home else home
+    inputs = get_nba_kill_inputs(
+        bet_team=bet_team, opp_team=opp_team,
+        spread=bet.line, market_type=bet.market_type,
+    )
+    return nba_kill_switch(**{k: v for k, v in inputs.items() if k != "data_live"})
+
+
+def _apply_nfl_kill(bet: BetCandidate) -> tuple[bool, str]:
+    """Route an NFL BetCandidate through the kill switch via stub feed."""
+    from data.kill_switch_feed import get_nfl_kill_inputs
+    parts = bet.matchup.split(" @ ", 1)
+    home = parts[1].strip() if len(parts) == 2 else ""
+    total = bet.line if bet.market_type == "total" else 0.0
+    inputs = get_nfl_kill_inputs(home_team=home, total=total, market_type=bet.market_type)
+    return nfl_kill_switch(**{k: v for k, v in inputs.items() if k != "data_live"})
+
+
+def _apply_ncaab_kill(bet: BetCandidate) -> tuple[bool, str]:
+    """Route an NCAAB BetCandidate through the kill switch via stub feed."""
+    from data.kill_switch_feed import get_ncaab_kill_inputs
+    parts = bet.matchup.split(" @ ", 1)
+    away = parts[0].strip() if len(parts) == 2 else ""
+    home = parts[1].strip() if len(parts) == 2 else ""
+    bet_team = home if bet.target.startswith(home) else away
+    opp_team = away if bet_team == home else home
+    is_away = bet_team == away
+    inputs = get_ncaab_kill_inputs(
+        bet_team=bet_team, opp_team=opp_team,
+        is_away=is_away, market_type=bet.market_type,
+    )
+    return ncaab_kill_switch(**{k: v for k, v in inputs.items() if k != "data_live"})
+
+
+def _apply_soccer_kill(bet: BetCandidate) -> tuple[bool, str]:
+    """Route a soccer BetCandidate through the kill switch via stub feed."""
+    from data.kill_switch_feed import get_soccer_kill_inputs
+    # No open_price available at parse time — drift detection is passive (returns 0.0)
+    inputs = get_soccer_kill_inputs(
+        open_price=None, current_price=float(bet.price), market_type=bet.market_type,
+    )
+    return soccer_kill_switch(**{k: v for k, v in inputs.items() if k != "data_live"})
+
+
+# Kill switch router: sport family → routing function
+_KILL_ROUTER = {
+    "nba":    _apply_nba_kill,
+    "ncaab":  _apply_ncaab_kill,
+    "nfl":    _apply_nfl_kill,
+    "soccer": _apply_soccer_kill,
+}
+
+
+def calculate_edges(
+    sport: str,
+    raw_games: Optional[list] = None,
+    louisiana_mode: bool = True,
+    min_edge: float = 0.035,
+) -> list[BetCandidate]:
+    """
+    Main pipeline entry point. Fetch → parse → kill switch → return candidates.
+
+    app.py calls this once per sport, then passes all candidates to rank_bets().
+    Example:
+        candidates  = calculate_edges("NBA")
+        candidates += calculate_edges("NCAAB")
+        ranked = rank_bets(candidates, efficiency_data=eff_data)
+
+    Args:
+        sport:        Friendly sport name: "NBA", "NCAAB", "NFL", "EPL", etc.
+                      Raises ValueError for unknown sport.
+        raw_games:    Pre-fetched game list (tests/offline only). If None,
+                      fetch_game_lines() is called automatically (1 API call).
+        louisiana_mode: Reserved for future prop gating. Default True.
+        min_edge:     Minimum edge threshold before kill switch runs. Default 3.5%.
+
+    Returns:
+        Live BetCandidate list — parsed, min_edge met, kill switch passed.
+        Killed candidates are excluded. FLAG candidates are included with
+        kill_reason set (non-empty string) for UI surfacing.
+    """
+    from odds_fetcher import fetch_game_lines
+
+    routing = _SPORT_ROUTING.get(sport.upper())
+    if routing is None:
+        raise ValueError(
+            f"Unknown sport '{sport}'. Valid: {sorted(_SPORT_ROUTING.keys())}"
+        )
+
+    sport_key = routing["sport_key"]
+    kill_family = routing["family"]
+
+    # Step 1: Fetch or accept pre-fetched games
+    if raw_games is None:
+        raw_games = fetch_game_lines(sport_key)
+
+    if not raw_games:
+        return []
+
+    # Step 2: Parse all games, apply min_edge filter before kill switch
+    all_candidates: list[BetCandidate] = []
+    for game in raw_games:
+        parsed = parse_game_markets(game, sport=sport.upper())
+        all_candidates.extend(c for c in parsed if c.edge_pct >= min_edge)
+
+    if not all_candidates:
+        return []
+
+    # Step 3: Run kill switches, tag and filter
+    kill_fn = _KILL_ROUTER.get(kill_family) if kill_family else None
+    live: list[BetCandidate] = []
+
+    for bet in all_candidates:
+        if kill_fn is not None:
+            killed, reason = kill_fn(bet)
+            if killed:
+                bet.kill_reason = reason
+                continue  # drop — excluded from output
+            elif reason:
+                bet.kill_reason = reason   # FLAG — kept, surfaced in UI
+        live.append(bet)
+
+    return live
