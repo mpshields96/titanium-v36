@@ -4,7 +4,7 @@ app.py — TITANIUM V36.1
 Streamlit UI ONLY. No business logic lives here.
 
 Responsibilities:
-- Render sport selector (toggle-style, grouped)
+- Render sport selector (toggle-style chip grid)
 - Render EXECUTE button
 - Call calculate_edges, rank_bets, build_efficiency_data in sequence
 - Display ranked bet cards with tier color coding
@@ -37,288 +37,561 @@ SPORT_GROUPS = {
 
 DEFAULT_SPORTS = {"NBA", "NCAAB"}
 
-TIER_COLORS = {
-    "NUCLEAR_2.0U":  "#F59E0B",
-    "STANDARD_1.0U": "#0D9488",
-    "LEAN_0.5U":     "#475569",
-    "PASS":          "#475569",
-}
-
-TIER_LABELS = {
-    "NUCLEAR_2.0U":  "NUCLEAR",
-    "STANDARD_1.0U": "STANDARD",
-    "LEAN_0.5U":     "LEAN",
-    "PASS":          "PASS",
-}
-
-TIER_SIZES = {
-    "NUCLEAR_2.0U":  "2.0U",
-    "STANDARD_1.0U": "1.0U",
-    "LEAN_0.5U":     "0.5U",
-    "PASS":          "–",
-}
-
 
 # ---------------------------------------------------------------------------
-# CSS injection
+# CSS — Precision Instrument aesthetic
+# IBM Plex Mono: authoritative data font, designed for terminals and dashboards
+# Palette: slate navy base, warm gold accent, cool teal secondary
 # ---------------------------------------------------------------------------
 
 CUSTOM_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
 :root {
-    --bg-root:    #0A0A0F;
-    --bg-card:    #12121A;
-    --bg-card-2:  #1A1A26;
-    --amber:      #F59E0B;
-    --amber-dim:  #92620A;
-    --teal:       #0D9488;
-    --slate:      #475569;
-    --text-pri:   #E2E8F0;
-    --text-dim:   #94A3B8;
-    --text-muted: #64748B;
-    --mono:       'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    /* Base */
+    --bg-root:       #0D1117;
+    --bg-card:       #161B22;
+    --bg-card-2:     #1C2433;
+    --bg-chip:       #1C2433;
+    --bg-chip-on:    #1E2D1A;
+
+    /* Accent */
+    --gold:          #E8A020;
+    --gold-dim:      #7A4A10;
+    --gold-glow:     rgba(232, 160, 32, 0.15);
+    --teal:          #14B8A6;
+    --teal-dim:      rgba(20, 184, 166, 0.15);
+    --green:         #22C55E;
+
+    /* Text */
+    --text-pri:      #E6EDF3;
+    --text-sec:      #8B949E;
+    --text-dim:      #6E7681;
+    --text-on-gold:  #0D0D0D;
+
+    /* Border */
+    --border:        #21262D;
+    --border-strong: #30363D;
+
+    /* Fonts */
+    --mono: 'IBM Plex Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --sans: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
-/* Root */
-html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+/* ── Reset & Root ─────────────────────────────────────────────── */
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
     background-color: var(--bg-root) !important;
     color: var(--text-pri) !important;
+    font-family: var(--mono) !important;
 }
 
-[data-testid="stHeader"] { background-color: var(--bg-root) !important; }
-[data-testid="stSidebar"] { display: none !important; }
+[data-testid="stHeader"]         { background-color: var(--bg-root) !important; }
+[data-testid="stSidebar"]        { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
+[data-testid="stDecoration"]     { display: none !important; }
+footer                           { display: none !important; }
 
-/* Main content width */
+/* ── Layout ───────────────────────────────────────────────────── */
 .block-container {
-    max-width: 720px !important;
-    padding-top: 2rem !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    max-width: 680px !important;
+    padding: 2rem 1.25rem 3rem !important;
 }
 
-/* Typography */
-h1, h2, h3, h4 {
+/* ── Typography base ──────────────────────────────────────────── */
+h1, h2, h3, h4, p, span, label, div {
     font-family: var(--mono) !important;
     color: var(--text-pri) !important;
-    letter-spacing: 0.08em !important;
 }
 
-p, span, label, div {
-    color: var(--text-pri) !important;
+/* ── TITANIUM Wordmark ────────────────────────────────────────── */
+/* Each letter is an individual span — no word-wrap, no letter-spacing break */
+.tm-wordmark {
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
-
-/* Header block */
-.t-header {
+.tm-letter {
     font-family: var(--mono);
-    margin-bottom: 0.25rem;
-}
-.t-header .t-title {
-    font-size: 1.6rem;
+    font-size: clamp(1.6rem, 6vw, 2.4rem);
     font-weight: 700;
-    letter-spacing: 0.35em;
     color: var(--text-pri);
+    display: inline-block;
+    width: 1ch;
+    text-align: center;
+    line-height: 1;
 }
-.t-header .t-rule {
+.tm-letter-space {
+    display: inline-block;
+    width: 0.38em;
+}
+.tm-rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold) 0%, transparent 100%);
+    margin: 8px 0 6px;
+    opacity: 0.7;
     border: none;
-    border-top: 1px solid var(--amber);
-    margin: 6px 0 4px 0;
-    opacity: 0.6;
 }
-.t-header .t-sub {
-    font-size: 0.72rem;
+.tm-sub {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 300;
+    letter-spacing: 0.28em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+}
+.tm-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+    padding: 1px 6px 1px;
+    margin-left: 10px;
+    vertical-align: middle;
+    position: relative;
+    top: -2px;
+}
+
+/* ── Section label ────────────────────────────────────────────── */
+.t-section-label {
+    font-size: 0.58rem;
+    font-weight: 600;
     letter-spacing: 0.22em;
     color: var(--text-dim);
-}
-
-/* Sport group label */
-.sport-group-label {
-    font-family: var(--mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
-    color: var(--text-muted);
     text-transform: uppercase;
-    margin-bottom: 2px;
-    margin-top: 10px;
+    margin-bottom: 8px;
+    margin-top: 20px;
 }
 
-/* Execute button */
-[data-testid="stButton"] > button {
-    width: 100%;
-    background-color: var(--amber) !important;
-    color: #0A0A0F !important;
-    border: none !important;
-    border-radius: 0 !important;
-    font-family: var(--mono) !important;
-    font-size: 0.85rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.25em !important;
-    padding: 0.75rem 1rem !important;
-    text-transform: uppercase !important;
-    transition: opacity 0.15s ease !important;
+/* ── Sport chip grid ──────────────────────────────────────────── */
+/* We render chips via HTML + checkbox hack */
+.chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
 }
-[data-testid="stButton"] > button:hover { opacity: 0.88 !important; }
+.chip {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    padding: 5px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    color: var(--text-sec);
+    background: var(--bg-chip);
+    user-select: none;
+}
+.chip.active {
+    background: var(--bg-chip-on);
+    border-color: var(--green);
+    color: var(--green);
+}
+
+/* ── Streamlit checkbox — hidden but functional ───────────────── */
+[data-testid="stCheckbox"] {
+    display: inline-flex !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+[data-testid="stCheckbox"] > label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 5px 12px !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 3px !important;
+    background: var(--bg-chip) !important;
+    cursor: pointer !important;
+    transition: all 0.12s ease !important;
+    font-family: var(--mono) !important;
+    font-size: 0.7rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.08em !important;
+    color: var(--text-sec) !important;
+    line-height: 1.2 !important;
+    min-height: unset !important;
+    margin: 0 !important;
+}
+[data-testid="stCheckbox"] > label:has(input:checked) {
+    background: var(--bg-chip-on) !important;
+    border-color: var(--green) !important;
+    color: var(--green) !important;
+}
+/* Hide the actual checkbox widget, keep it clickable */
+[data-testid="stCheckbox"] input[type="checkbox"] {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+/* Remove the Streamlit checkbox box graphic */
+[data-testid="stCheckbox"] div[data-baseweb="checkbox"] > div:first-child {
+    display: none !important;
+}
+[data-testid="stCheckbox"] .st-emotion-cache-1kyxreq,
+[data-testid="stCheckbox"] [class*="checkbox"] > div:first-child {
+    display: none !important;
+}
+
+/* ── Execute Button ───────────────────────────────────────────── */
+[data-testid="stButton"] > button {
+    width: 100% !important;
+    background: var(--gold) !important;
+    color: var(--text-on-gold) !important;
+    border: none !important;
+    border-radius: 2px !important;
+    font-family: var(--mono) !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.3em !important;
+    padding: 0.85rem 1rem !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    transition: opacity 0.15s ease, background 0.15s ease !important;
+    margin-top: 12px !important;
+}
+[data-testid="stButton"] > button:hover:not(:disabled) {
+    opacity: 0.9 !important;
+}
 [data-testid="stButton"] > button:disabled {
-    background-color: var(--amber-dim) !important;
-    color: #3D2E0A !important;
+    background: #2A2010 !important;
+    color: #5A4A20 !important;
     cursor: not-allowed !important;
 }
-
-/* Checkboxes — sport toggles */
-[data-testid="stCheckbox"] label {
-    font-family: var(--mono) !important;
-    font-size: 0.78rem !important;
-    letter-spacing: 0.04em !important;
-    color: var(--text-dim) !important;
+/* Scanning animation */
+[data-testid="stButton"] > button[aria-disabled="true"].scanning {
+    background: #1A1500 !important;
+    color: var(--gold) !important;
+    border: 1px solid var(--gold-dim) !important;
+    animation: pulse-border 1.5s ease infinite !important;
 }
-[data-testid="stCheckbox"] input:checked + div {
-    color: var(--amber) !important;
+@keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+    50%       { box-shadow: 0 0 0 6px transparent; }
 }
 
-/* Progress */
+/* ── Progress bar ─────────────────────────────────────────────── */
 [data-testid="stProgressBar"] > div > div {
-    background-color: var(--amber) !important;
+    background-color: var(--gold) !important;
+    border-radius: 1px !important;
+}
+[data-testid="stProgressBar"] > div {
+    background-color: var(--border) !important;
+    border-radius: 1px !important;
+    height: 2px !important;
 }
 
-/* Status / spinner */
-[data-testid="stStatusWidget"] {
+/* ── Status widget ────────────────────────────────────────────── */
+[data-testid="stStatusWidget"],
+[data-testid="stExpander"] {
     background-color: var(--bg-card-2) !important;
-    border: 1px solid var(--slate) !important;
-    border-radius: 0 !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 2px !important;
+    font-family: var(--mono) !important;
+    font-size: 0.75rem !important;
+    color: var(--text-sec) !important;
+}
+
+/* ── Alert / Info blocks ──────────────────────────────────────── */
+[data-testid="stAlert"] {
+    background-color: var(--bg-card) !important;
+    border-radius: 2px !important;
+    border: 1px solid var(--border-strong) !important;
+    border-left: 3px solid var(--border-strong) !important;
     font-family: var(--mono) !important;
     font-size: 0.78rem !important;
+    color: var(--text-sec) !important;
+}
+[data-testid="stAlert"][data-type="info"] {
+    border-left-color: var(--teal) !important;
+}
+[data-testid="stAlert"][data-type="error"] {
+    border-left-color: #EF4444 !important;
+}
+[data-testid="stAlert"][data-type="warning"] {
+    border-left-color: var(--gold) !important;
 }
 
-/* Divider */
+/* ── Horizontal rule ──────────────────────────────────────────── */
 hr {
-    border-color: #1E1E2E !important;
-    margin: 1rem 0 !important;
+    border: none !important;
+    border-top: 1px solid var(--border) !important;
+    margin: 1.25rem 0 !important;
 }
 
-/* Info / warning / error alerts */
-[data-testid="stAlert"] {
-    background-color: var(--bg-card-2) !important;
-    border-radius: 0 !important;
-    font-family: var(--mono) !important;
-    font-size: 0.8rem !important;
-    border-left: 3px solid var(--slate) !important;
-}
-
-/* Bet card styles */
+/* ── Bet cards ────────────────────────────────────────────────── */
 .bet-card {
     background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 4px;
-    padding: 14px 16px;
+    padding: 16px 18px 14px;
     margin-bottom: 10px;
     font-family: var(--mono);
     position: relative;
+    overflow: hidden;
+    transition: border-color 0.15s ease;
 }
-.bet-card.nuclear {
-    border-left: 3px solid #F59E0B;
-    box-shadow: -2px 0 12px rgba(245, 158, 11, 0.12);
+.bet-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 4px 0 0 4px;
 }
-.bet-card.standard {
-    border-left: 3px solid #0D9488;
-    box-shadow: -2px 0 8px rgba(13, 148, 136, 0.08);
-}
-.bet-card.lean {
-    border-left: 3px solid #475569;
-}
+.bet-card.nuclear::before  { background: var(--gold); }
+.bet-card.standard::before { background: var(--teal); }
+.bet-card.lean::before     { background: var(--border-strong); }
 
-.bc-rank {
-    font-size: 0.62rem;
+.bet-card.nuclear  { border-color: rgba(232, 160, 32, 0.18); }
+.bet-card.standard { border-color: rgba(20, 184, 166, 0.15); }
+
+/* Card header row */
+.bc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.bc-rank-meta {
+    font-size: 0.6rem;
+    font-weight: 500;
     letter-spacing: 0.18em;
-    color: var(--text-muted);
-    margin-bottom: 4px;
-}
-.bc-tier-nuclear { color: #F59E0B; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.18em; }
-.bc-tier-standard { color: #0D9488; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.18em; }
-.bc-tier-lean { color: #475569; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.18em; }
-
-.bc-matchup {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-pri);
-    margin: 4px 0 2px 0;
-    letter-spacing: 0.02em;
-}
-.bc-target {
-    font-size: 0.82rem;
     color: var(--text-dim);
-    margin-bottom: 8px;
-}
-.bc-meta {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    letter-spacing: 0.04em;
-    margin-top: 2px;
-}
-.bc-stats {
-    display: flex;
-    gap: 16px;
-    margin-top: 8px;
-    flex-wrap: wrap;
-}
-.bc-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}
-.bc-stat-label {
-    font-size: 0.58rem;
-    letter-spacing: 0.15em;
-    color: var(--text-muted);
     text-transform: uppercase;
 }
-.bc-stat-value {
-    font-size: 0.85rem;
+.bc-tier {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    padding: 2px 8px;
+    border-radius: 2px;
+}
+.bc-tier.nuclear  {
+    background: rgba(232, 160, 32, 0.12);
+    color: var(--gold);
+    border: 1px solid rgba(232, 160, 32, 0.3);
+}
+.bc-tier.standard {
+    background: rgba(20, 184, 166, 0.1);
+    color: var(--teal);
+    border: 1px solid rgba(20, 184, 166, 0.25);
+}
+.bc-tier.lean {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border-strong);
+}
+
+/* Matchup */
+.bc-matchup {
+    font-size: 1.0rem;
+    font-weight: 600;
+    color: var(--text-pri);
+    margin-bottom: 3px;
+    line-height: 1.3;
+}
+.bc-target-line {
+    font-size: 0.8rem;
+    color: var(--text-sec);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.bc-price {
     font-weight: 600;
     color: var(--text-pri);
 }
-.bc-stat-value.amber { color: #F59E0B; }
-.bc-stat-value.teal  { color: #0D9488; }
-
-.bc-nemesis {
-    margin-top: 10px;
-    padding: 7px 10px;
-    background: #0D0D16;
-    border-left: 2px solid #1E293B;
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    letter-spacing: 0.02em;
-    font-style: italic;
-}
-.bc-flag {
-    display: inline-block;
-    margin-top: 8px;
-    padding: 3px 8px;
-    background: rgba(245, 158, 11, 0.12);
-    border: 1px solid rgba(245, 158, 11, 0.3);
+.bc-book {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    padding: 1px 6px;
+    border: 1px solid var(--border-strong);
     border-radius: 2px;
-    font-size: 0.65rem;
+}
+
+/* Stats grid */
+.bc-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px 4px;
+    padding: 10px 0 8px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+}
+.bc-stat-label {
+    font-size: 0.55rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+}
+.bc-stat-value {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-pri);
+    line-height: 1.1;
+}
+.bc-stat-value.v-gold  { color: var(--gold); }
+.bc-stat-value.v-teal  { color: var(--teal); }
+.bc-stat-value.v-green { color: var(--green); }
+
+/* Nemesis */
+.bc-nemesis {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+    margin-top: 6px;
+    padding: 7px 10px;
+    background: #0D1117;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+}
+.bc-nemesis::before {
+    content: '▶ ';
+    color: var(--text-dim);
+    font-size: 0.55rem;
+}
+
+/* Flag warning */
+.bc-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 4px 9px;
+    background: rgba(232, 160, 32, 0.08);
+    border: 1px solid rgba(232, 160, 32, 0.25);
+    border-radius: 2px;
+    font-size: 0.63rem;
+    font-weight: 500;
     letter-spacing: 0.1em;
-    color: #F59E0B;
+    color: var(--gold);
     text-transform: uppercase;
 }
+.bc-flag::before { content: '⚑ '; }
 
-/* Timestamp / quota */
-.t-footer {
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--text-muted);
+/* ── Results header ───────────────────────────────────────────── */
+.results-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+.results-count {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-pri);
+}
+.results-info {
+    font-size: 0.62rem;
+    color: var(--text-dim);
     letter-spacing: 0.06em;
-    margin-top: 1.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #1E1E2E;
 }
 
-/* Mobile */
-@media (max-width: 640px) {
-    .bc-stats { gap: 10px; }
-    .bc-matchup { font-size: 0.85rem; }
-    .t-header .t-title { font-size: 1.25rem; letter-spacing: 0.22em; }
+/* ── Empty state ──────────────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+.empty-state-icon {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+    opacity: 0.3;
+}
+.empty-state-text {
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    line-height: 1.6;
+}
+
+/* ── Well-priced state ────────────────────────────────────────── */
+.well-priced {
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    border-left: 3px solid var(--teal);
+    text-align: center;
+}
+.well-priced-main {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--teal);
+    margin-bottom: 6px;
+}
+.well-priced-sub {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+}
+
+/* ── Footer ───────────────────────────────────────────────────── */
+.t-footer {
+    margin-top: 2rem;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.t-footer-item {
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+}
+.t-footer-dot {
+    color: var(--border-strong);
+    margin: 0 4px;
+}
+
+/* ── Mobile refinements ───────────────────────────────────────── */
+@media (max-width: 600px) {
+    .block-container {
+        padding: 1.25rem 0.85rem 3rem !important;
+    }
+    .bc-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px 8px;
+    }
+    .bc-matchup { font-size: 0.9rem; }
+    .tm-letter  { font-size: clamp(1.3rem, 6vw, 1.8rem); }
+}
+
+/* ── Column layout flush ──────────────────────────────────────── */
+[data-testid="stHorizontalBlock"] {
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+}
+[data-testid="column"] {
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
 }
 </style>
 """
@@ -328,108 +601,150 @@ hr {
 # Rendering helpers
 # ---------------------------------------------------------------------------
 
-def _tier_class(signal: str) -> str:
-    if "NUCLEAR" in signal:
+def _get_tier(sharp_score: float) -> str:
+    """Return tier key from sharp score."""
+    if sharp_score >= 90:
         return "nuclear"
-    if "STANDARD" in signal:
+    if sharp_score >= 80:
         return "standard"
     return "lean"
 
 
-def _tier_label_html(signal: str) -> str:
-    tier = TIER_LABELS.get(signal, "LEAN")
-    size = TIER_SIZES.get(signal, "0.5U")
-    css_class = f"bc-tier-{_tier_class(signal)}"
-    return f'<span class="{css_class}">{tier} &nbsp;{size}</span>'
+def _get_size_label(sharp_score: float) -> str:
+    if sharp_score >= 90:
+        return "2.0U"
+    if sharp_score >= 80:
+        return "1.0U"
+    return "0.5U"
 
 
-def render_bet_card(rank: int, bet) -> str:
-    """Build an HTML bet card from a BetCandidate object."""
-    tier_class = _tier_class(bet.signal)
-    tier_html  = _tier_label_html(bet.signal)
-
-    edge_pct   = f"{bet.edge_pct * 100:.1f}%"
-    sharp      = f"{bet.sharp_score:.0f}"
-    kelly      = f"{bet.kelly_size:.2f}u"
-    price      = f"{bet.price:+d}"
-    win_prob   = f"{bet.win_prob * 100:.1f}%"
-
-    edge_color = "amber" if bet.edge_pct >= 0.07 else ("teal" if bet.edge_pct >= 0.05 else "")
-    sharp_color = "amber" if bet.sharp_score >= 90 else ("teal" if bet.sharp_score >= 80 else "")
-
-    nemesis_html = ""
-    if bet.nemesis and bet.nemesis.get("counter"):
-        nem = bet.nemesis
-        prob_str = f"{nem.get('probability', 0) * 100:.0f}%"
-        counter  = nem.get("counter", "")
-        adj      = nem.get("adjustment", 0)
-        adj_str  = f"{adj:+d}pts" if adj else "—"
-        nemesis_html = (
-            f'<div class="bc-nemesis">'
-            f'NEMESIS ({prob_str} counter probability, {adj_str}) &mdash; {counter}'
-            f'</div>'
-        )
-
-    flag_html = ""
-    if bet.kill_reason and bet.kill_reason.startswith("FLAG"):
-        flag_text = bet.kill_reason.replace("FLAG: ", "").replace("FLAG:", "")
-        flag_html = f'<div class="bc-flag">&#9888; {flag_text}</div>'
-
-    book_short = bet.book.split("(")[0].strip() if bet.book else "—"
-
-    card = f"""
-<div class="bet-card {tier_class}">
-  <div class="bc-rank">#{rank} &nbsp;&bull;&nbsp; {bet.sport} &nbsp;&bull;&nbsp; {bet.market_type.upper()}</div>
-  {tier_html}
-  <div class="bc-matchup">{bet.matchup}</div>
-  <div class="bc-target">{bet.target} &nbsp;&nbsp;{price} &nbsp;&mdash;&nbsp; {book_short}</div>
-  <div class="bc-stats">
-    <div class="bc-stat">
-      <span class="bc-stat-label">Edge</span>
-      <span class="bc-stat-value {edge_color}">{edge_pct}</span>
-    </div>
-    <div class="bc-stat">
-      <span class="bc-stat-label">Sharp</span>
-      <span class="bc-stat-value {sharp_color}">{sharp}/100</span>
-    </div>
-    <div class="bc-stat">
-      <span class="bc-stat-label">Win Prob</span>
-      <span class="bc-stat-value">{win_prob}</span>
-    </div>
-    <div class="bc-stat">
-      <span class="bc-stat-label">Kelly</span>
-      <span class="bc-stat-value">{kelly}</span>
-    </div>
-  </div>
-  {nemesis_html}
-  {flag_html}
-  <div class="bc-meta">{bet.commence_time or ""}</div>
-</div>
-"""
-    return card
+def _get_tier_label(sharp_score: float) -> str:
+    if sharp_score >= 90:
+        return "NUCLEAR"
+    if sharp_score >= 80:
+        return "STANDARD"
+    return "LEAN"
 
 
 def render_header():
-    st.markdown("""
-<div class="t-header">
-  <div class="t-title">T &nbsp; I &nbsp; T &nbsp; A &nbsp; N &nbsp; I &nbsp; U &nbsp; M</div>
-  <hr class="t-rule">
-  <div class="t-sub">V 3 6 . 1 &nbsp;&nbsp;//&nbsp;&nbsp; E D G E &nbsp; D E T E C T I O N &nbsp; E N G I N E</div>
+    """Render the TITANIUM wordmark — letters as individual spans to prevent wrapping."""
+    letters = list("TITANIUM")
+    letter_spans = ""
+    for letter in letters:
+        letter_spans += f'<span class="tm-letter">{letter}</span><span class="tm-letter-space"></span>'
+    # Remove trailing space span
+    letter_spans = letter_spans.rstrip('<span class="tm-letter-space"></span>')
+
+    st.markdown(f"""
+<div style="margin-bottom: 0.5rem;">
+  <div class="tm-wordmark">
+    {letter_spans}
+    <span class="tm-badge">V36.1</span>
+  </div>
+  <hr class="tm-rule">
+  <div class="tm-sub">Edge Detection Engine</div>
 </div>
 """, unsafe_allow_html=True)
 
 
 def render_sport_selector() -> list[str]:
-    """Render grouped sport checkboxes. Returns list of selected sport keys."""
+    """Render grouped sport toggle chips. Returns list of selected sport keys."""
     selected = []
     for group_name, sports in SPORT_GROUPS.items():
-        st.markdown(f'<div class="sport-group-label">{group_name}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="t-section-label">{group_name}</div>', unsafe_allow_html=True)
         cols = st.columns(len(sports))
         for i, sport in enumerate(sports):
             default_on = sport in DEFAULT_SPORTS
             if cols[i].checkbox(sport, value=default_on, key=f"sport_{sport}"):
                 selected.append(sport)
     return selected
+
+
+def render_bet_card(rank: int, bet) -> str:
+    """Build an HTML bet card from a BetCandidate object."""
+    tier      = _get_tier(bet.sharp_score)
+    tier_lbl  = _get_tier_label(bet.sharp_score)
+    size_lbl  = _get_size_label(bet.sharp_score)
+    edge_pct  = f"{bet.edge_pct * 100:.1f}%"
+    sharp_str = f"{bet.sharp_score:.0f}"
+    kelly_str = f"{bet.kelly_size:.2f}u"
+    winp_str  = f"{bet.win_prob * 100:.1f}%"
+
+    # Price formatting
+    try:
+        price_int = int(bet.price)
+        price_str = f"+{price_int}" if price_int > 0 else str(price_int)
+    except (TypeError, ValueError):
+        price_str = str(bet.price)
+
+    # Color assignments
+    edge_cls  = "v-gold" if bet.edge_pct >= 0.07 else ("v-teal" if bet.edge_pct >= 0.05 else "")
+    sharp_cls = "v-gold" if bet.sharp_score >= 90 else ("v-teal" if bet.sharp_score >= 80 else "")
+    kelly_cls = "v-green" if bet.kelly_size >= 1.5 else ""
+
+    book_short = bet.book.split("(")[0].strip() if bet.book else "—"
+    sport_tag  = getattr(bet, "sport", "")
+    mkt_tag    = getattr(bet, "market_type", "").upper()
+
+    # Nemesis block
+    nemesis_html = ""
+    nemesis = getattr(bet, "nemesis", None)
+    if nemesis and isinstance(nemesis, dict) and nemesis.get("counter"):
+        prob  = f"{nemesis.get('probability', 0) * 100:.0f}%"
+        adj   = nemesis.get("adjustment", 0)
+        adj_s = f"{adj:+d}pts" if adj else "—"
+        counter = nemesis.get("counter", "")
+        nemesis_html = (
+            f'<div class="bc-nemesis">'
+            f'{counter} &mdash; {prob} counter probability · {adj_s}'
+            f'</div>'
+        )
+
+    # Flag block
+    flag_html = ""
+    kill_reason = getattr(bet, "kill_reason", "")
+    if kill_reason and kill_reason.startswith("FLAG"):
+        flag_text = kill_reason.replace("FLAG: ", "").replace("FLAG:", "").strip()
+        flag_html = f'<div class="bc-flag">{flag_text}</div>'
+
+    # Build matchup string
+    matchup = getattr(bet, "matchup", f"{getattr(bet, 'team', '?')} vs {getattr(bet, 'opponent', '?')}")
+    target  = getattr(bet, "target", f"{getattr(bet, 'team', '')} {getattr(bet, 'line', '')}")
+
+    return f"""
+<div class="bet-card {tier}">
+  <div class="bc-header">
+    <span class="bc-rank-meta">#{rank} &nbsp;·&nbsp; {sport_tag} &nbsp;·&nbsp; {mkt_tag}</span>
+    <span class="bc-tier {tier}">{tier_lbl}&nbsp;&nbsp;{size_lbl}</span>
+  </div>
+  <div class="bc-matchup">{matchup}</div>
+  <div class="bc-target-line">
+    <span>{target}</span>
+    <span class="bc-price">{price_str}</span>
+    <span class="bc-book">{book_short}</span>
+  </div>
+  <div class="bc-stats">
+    <div>
+      <div class="bc-stat-label">Edge</div>
+      <div class="bc-stat-value {edge_cls}">{edge_pct}</div>
+    </div>
+    <div>
+      <div class="bc-stat-label">Sharp</div>
+      <div class="bc-stat-value {sharp_cls}">{sharp_str}</div>
+    </div>
+    <div>
+      <div class="bc-stat-label">Win&nbsp;Prob</div>
+      <div class="bc-stat-value">{winp_str}</div>
+    </div>
+    <div>
+      <div class="bc-stat-label">Kelly</div>
+      <div class="bc-stat-value {kelly_cls}">{kelly_str}</div>
+    </div>
+  </div>
+  {nemesis_html}
+  {flag_html}
+</div>
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -439,47 +754,51 @@ def render_sport_selector() -> list[str]:
 def run_pipeline(selected_sports: list[str]):
     """Execute the full edge-detection pipeline for selected sports."""
     all_candidates = []
-    eff_data = {}
+    eff_data       = {}
+    n              = len(selected_sports)
 
-    progress = st.progress(0)
-    n = len(selected_sports)
+    progress = st.progress(0, text="")
 
     for idx, sport in enumerate(selected_sports):
-        pct = int((idx / n) * 100)
+        pct = int((idx / n) * 90)
         progress.progress(pct, text=f"Scanning {sport}...")
 
-        with st.status(f"Fetching {sport} odds...", expanded=False):
+        with st.status(f"{sport}", expanded=False) as status:
             try:
                 candidates = calculate_edges(sport)
-                st.write(f"{sport}: {len(candidates)} candidates after collar + edge filter")
                 all_candidates.extend(candidates)
+                status.update(
+                    label=f"{sport} — {len(candidates)} candidates",
+                    state="complete",
+                    expanded=False,
+                )
 
                 if sport == "NCAAB":
-                    routing = _SPORT_ROUTING.get("NCAAB", {})
+                    routing   = _SPORT_ROUTING.get("NCAAB", {})
                     sport_key = routing.get("sport_key", "basketball_ncaab")
                     raw_ncaab = fetch_game_lines(sport_key)
-                    eff_data = build_efficiency_data(raw_ncaab)
-                    st.write(f"NCAAB efficiency data: {len(eff_data)} games mapped")
+                    eff_data  = build_efficiency_data(raw_ncaab)
 
-            except ValueError as e:
-                st.warning(f"{sport}: {e}")
-            except Exception as e:
-                err = str(e)
+            except ValueError as exc:
+                status.update(label=f"{sport} — {exc}", state="error")
+            except Exception as exc:
+                err = str(exc)
                 if "401" in err or "403" in err or "Unauthorized" in err:
-                    st.error("API key error — check ODDS_API_KEY in .streamlit/secrets.toml")
                     progress.empty()
+                    st.session_state["running"] = False
+                    st.error(
+                        "API key error — verify ODDS_API_KEY in .streamlit/secrets.toml"
+                    )
                     return
-                st.warning(f"{sport} fetch error: {err}")
+                status.update(label=f"{sport} — fetch error: {err}", state="error")
 
-    progress.progress(100, text="Ranking bets...")
-
+    progress.progress(100, text="Ranking...")
     ranked = rank_bets(all_candidates, efficiency_data=eff_data)
 
     st.session_state["results"]     = ranked
     st.session_state["last_run"]    = datetime.now()
     st.session_state["last_sports"] = selected_sports
     st.session_state["running"]     = False
-
     progress.empty()
 
 
@@ -494,88 +813,102 @@ def main():
         initial_sidebar_state="collapsed",
     )
 
-    # Inject CSS
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-    # Session state defaults
-    if "results"     not in st.session_state:
-        st.session_state["results"]     = []
-    if "last_run"    not in st.session_state:
-        st.session_state["last_run"]    = None
-    if "last_sports" not in st.session_state:
-        st.session_state["last_sports"] = []
-    if "running"     not in st.session_state:
-        st.session_state["running"]     = False
+    # Session defaults
+    for key, default in [
+        ("results",     []),
+        ("last_run",    None),
+        ("last_sports", []),
+        ("running",     False),
+    ]:
+        if key not in st.session_state:
+            st.session_state[key] = default
 
-    # --- Header ---
+    # ── Header ──────────────────────────────────────────────────
     render_header()
     st.markdown("---")
 
-    # --- API key guard ---
+    # ── API key guard ────────────────────────────────────────────
     api_key = os.environ.get("ODDS_API_KEY") or st.secrets.get("ODDS_API_KEY", "")
     if not api_key:
         st.error(
-            "ODDS_API_KEY not found. "
-            "Add it to .streamlit/secrets.toml or set it as an environment variable."
+            "ODDS_API_KEY not found — add it to .streamlit/secrets.toml"
         )
         return
 
-    # --- Sport selector ---
+    # ── Sport selector ───────────────────────────────────────────
+    st.markdown('<div class="t-section-label">Select Markets</div>', unsafe_allow_html=True)
     selected_sports = render_sport_selector()
     st.markdown("")
 
-    # --- Execute button ---
-    execute_disabled = st.session_state["running"] or len(selected_sports) == 0
-    execute_label    = "SCANNING..." if st.session_state["running"] else "EXECUTE SCAN"
+    # ── Execute button ───────────────────────────────────────────
+    is_running     = st.session_state["running"]
+    no_selection   = len(selected_sports) == 0
+    btn_disabled   = is_running or no_selection
+    btn_label      = "SCANNING..." if is_running else "EXECUTE SCAN"
 
-    if st.button(execute_label, disabled=execute_disabled, use_container_width=True):
+    if st.button(
+        btn_label,
+        disabled=btn_disabled,
+        use_container_width=True,
+    ):
         st.session_state["running"] = True
         run_pipeline(selected_sports)
+        st.rerun()
 
-    # --- Results ---
+    # ── Results ──────────────────────────────────────────────────
     st.markdown("---")
     ranked = st.session_state["results"]
+    last_run = st.session_state["last_run"]
 
-    if st.session_state["last_run"] is not None:
-        run_time    = st.session_state["last_run"].strftime("%H:%M:%S")
+    if last_run is not None:
+        run_time    = last_run.strftime("%H:%M")
         sport_str   = " · ".join(st.session_state["last_sports"])
         result_count = len(ranked)
 
         if result_count == 0:
-            st.info(
-                "Market is well-priced today. No edges found.\n\n"
-                f"Scanned: {sport_str}  ·  {run_time}"
-            )
+            st.markdown(f"""
+<div class="well-priced">
+  <div class="well-priced-main">Market is well-priced today</div>
+  <div class="well-priced-sub">No edges found &nbsp;·&nbsp; {sport_str} &nbsp;·&nbsp; {run_time}</div>
+</div>
+""", unsafe_allow_html=True)
+
         else:
-            st.markdown(
-                f'<div class="bc-meta" style="margin-bottom:8px;">'
-                f'{result_count} bet{"s" if result_count != 1 else ""} &nbsp;&bull;&nbsp; '
-                f'{sport_str} &nbsp;&bull;&nbsp; {run_time}'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f"""
+<div class="results-meta">
+  <span class="results-count">{result_count} bet{"s" if result_count != 1 else ""} found</span>
+  <span class="results-info">{sport_str} &nbsp;·&nbsp; {run_time}</span>
+</div>
+""", unsafe_allow_html=True)
+
             for i, bet in enumerate(ranked, 1):
-                card_html = render_bet_card(i, bet)
-                st.markdown(card_html, unsafe_allow_html=True)
+                st.markdown(render_bet_card(i, bet), unsafe_allow_html=True)
 
-    elif not st.session_state["running"]:
-        st.markdown(
-            '<div class="bc-meta" style="text-align:center; padding: 2rem 0;">'
-            'Select sports above and press EXECUTE SCAN.'
-            '</div>',
-            unsafe_allow_html=True,
-        )
+    else:
+        st.markdown("""
+<div class="empty-state">
+  <div class="empty-state-icon">◈</div>
+  <div class="empty-state-text">Select markets above<br>and press EXECUTE SCAN</div>
+</div>
+""", unsafe_allow_html=True)
 
-    # --- Footer: quota status ---
+    # ── Footer ───────────────────────────────────────────────────
     try:
         quota_str = get_quota_status()
     except Exception:
-        quota_str = "quota status unavailable"
+        quota_str = "unavailable"
 
-    st.markdown(
-        f'<div class="t-footer">API QUOTA &nbsp;// &nbsp;{quota_str}</div>',
-        unsafe_allow_html=True,
+    run_ts = (
+        last_run.strftime("%b %d · %H:%M") if last_run else "—"
     )
+    st.markdown(f"""
+<div class="t-footer">
+  <span class="t-footer-item">API Quota &nbsp;// &nbsp;{quota_str}</span>
+  <span class="t-footer-item">Last run {run_ts}</span>
+</div>
+""", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
