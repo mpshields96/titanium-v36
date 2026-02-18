@@ -223,11 +223,48 @@ This works because books occasionally misprice relative to the consensus.
 
 ## CURRENT STATE
 Last completed: Session 13 — threshold 40→45, passive RLM wired end-to-end
-Last git commit: db4b843 (pre-session; Sessions 11–13 changes pending commit)
+Last git commit: 0b6ab9f (Sessions 11–13 committed — all changes in main)
 Tests: 85 total, all passing
 Quota: ~18,307 remaining (no API calls this session)
 Streamlit Cloud: deployed, auto-deploys from main
 Next: Session 14 — TBD
+
+## CHECKPOINT — Session 13 (2026-02-18)
+State: CLEAN. All code committed. 85/85 tests green.
+
+### Sharp Score formula (as implemented — memorise this)
+  score = edge_pts(0-40) + rlm_pts(0-25) + efficiency_pts(0-20) + situational_pts(0-15)
+  Threshold: 45 pts (raised from 40 in Session 13)
+  NUCLEAR ≥90 = 2.0u | STANDARD ≥80 = 1.0u | LEAN ≥45 = 0.5u | FAIL <45 = dropped
+
+### Live data sources (what's actually wired vs stub)
+  | Component         | Source             | Live? |
+  |-------------------|--------------------|-------|
+  | edge_pct          | consensus books    | ✅    |
+  | rlm_confirmed     | open-price cache   | ✅ (cold on first run — fires on refresh) |
+  | efficiency_gap    | efficiency_feed    | ✅ (110 teams: 30 NBA + 80 NCAAB) |
+  | rest_edge         | schedule rest days | ✅ NBA only |
+  | injury_leverage   | (none)             | ❌ always 0 |
+  | motivation        | (none)             | ❌ always 0 |
+  | matchup_score     | (none)             | ❌ always 0 |
+
+### Kill switches (all four active)
+  NBA:    rest_disadvantage AND spread < -4 → KILL spread
+  NFL:    wind > 15mph AND total > 42 → FORCE UNDER
+  NCAAB:  3PT reliance > 40% AND is_away → KILL (80-team coverage)
+  Soccer: drift > 10% implied prob shift → KILL
+
+### Key architecture invariants (do not break)
+  - One API call per sport (raw_games pre-fetched in run_pipeline, passed to calculate_edges)
+  - Multi-book consensus = edge signal. Never single-book comparison.
+  - Nemesis = display annotation only. Zero effect on score or survival.
+  - Math > Narrative. No narrative input may gate or penalise a bet.
+  - _OPEN_PRICE_CACHE frozen on first call — second call is no-op (RLM baseline integrity)
+
+### Next threshold raise trigger
+  Raise SHARP_THRESHOLD from 45 → 50 when: RLM fires consistently on live data
+  (i.e. R&D validates that 6% edge + RLM + eff=12 + rest=2 = 63 is observed empirically).
+  Do NOT raise on theory alone — validate distribution first.
 
 ## SESSION 12 GOAL ✅ COMPLETE
 1. ✅ Nemesis demoted to display-only (bet_ranker.py) — no veto power over math
