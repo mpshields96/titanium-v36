@@ -6,9 +6,17 @@
 | `app.py` | Streamlit UI, button handling | Business logic, API calls |
 | `odds_fetcher.py` | Odds API calls only | Math, UI |
 | `edge_calculator.py` | Betting math only | API calls, UI |
-| `bet_ranker.py` | Dedup + rank + top-10 selection | Math, API calls |
+| `bet_ranker.py` | Dedup + Sharp Score rank + top-10 | Math, API calls |
+| `ncaab_parser.py` | NCAAB collar filter + best-price extraction | Edge calc, UI |
 | `originator_engine.py` | Monte Carlo — DO NOT TOUCH unless asked | — |
 | `data/team_stats_bunker.py` | Static fallback stats | Live data |
+
+## Commands
+```bash
+python3 -m pytest tests/ -v          # Run all tests (must pass before any session)
+python3 ncaab_parser.py              # Live NCAAB pipeline test (1 API call)
+streamlit run app.py                 # Launch UI locally (Session 5+)
+```
 
 ## Non-Negotiable Betting Rules
 1. **Odds collar**: Only -180 to +150 (American). Reject everything else.
@@ -22,8 +30,11 @@
    - Soccer: market drift > 10% against position → ABORT
 
 ## Output Format (Definition of Done)
-Table with max 10 rows, sorted by Edge% descending:
+Table with max 10 rows, **sorted by Sharp Score descending** (NOT Edge% — changed Session 4):
 `Time | Matchup | Type | Target | Line | Price | Edge% | Kelly_Size | Signal`
+
+Sharp Score tiers: NUCLEAR (≥90) = 2.0u | STANDARD (≥80) = 1.0u | LEAN (else) = 0.5u
+Threshold: 40 pts pre-nemesis (temporary — raise to 75 when KenPom/Barttorvik wired in Session 5+)
 
 ## API Notes
 - Key: `os.environ.get("ODDS_API_KEY")` — never hardcode
@@ -43,17 +54,18 @@ Table with max 10 rows, sorted by Edge% descending:
 |---------|--------|----------------|
 | 1 | ✅ Done | File structure, CLAUDE.md, requirements.txt, all scaffolds |
 | 2 | ✅ Done | odds_fetcher.py fetch_batch_odds() — live-tested, 20/20 tests passing |
-| 3 | 🔲 Next | Upgrade odds_fetcher, port originator_engine, build ncaab_parser, wire edge_calculator consensus method |
-| 4 | 🔲 Planned | bet_ranker.py full pipeline, NCAAB edge logic (KenPom/Barttorvik) |
-| 5 | 🔲 Planned | Streamlit UI wired end-to-end, mobile view |
+| 3 | ✅ Done | odds_fetcher upgrade, originator_engine (Trinity MC), ncaab_parser, consensus edge detection |
+| 4 | ✅ Done | bet_ranker.py, Sharp Score, run_nemesis, BetCandidate updated, full pipeline live-tested |
+| 5 | 🔲 Next | efficiency_feed.py (KenPom mock), Streamlit UI wired, kill switches, Streamlit Cloud deploy |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
 - Only promote code that has been live-tested in R&D
 - Known R&D bugs — DO NOT promote until fixed:
-  - Props edge always ~0 (model_prob uses best_price fair_prob, not consensus)
-  - run_trinity_simulation receives bet.line as mean instead of projected margin
-  - RLM component of Sharp Score always returns 0
+  - run_trinity_simulation receives bet.line as mean instead of projected margin (unfixed)
+  - RLM component of Sharp Score always returns 0 (unfixed — no line movement data source)
+- Fixed in R&D, ready for promotion review:
+  - Props edge bug: fixed (consensus fair_prob across books, same pattern as game lines)
 - Edge detection method (PROVEN): consensus vig-free mean across all books = model.
   Best single-book price = betting price. Edge = consensus_prob - implied(best_price)
 
@@ -64,10 +76,9 @@ Table with max 10 rows, sorted by Edge% descending:
 - All sports use fetch_batch_odds() — no per-event prop calls (API tier limitation)
 
 ## If Starting a New Chat Session
-1. Paste the full bootstrap document (titanium-v36-bootstrap.md if saved, else the original)
-2. Say: "Read CLAUDE.md first, then read these files: odds_fetcher.py, edge_calculator.py"
-3. State the current session number and goal
-4. Run: pytest tests/ -v to confirm baseline is still passing before touching anything
+1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)
+2. Say: "Resume Session [N]. Read CLAUDE.md and SESSION_STATE.md. Run: pytest tests/ -v and confirm all tests pass before we start."
+3. Wait for test confirmation, then state what you want to build
 
 ## Deployment Checklist
 - [ ] No API keys in code
