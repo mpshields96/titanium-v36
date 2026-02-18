@@ -5,6 +5,7 @@ Stub data layer for kill switch live inputs.
 No live scraping. Returns mock/default values until real sources are wired.
 
 Promoted from R&D (titanium-experimental/core/data/kill_switch_feed.py) — Session 6.
+Updated Session 9: full 30-team NBA coverage + full 32-team NFL stadium wind map.
 
 Provides inputs for:
     nba_kill_switch()    — rest days, B2B schedule, pace std dev
@@ -40,41 +41,87 @@ from typing import Optional
 
 # Static rest data — days of rest per team since last game.
 # 0 = B2B (played yesterday), 1 = one day rest, 2+ = well rested.
-# Replace with schedule-derived data when available.
+# Stub snapshot: replace with schedule-derived data when available.
+# Full 30-team coverage — unknown team falls back to _DEFAULT_NBA_REST (1).
 _NBA_REST_DAYS: dict[str, int] = {
-    "Indiana Pacers":           1,
-    "Washington Wizards":       2,
+    # Atlantic
     "Boston Celtics":           2,
-    "Miami Heat":               0,   # B2B
-    "Golden State Warriors":    1,
-    "Los Angeles Lakers":       2,
-    "Milwaukee Bucks":          1,
-    "Denver Nuggets":           2,
-    "Oklahoma City Thunder":    1,
-    "Phoenix Suns":             2,
-    "Cleveland Cavaliers":      1,
+    "Brooklyn Nets":            1,
     "New York Knicks":          0,   # B2B
     "Philadelphia 76ers":       2,
+    "Toronto Raptors":          1,
+    # Central
+    "Chicago Bulls":            2,
+    "Cleveland Cavaliers":      1,
+    "Detroit Pistons":          2,
+    "Indiana Pacers":           1,
+    "Milwaukee Bucks":          1,
+    # Southeast
+    "Atlanta Hawks":            1,
+    "Charlotte Hornets":        2,
+    "Miami Heat":               0,   # B2B
+    "Orlando Magic":            2,
+    "Washington Wizards":       2,
+    # Northwest
+    "Denver Nuggets":           2,
     "Minnesota Timberwolves":   1,
+    "Oklahoma City Thunder":    1,
+    "Portland Trail Blazers":   2,
+    "Utah Jazz":                1,
+    # Pacific
+    "Golden State Warriors":    1,
+    "Los Angeles Clippers":     2,
+    "Los Angeles Lakers":       2,
+    "Phoenix Suns":             2,
+    "Sacramento Kings":         1,
+    # Southwest
     "Dallas Mavericks":         2,
+    "Houston Rockets":          1,
+    "Memphis Grizzlies":        1,
+    "New Orleans Pelicans":     2,
+    "San Antonio Spurs":        2,
 }
 
+# Pace standard deviation — volatility of possessions per game.
+# High std_dev (>4) on totals triggers kill switch.
+# Source: last 15 games pace variance (synthetic stub ~2024-25).
 _NBA_PACE_STD_DEV: dict[str, float] = {
-    "Indiana Pacers":           4.2,    # high — run-and-gun
-    "Washington Wizards":       3.1,
+    # Atlantic
     "Boston Celtics":           2.8,
-    "Miami Heat":               3.5,
-    "Golden State Warriors":    3.9,
-    "Los Angeles Lakers":       2.6,
-    "Milwaukee Bucks":          2.4,
-    "Denver Nuggets":           2.9,
-    "Oklahoma City Thunder":    3.0,
-    "Phoenix Suns":             4.1,    # high — fast pace
-    "Cleveland Cavaliers":      2.5,
+    "Brooklyn Nets":            3.6,
     "New York Knicks":          2.7,
     "Philadelphia 76ers":       2.3,
+    "Toronto Raptors":          3.1,
+    # Central
+    "Chicago Bulls":            3.0,
+    "Cleveland Cavaliers":      2.5,
+    "Detroit Pistons":          3.4,
+    "Indiana Pacers":           4.2,   # high — run-and-gun
+    "Milwaukee Bucks":          2.4,
+    # Southeast
+    "Atlanta Hawks":            3.7,
+    "Charlotte Hornets":        3.9,
+    "Miami Heat":               3.5,
+    "Orlando Magic":            2.9,
+    "Washington Wizards":       3.1,
+    # Northwest
+    "Denver Nuggets":           2.9,
     "Minnesota Timberwolves":   2.6,
+    "Oklahoma City Thunder":    3.0,
+    "Portland Trail Blazers":   3.8,
+    "Utah Jazz":                3.5,
+    # Pacific
+    "Golden State Warriors":    3.9,
+    "Los Angeles Clippers":     2.8,
+    "Los Angeles Lakers":       2.6,
+    "Phoenix Suns":             4.1,   # high — up-tempo
+    "Sacramento Kings":         4.0,   # high — fast pace
+    # Southwest
     "Dallas Mavericks":         3.2,
+    "Houston Rockets":          3.3,
+    "Memphis Grizzlies":        3.6,
+    "New Orleans Pelicans":     3.1,
+    "San Antonio Spurs":        3.4,
 }
 
 _DEFAULT_NBA_REST = 1
@@ -130,23 +177,57 @@ def get_nba_kill_inputs(
 # NFL stubs
 # ---------------------------------------------------------------------------
 
-# Wind forecasts by team stadium city — mph at game time.
-# In production: call a weather API keyed to stadium location + game time.
+# Wind forecasts by home team — mph at game time (stub averages by stadium type/location).
+# In production: replace with weather API keyed to stadium GPS + game commence_time.
+#
+# Indoor / retractable-roof stadiums: 0-3 mph (controlled environment).
+# Outdoor cold-weather: 8-14 mph average.
+# Outdoor warm/mild: 4-8 mph average.
+# Coastal/lakefront: 7-12 mph average.
+#
+# All 32 NFL teams covered. Unknown home team falls back to _DEFAULT_WIND_MPH (5.0).
+# Stubs intentionally below 15mph threshold — kill fires on real weather data, not stubs.
 _NFL_WIND_FORECAST: dict[str, float] = {
-    "Buffalo Bills":        12.0,   # outdoor — wind-prone
-    "Chicago Bears":        8.0,
-    "Kansas City Chiefs":   6.0,
-    "Las Vegas Raiders":    3.0,    # indoor
-    "Dallas Cowboys":       4.0,    # indoor
-    "New England Patriots": 9.0,
-    "Green Bay Packers":    11.0,
-    "New York Giants":      7.0,
-    "New York Jets":        7.0,
-    "Miami Dolphins":       5.0,
-    "Minnesota Vikings":    2.0,    # indoor
-    "Indianapolis Colts":   2.0,    # indoor
-    "New Orleans Saints":   2.0,    # indoor
-    "Atlanta Falcons":      2.0,    # indoor
+    # AFC East
+    "Buffalo Bills":            13.0,  # outdoor, western NY — windiest in NFL
+    "Miami Dolphins":            6.0,  # outdoor, South Florida — mild
+    "New England Patriots":      9.0,  # outdoor, New England — cold/wind
+    "New York Jets":             7.0,  # outdoor, NJ — variable
+    # AFC North
+    "Baltimore Ravens":          7.0,  # outdoor, mid-Atlantic
+    "Cincinnati Bengals":        6.0,  # outdoor, Ohio River valley
+    "Cleveland Browns":         11.0,  # outdoor, Lake Erie — very wind-prone
+    "Pittsburgh Steelers":       8.0,  # outdoor, river valley
+    # AFC South
+    "Houston Texans":            2.0,  # indoor (NRG Stadium — retractable, usually closed)
+    "Indianapolis Colts":        2.0,  # indoor (Lucas Oil)
+    "Jacksonville Jaguars":      6.0,  # outdoor, coastal Florida
+    "Tennessee Titans":          5.0,  # outdoor, Nashville — moderate
+    # AFC West
+    "Denver Broncos":            9.0,  # outdoor, altitude/wind — variable
+    "Kansas City Chiefs":        7.0,  # outdoor, Midwest plains
+    "Las Vegas Raiders":         2.0,  # indoor (Allegiant Stadium)
+    "Los Angeles Chargers":      4.0,  # indoor (SoFi — open but sheltered)
+    # NFC East
+    "Dallas Cowboys":            2.0,  # indoor (AT&T Stadium)
+    "New York Giants":           7.0,  # outdoor, NJ — variable
+    "Philadelphia Eagles":       8.0,  # outdoor, mid-Atlantic
+    "Washington Commanders":     6.0,  # outdoor, mid-Atlantic
+    # NFC North
+    "Chicago Bears":             9.0,  # outdoor, lakefront — wind-prone
+    "Detroit Lions":             2.0,  # indoor (Ford Field)
+    "Green Bay Packers":        12.0,  # outdoor, Wisconsin — most wind-exposed
+    "Minnesota Vikings":         2.0,  # indoor (US Bank Stadium)
+    # NFC South
+    "Atlanta Falcons":           2.0,  # indoor (Mercedes-Benz)
+    "Carolina Panthers":         5.0,  # outdoor, Charlotte — mild
+    "New Orleans Saints":        2.0,  # indoor (Caesars Superdome)
+    "Tampa Bay Buccaneers":      5.0,  # outdoor, Florida Gulf — mild
+    # NFC West
+    "Arizona Cardinals":         2.0,  # indoor (State Farm — retractable, usually closed)
+    "Los Angeles Rams":          4.0,  # indoor (SoFi — open but sheltered)
+    "San Francisco 49ers":       8.0,  # outdoor, Bay Area — afternoon wind
+    "Seattle Seahawks":          7.0,  # outdoor, Pacific Northwest
 }
 
 _DEFAULT_WIND_MPH = 5.0

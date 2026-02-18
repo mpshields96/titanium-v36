@@ -334,3 +334,101 @@ def fetch_sport(sport: str) -> list:
 def get_quota_status() -> str:
     """Return current API quota status as a human-readable string."""
     return quota.report()
+
+
+# ---------------------------------------------------------------------------
+# Soccer open-price cache (drift detection — zero API cost)
+# ---------------------------------------------------------------------------
+#
+# The Odds API has no `open_price` field. Drift must be detected passively
+# by caching prices at session start and diffing on refresh.
+#
+# Usage pattern:
+#   1. Call cache_open_prices(games) once at session start (first fetch).
+#   2. On refresh, get_open_price(event_id, outcome) returns the cached price.
+#   3. Pass open_price to get_soccer_kill_inputs() for drift computation.
+#
+# The cache lives for the session only (module-level dict, no persistence).
+# Zero API calls — uses data already fetched by fetch_game_lines().
+# ---------------------------------------------------------------------------
+
+_OPEN_PRICE_CACHE: dict[str, dict[str, float]] = {}
+# Structure: { event_id: { "home": american_odds, "away": american_odds } }
+
+
+def cache_open_prices(games: list[dict]) -> int:
+    """
+    Cache opening prices for a list of games. Only stores prices that are
+    not already in the cache (i.e. the first call wins — open price is frozen).
+
+    Call once per session at first fetch, before any refresh.
+
+    Args:
+        games: Raw game dicts from fetch_game_lines() / fetch_batch_odds().
+               Each game must have: id, home_team, away_team, bookmakers.
+
+    Returns:
+        Number of new events cached (0 if all already present).
+    """
+    new_count = 0
+    for game in games:
+        event_id = game.get("id")
+        if not event_id or event_id in _OPEN_PRICE_CACHE:
+            continue  # already cached — open price frozen
+
+        bookmakers = game.get("bookmakers", [])
+        home_price: Optional[float] = None
+        away_price: Optional[float] = None
+
+        # Try preferred books in order, then fall back to first available
+        book_map = {b["key"]: b for b in bookmakers if "markets" in b}
+        for book_key in PREFERRED_BOOKS:
+            if book_key in book_map:
+                for market in book_map[book_key].get("markets", []):
+                    if market.get("key") == "h2h":
+                        for outcome in market.get("outcomes", []):
+                            name = outcome.get("name", "")
+                            price = outcome.get("price")
+                            if price is None:
+                                continue
+                            if name == game.get("home_team"):
+                                home_price = float(price)
+                            elif name == game.get("away_team"):
+                                away_price = float(price)
+                        break
+                if home_price is not None:
+                    break
+
+        if home_price is not None and away_price is not None:
+            _OPEN_PRICE_CACHE[event_id] = {
+                "home": home_price,
+                "away": away_price,
+            }
+            new_count += 1
+
+    logger.info("cache_open_prices: %d new events cached (total: %d)",
+                new_count, len(_OPEN_PRICE_CACHE))
+    return new_count
+
+
+def get_open_price(event_id: str, side: str = "home") -> Optional[float]:
+    """
+    Return the cached opening price for an event.
+
+    Args:
+        event_id: Game event ID from the Odds API.
+        side:     "home" or "away".
+
+    Returns:
+        American odds float, or None if event not in cache.
+    """
+    entry = _OPEN_PRICE_CACHE.get(event_id)
+    if entry is None:
+        return None
+    return entry.get(side)
+
+
+def clear_open_price_cache() -> None:
+    """Clear all cached open prices. Call at session start if needed."""
+    _OPEN_PRICE_CACHE.clear()
+    logger.info("cache_open_prices: cache cleared")
