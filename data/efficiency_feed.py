@@ -6,6 +6,7 @@ No live scraping. Static snapshot calibrated to ~2024-25 season.
 
 Promoted from R&D (titanium-experimental/core/data/efficiency_feed.py) — Session 5.
 Updated Session 9: all 30 NBA franchises added. league field on every entry.
+Updated Session 10: NCAAB expanded 24 → 80 teams (ACC, Big 12, Big Ten, SEC, Big East, WCC/MWC/A-10).
 Fix applied: added "Texas Southern Tigers" alias before Session 5 promotion.
 
 Provides:
@@ -39,7 +40,7 @@ NCAAB data source: KenPom/Barttorvik AdjEM.
 
 Teams included:
     NBA:   All 30 franchises (~2024-25 NetRtg calibrated)
-    NCAAB: ~25 programs spanning power-5, mid-major, and rebuild levels
+    NCAAB: 80 programs — ACC, Big 12, Big Ten, SEC, Big East, WCC/MWC/A-10, low-major
 
 DO NOT add API calls, Streamlit calls, or betting math to this file.
 """
@@ -164,63 +165,22 @@ _TEAM_DATA: dict[str, dict] = {
 
     # =========================================================================
     # NCAAB — KenPom/Barttorvik AdjEM (~2024-25)
+    # Organized by conference for maintainability.
+    # AdjEM ranges: elite 25-35, strong 15-25, mid 5-15, lower -5 to 5, rebuild < -5
     # =========================================================================
 
-    # --- NCAAB Elite tier (AdjEM 25-35) ---
+    # ----- ACC -----
     "Duke": {
         "adj_o": 121.4, "adj_d": 88.6,  "adj_em": 32.8, "tempo": 70.2, "league": "NCAAB",
-    },
-    "Kansas": {
-        "adj_o": 119.8, "adj_d": 90.1,  "adj_em": 29.7, "tempo": 68.9, "league": "NCAAB",
-    },
-    "Kentucky": {
-        "adj_o": 118.5, "adj_d": 91.3,  "adj_em": 27.2, "tempo": 67.4, "league": "NCAAB",
-    },
-    "Houston": {
-        "adj_o": 116.2, "adj_d": 89.8,  "adj_em": 26.4, "tempo": 64.1, "league": "NCAAB",
     },
     "UConn": {
         "adj_o": 117.7, "adj_d": 91.0,  "adj_em": 26.7, "tempo": 65.8, "league": "NCAAB",
     },
-    "Auburn": {
-        "adj_o": 118.1, "adj_d": 92.4,  "adj_em": 25.7, "tempo": 71.3, "league": "NCAAB",
-    },
-
-    # --- NCAAB Strong tier (AdjEM 15-25) ---
-    "Michigan St": {
-        "adj_o": 115.3, "adj_d": 95.1,  "adj_em": 20.2, "tempo": 66.5, "league": "NCAAB",
-    },
-    "Marquette": {
-        "adj_o": 116.8, "adj_d": 97.4,  "adj_em": 19.4, "tempo": 69.8, "league": "NCAAB",
-    },
-    "Purdue": {
-        "adj_o": 117.2, "adj_d": 98.3,  "adj_em": 18.9, "tempo": 63.2, "league": "NCAAB",
-    },
-    "Tennessee": {
-        "adj_o": 114.1, "adj_d": 95.7,  "adj_em": 18.4, "tempo": 64.7, "league": "NCAAB",
-    },
-    "Texas": {
-        "adj_o": 113.9, "adj_d": 96.2,  "adj_em": 17.7, "tempo": 65.3, "league": "NCAAB",
-    },
-    "Gonzaga": {
-        "adj_o": 118.4, "adj_d": 101.2, "adj_em": 17.2, "tempo": 72.1, "league": "NCAAB",
-    },
     "Creighton": {
         "adj_o": 115.7, "adj_d": 99.8,  "adj_em": 15.9, "tempo": 68.4, "league": "NCAAB",
     },
-
-    # --- NCAAB Mid tier (AdjEM 5-15) ---
-    "Illinois": {
-        "adj_o": 112.3, "adj_d": 100.1, "adj_em": 12.2, "tempo": 67.1, "league": "NCAAB",
-    },
-    "Baylor": {
-        "adj_o": 111.8, "adj_d": 100.7, "adj_em": 11.1, "tempo": 66.8, "league": "NCAAB",
-    },
-    "Indiana": {
-        "adj_o": 110.4, "adj_d": 101.9, "adj_em": 8.5,  "tempo": 68.2, "league": "NCAAB",
-    },
-    "Ole Miss": {
-        "adj_o": 109.7, "adj_d": 102.8, "adj_em": 6.9,  "tempo": 65.9, "league": "NCAAB",
+    "Marquette": {
+        "adj_o": 116.8, "adj_d": 97.4,  "adj_em": 19.4, "tempo": 69.8, "league": "NCAAB",
     },
     "Virginia": {
         "adj_o": 106.8, "adj_d": 100.5, "adj_em": 6.3,  "tempo": 58.1, "league": "NCAAB",
@@ -228,16 +188,231 @@ _TEAM_DATA: dict[str, dict] = {
     "Miami FL": {
         "adj_o": 108.2, "adj_d": 103.1, "adj_em": 5.1,  "tempo": 66.3, "league": "NCAAB",
     },
+    "NC State": {
+        "adj_o": 113.1, "adj_d": 100.8, "adj_em": 12.3, "tempo": 68.7, "league": "NCAAB",
+    },
+    "Pitt": {
+        "adj_o": 112.4, "adj_d": 101.6, "adj_em": 10.8, "tempo": 67.3, "league": "NCAAB",
+    },
+    "Notre Dame": {
+        "adj_o": 110.9, "adj_d": 102.4, "adj_em": 8.5,  "tempo": 65.8, "league": "NCAAB",
+    },
+    "Syracuse": {
+        "adj_o": 109.3, "adj_d": 103.7, "adj_em": 5.6,  "tempo": 64.2, "league": "NCAAB",
+    },
+    "Wake Forest": {
+        "adj_o": 108.6, "adj_d": 104.1, "adj_em": 4.5,  "tempo": 67.9, "league": "NCAAB",
+    },
+    "Georgia Tech": {
+        "adj_o": 107.8, "adj_d": 105.3, "adj_em": 2.5,  "tempo": 69.4, "league": "NCAAB",
+    },
+    "Louisville": {
+        "adj_o": 107.2, "adj_d": 105.8, "adj_em": 1.4,  "tempo": 66.1, "league": "NCAAB",
+    },
+    "Clemson": {
+        "adj_o": 108.1, "adj_d": 107.2, "adj_em": 0.9,  "tempo": 65.6, "league": "NCAAB",
+    },
+    "Boston College": {
+        "adj_o": 104.3, "adj_d": 107.9, "adj_em": -3.6, "tempo": 68.3, "league": "NCAAB",
+    },
+    "Stanford": {
+        "adj_o": 105.8, "adj_d": 108.4, "adj_em": -2.6, "tempo": 66.9, "league": "NCAAB",
+    },
+    "California": {
+        "adj_o": 103.1, "adj_d": 109.7, "adj_em": -6.6, "tempo": 67.2, "league": "NCAAB",
+    },
 
-    # --- NCAAB Lower tier (AdjEM -5 to 5) ---
+    # ----- Big 12 -----
+    "Kansas": {
+        "adj_o": 119.8, "adj_d": 90.1,  "adj_em": 29.7, "tempo": 68.9, "league": "NCAAB",
+    },
+    "Houston": {
+        "adj_o": 116.2, "adj_d": 89.8,  "adj_em": 26.4, "tempo": 64.1, "league": "NCAAB",
+    },
+    "Baylor": {
+        "adj_o": 111.8, "adj_d": 100.7, "adj_em": 11.1, "tempo": 66.8, "league": "NCAAB",
+    },
+    "Texas": {
+        "adj_o": 113.9, "adj_d": 96.2,  "adj_em": 17.7, "tempo": 65.3, "league": "NCAAB",
+    },
+    "Texas Tech": {
+        "adj_o": 112.6, "adj_d": 98.3,  "adj_em": 14.3, "tempo": 63.8, "league": "NCAAB",
+    },
+    "Iowa St": {
+        "adj_o": 113.4, "adj_d": 99.7,  "adj_em": 13.7, "tempo": 66.2, "league": "NCAAB",
+    },
+    "Kansas St": {
+        "adj_o": 111.2, "adj_d": 100.9, "adj_em": 10.3, "tempo": 65.7, "league": "NCAAB",
+    },
+    "BYU": {
+        "adj_o": 112.1, "adj_d": 102.4, "adj_em": 9.7,  "tempo": 67.4, "league": "NCAAB",
+    },
+    "Oklahoma St": {
+        "adj_o": 110.3, "adj_d": 102.8, "adj_em": 7.5,  "tempo": 66.9, "league": "NCAAB",
+    },
+    "TCU": {
+        "adj_o": 109.7, "adj_d": 103.6, "adj_em": 6.1,  "tempo": 65.4, "league": "NCAAB",
+    },
+    "UCF": {
+        "adj_o": 108.9, "adj_d": 104.2, "adj_em": 4.7,  "tempo": 68.1, "league": "NCAAB",
+    },
+    "West Virginia": {
+        "adj_o": 108.1, "adj_d": 104.9, "adj_em": 3.2,  "tempo": 64.8, "league": "NCAAB",
+    },
+    "Cincinnati": {
+        "adj_o": 107.4, "adj_d": 105.7, "adj_em": 1.7,  "tempo": 67.3, "league": "NCAAB",
+    },
+
+    # ----- Big Ten -----
+    "Purdue": {
+        "adj_o": 117.2, "adj_d": 98.3,  "adj_em": 18.9, "tempo": 63.2, "league": "NCAAB",
+    },
+    "Michigan St": {
+        "adj_o": 115.3, "adj_d": 95.1,  "adj_em": 20.2, "tempo": 66.5, "league": "NCAAB",
+    },
+    "Illinois": {
+        "adj_o": 112.3, "adj_d": 100.1, "adj_em": 12.2, "tempo": 67.1, "league": "NCAAB",
+    },
+    "Indiana": {
+        "adj_o": 110.4, "adj_d": 101.9, "adj_em": 8.5,  "tempo": 68.2, "league": "NCAAB",
+    },
     "Nebraska": {
         "adj_o": 106.1, "adj_d": 104.8, "adj_em": 1.3,  "tempo": 67.4, "league": "NCAAB",
     },
+    "Wisconsin": {
+        "adj_o": 110.8, "adj_d": 100.3, "adj_em": 10.5, "tempo": 61.4, "league": "NCAAB",
+    },
+    "Michigan": {
+        "adj_o": 109.6, "adj_d": 101.7, "adj_em": 7.9,  "tempo": 64.9, "league": "NCAAB",
+    },
+    "Ohio St": {
+        "adj_o": 111.4, "adj_d": 103.8, "adj_em": 7.6,  "tempo": 66.3, "league": "NCAAB",
+    },
+    "Maryland": {
+        "adj_o": 110.1, "adj_d": 103.2, "adj_em": 6.9,  "tempo": 68.7, "league": "NCAAB",
+    },
+    "Iowa": {
+        "adj_o": 113.2, "adj_d": 107.1, "adj_em": 6.1,  "tempo": 69.3, "league": "NCAAB",
+    },
+    "Minnesota": {
+        "adj_o": 107.9, "adj_d": 105.8, "adj_em": 2.1,  "tempo": 66.8, "league": "NCAAB",
+    },
+    "Penn St": {
+        "adj_o": 107.3, "adj_d": 106.4, "adj_em": 0.9,  "tempo": 65.2, "league": "NCAAB",
+    },
+    "Northwestern": {
+        "adj_o": 105.8, "adj_d": 107.3, "adj_em": -1.5, "tempo": 63.7, "league": "NCAAB",
+    },
+    "Rutgers": {
+        "adj_o": 104.6, "adj_d": 107.1, "adj_em": -2.5, "tempo": 64.4, "league": "NCAAB",
+    },
+
+    # ----- SEC -----
+    "Auburn": {
+        "adj_o": 118.1, "adj_d": 92.4,  "adj_em": 25.7, "tempo": 71.3, "league": "NCAAB",
+    },
+    "Kentucky": {
+        "adj_o": 118.5, "adj_d": 91.3,  "adj_em": 27.2, "tempo": 67.4, "league": "NCAAB",
+    },
+    "Tennessee": {
+        "adj_o": 114.1, "adj_d": 95.7,  "adj_em": 18.4, "tempo": 64.7, "league": "NCAAB",
+    },
+    "Ole Miss": {
+        "adj_o": 109.7, "adj_d": 102.8, "adj_em": 6.9,  "tempo": 65.9, "league": "NCAAB",
+    },
+    "Alabama": {
+        "adj_o": 116.3, "adj_d": 97.4,  "adj_em": 18.9, "tempo": 72.4, "league": "NCAAB",
+    },
+    "Florida": {
+        "adj_o": 112.8, "adj_d": 99.6,  "adj_em": 13.2, "tempo": 68.1, "league": "NCAAB",
+    },
+    "Arkansas": {
+        "adj_o": 111.4, "adj_d": 100.3, "adj_em": 11.1, "tempo": 69.8, "league": "NCAAB",
+    },
+    "Missouri": {
+        "adj_o": 110.7, "adj_d": 101.2, "adj_em": 9.5,  "tempo": 66.4, "league": "NCAAB",
+    },
+    "Texas A&M": {
+        "adj_o": 109.8, "adj_d": 102.1, "adj_em": 7.7,  "tempo": 64.3, "league": "NCAAB",
+    },
+    "LSU": {
+        "adj_o": 110.3, "adj_d": 103.4, "adj_em": 6.9,  "tempo": 70.6, "league": "NCAAB",
+    },
+    "Mississippi St": {
+        "adj_o": 108.4, "adj_d": 104.6, "adj_em": 3.8,  "tempo": 67.2, "league": "NCAAB",
+    },
+    "Georgia": {
+        "adj_o": 107.6, "adj_d": 105.3, "adj_em": 2.3,  "tempo": 66.9, "league": "NCAAB",
+    },
+    "South Carolina": {
+        "adj_o": 106.9, "adj_d": 106.1, "adj_em": 0.8,  "tempo": 65.8, "league": "NCAAB",
+    },
+    "Vanderbilt": {
+        "adj_o": 105.3, "adj_d": 108.7, "adj_em": -3.4, "tempo": 67.1, "league": "NCAAB",
+    },
+
+    # ----- Big East -----
     "DePaul": {
         "adj_o": 103.4, "adj_d": 106.2, "adj_em": -2.8, "tempo": 69.1, "league": "NCAAB",
     },
+    "St. John's": {
+        "adj_o": 114.2, "adj_d": 98.6,  "adj_em": 15.6, "tempo": 70.3, "league": "NCAAB",
+    },
+    "Providence": {
+        "adj_o": 110.1, "adj_d": 102.8, "adj_em": 7.3,  "tempo": 64.6, "league": "NCAAB",
+    },
+    "Xavier": {
+        "adj_o": 109.4, "adj_d": 103.7, "adj_em": 5.7,  "tempo": 67.8, "league": "NCAAB",
+    },
+    "Villanova": {
+        "adj_o": 108.8, "adj_d": 104.4, "adj_em": 4.4,  "tempo": 63.1, "league": "NCAAB",
+    },
+    "Georgetown": {
+        "adj_o": 102.1, "adj_d": 109.8, "adj_em": -7.7, "tempo": 68.4, "league": "NCAAB",
+    },
+    "Butler": {
+        "adj_o": 105.4, "adj_d": 107.6, "adj_em": -2.2, "tempo": 65.9, "league": "NCAAB",
+    },
+    "Seton Hall": {
+        "adj_o": 107.1, "adj_d": 105.9, "adj_em": 1.2,  "tempo": 66.7, "league": "NCAAB",
+    },
 
-    # --- NCAAB Rebuild / low-major tier (AdjEM < -10) ---
+    # ----- WCC / Mountain West / A-10 (top mid-majors) -----
+    "Gonzaga": {
+        "adj_o": 118.4, "adj_d": 101.2, "adj_em": 17.2, "tempo": 72.1, "league": "NCAAB",
+    },
+    "Saint Mary's": {
+        "adj_o": 112.1, "adj_d": 101.4, "adj_em": 10.7, "tempo": 61.8, "league": "NCAAB",
+    },
+    "San Diego St": {
+        "adj_o": 108.3, "adj_d": 99.7,  "adj_em": 8.6,  "tempo": 62.4, "league": "NCAAB",
+    },
+    "Utah St": {
+        "adj_o": 111.7, "adj_d": 103.2, "adj_em": 8.5,  "tempo": 66.1, "league": "NCAAB",
+    },
+    "Dayton": {
+        "adj_o": 113.2, "adj_d": 104.8, "adj_em": 8.4,  "tempo": 67.4, "league": "NCAAB",
+    },
+    "VCU": {
+        "adj_o": 108.9, "adj_d": 102.1, "adj_em": 6.8,  "tempo": 68.9, "league": "NCAAB",
+    },
+    "UNLV": {
+        "adj_o": 109.4, "adj_d": 103.7, "adj_em": 5.7,  "tempo": 69.2, "league": "NCAAB",
+    },
+    "New Mexico": {
+        "adj_o": 109.1, "adj_d": 104.3, "adj_em": 4.8,  "tempo": 70.1, "league": "NCAAB",
+    },
+    "Drake": {
+        "adj_o": 109.8, "adj_d": 105.6, "adj_em": 4.2,  "tempo": 64.7, "league": "NCAAB",
+    },
+    "Richmond": {
+        "adj_o": 107.3, "adj_d": 105.4, "adj_em": 1.9,  "tempo": 65.3, "league": "NCAAB",
+    },
+    "Davidson": {
+        "adj_o": 108.1, "adj_d": 106.4, "adj_em": 1.7,  "tempo": 68.6, "league": "NCAAB",
+    },
+
+    # ----- Low-major / rebuild -----
     "Bryant": {
         "adj_o": 101.2, "adj_d": 110.4, "adj_em": -9.2,  "tempo": 70.8, "league": "NCAAB",
     },
@@ -290,30 +465,106 @@ _ALIASES: dict[str, str] = {
     "Hornets":                   "Charlotte Hornets",
     "Wizards":                   "Washington Wizards",
 
-    # --- NCAAB aliases ---
+    # --- NCAAB aliases (full mascot names + common variants the Odds API may return) ---
+    # ACC
     "Michigan State":            "Michigan St",
     "UConn Huskies":             "UConn",
     "Connecticut":               "UConn",
     "Duke Blue Devils":          "Duke",
-    "Kansas Jayhawks":           "Kansas",
-    "Kentucky Wildcats":         "Kentucky",
-    "Houston Cougars":           "Houston",
-    "Auburn Tigers":             "Auburn",
-    "Marquette Golden Eagles":   "Marquette",
-    "Purdue Boilermakers":       "Purdue",
-    "Tennessee Volunteers":      "Tennessee",
-    "Texas Longhorns":           "Texas",
-    "Gonzaga Bulldogs":          "Gonzaga",
-    "Illinois Fighting Illini":  "Illinois",
-    "Baylor Bears":              "Baylor",
-    "Indiana Hoosiers":          "Indiana",
     "Virginia Cavaliers":        "Virginia",
-    "Nebraska Cornhuskers":      "Nebraska",
-    "Creighton Bluejays":        "Creighton",
-    "Ole Miss Rebels":           "Ole Miss",
-    "Texas Southern Tigers":     "Texas Southern",   # explicit alias — prevents Texas partial match
+    "Miami Hurricanes":          "Miami FL",
     "Miami":                     "Miami FL",
     "Miami (FL)":                "Miami FL",
+    "NC State Wolfpack":         "NC State",
+    "North Carolina State":      "NC State",
+    "Pittsburgh Panthers":       "Pitt",
+    "Notre Dame Fighting Irish": "Notre Dame",
+    "Syracuse Orange":           "Syracuse",
+    "Wake Forest Demon Deacons": "Wake Forest",
+    "Georgia Tech Yellow Jackets": "Georgia Tech",
+    "Louisville Cardinals":      "Louisville",
+    "Clemson Tigers":            "Clemson",
+    "Boston College Eagles":     "Boston College",
+    "Stanford Cardinal":         "Stanford",
+    # Big 12
+    "Kansas Jayhawks":           "Kansas",
+    "Houston Cougars":           "Houston",
+    "Baylor Bears":              "Baylor",
+    "Texas Longhorns":           "Texas",
+    "Texas Tech Red Raiders":    "Texas Tech",
+    "Iowa State Cyclones":       "Iowa St",
+    "Iowa State":                "Iowa St",
+    "Kansas State Wildcats":     "Kansas St",
+    "Kansas State":              "Kansas St",
+    "BYU Cougars":               "BYU",
+    "Oklahoma State Cowboys":    "Oklahoma St",
+    "Oklahoma State":            "Oklahoma St",
+    "TCU Horned Frogs":          "TCU",
+    "UCF Knights":               "UCF",
+    "West Virginia Mountaineers": "West Virginia",
+    "Cincinnati Bearcats":       "Cincinnati",
+    # Big Ten
+    "Purdue Boilermakers":       "Purdue",
+    "Michigan State Spartans":   "Michigan St",
+    "Illinois Fighting Illini":  "Illinois",
+    "Indiana Hoosiers":          "Indiana",
+    "Nebraska Cornhuskers":      "Nebraska",
+    "Wisconsin Badgers":         "Wisconsin",
+    "Michigan Wolverines":       "Michigan",
+    "Ohio State Buckeyes":       "Ohio St",
+    "Ohio State":                "Ohio St",
+    "Maryland Terrapins":        "Maryland",
+    "Iowa Hawkeyes":             "Iowa",
+    "Minnesota Golden Gophers":  "Minnesota",
+    "Penn State Nittany Lions":  "Penn St",
+    "Penn State":                "Penn St",
+    "Northwestern Wildcats":     "Northwestern",
+    "Rutgers Scarlet Knights":   "Rutgers",
+    # SEC
+    "Auburn Tigers":             "Auburn",
+    "Kentucky Wildcats":         "Kentucky",
+    "Tennessee Volunteers":      "Tennessee",
+    "Ole Miss Rebels":           "Ole Miss",
+    "Alabama Crimson Tide":      "Alabama",
+    "Florida Gators":            "Florida",
+    "Arkansas Razorbacks":       "Arkansas",
+    "Missouri Tigers":           "Missouri",
+    "Texas A&M Aggies":          "Texas A&M",
+    "LSU Tigers":                "LSU",
+    "Mississippi State Bulldogs": "Mississippi St",
+    "Mississippi State":         "Mississippi St",
+    "Georgia Bulldogs":          "Georgia",
+    "South Carolina Gamecocks":  "South Carolina",
+    "Vanderbilt Commodores":     "Vanderbilt",
+    # Big East
+    "St. John's Red Storm":      "St. John's",
+    "Saint John's":              "St. John's",
+    "St John's":                 "St. John's",
+    "Providence Friars":         "Providence",
+    "Xavier Musketeers":         "Xavier",
+    "Villanova Wildcats":        "Villanova",
+    "Georgetown Hoyas":          "Georgetown",
+    "Butler Bulldogs":           "Butler",
+    "Seton Hall Pirates":        "Seton Hall",
+    "Marquette Golden Eagles":   "Marquette",
+    "Creighton Bluejays":        "Creighton",
+    # WCC / Mountain West / A-10
+    "Gonzaga Bulldogs":          "Gonzaga",
+    "Saint Mary's Gaels":        "Saint Mary's",
+    "San Diego State Aztecs":    "San Diego St",
+    "San Diego State":           "San Diego St",
+    "Utah State Aggies":         "Utah St",
+    "Utah State":                "Utah St",
+    "Dayton Flyers":             "Dayton",
+    "VCU Rams":                  "VCU",
+    "Virginia Commonwealth":     "VCU",
+    "UNLV Runnin Rebels":        "UNLV",
+    "New Mexico Lobos":          "New Mexico",
+    "Drake Bulldogs":            "Drake",
+    "Richmond Spiders":          "Richmond",
+    "Davidson Wildcats":         "Davidson",
+    # Low-major
+    "Texas Southern Tigers":     "Texas Southern",   # explicit alias — prevents Texas partial match
 }
 
 # Scaling constants
@@ -387,7 +638,7 @@ def get_efficiency_gap(home_team: str, away_team: str) -> float:
     Score > 10: home team has an efficiency advantage.
     Score < 10: away team has an efficiency advantage.
 
-    Covers all 30 NBA franchises (NetRtg-derived adj_em) and ~25 NCAAB programs
+    Covers all 30 NBA franchises (NetRtg-derived adj_em) and 80 NCAAB programs
     (KenPom/Barttorvik adj_em). Both use the same scaling so the gap is
     comparable across leagues within the 0-20 output range.
 
