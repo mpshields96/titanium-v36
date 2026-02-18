@@ -77,9 +77,22 @@ API: The Odds API v4 — key in .streamlit/secrets.toml (never commit)
   Error states: missing API key, fetch error, 0 edges (neutral message)
   Quota status footer, st.session_state for result persistence
 
+## WHAT'S BUILT AND WORKING (as of Session 9)
+- data/efficiency_feed.py: all 30 NBA franchises added (NetRtg×2.2 → AdjEM equivalent)
+  54 total teams (30 NBA + 24 NCAAB). league field on every entry.
+  list_teams(league=None) accepts optional "NBA" or "NCAAB" filter.
+- data/kill_switch_feed.py: full 30-team NBA rest/pace coverage (was 15)
+  Full 32-team NFL stadium wind map (was 14). Indoor stubs 2mph, cold-weather correct.
+- odds_fetcher.py: cache_open_prices(), get_open_price(), clear_open_price_cache()
+  Session-start price cache for soccer drift detection. Zero API cost.
+- app.py: UI redesign — "Precision Instrument" aesthetic
+  Background softened to #0D1117. Font: IBM Plex Mono.
+  TITANIUM header bug fixed (letters as individual spans — no letter-spacing wrap).
+  Sport chips restyled. Well-priced neutral card. Cleaner bet cards.
+
 ## WHAT'S STUBBED (TODO)
-- data expansion: NBA/NFL full team coverage in efficiency_feed + kill_switch_feed (Session 9)
-- Streamlit Cloud deploy: pending (awaiting user action at share.streamlit.io)
+- NCAAB efficiency_feed expansion: only 24 teams, many mid-major fall back to default 8.0
+- Streamlit Cloud deploy: DONE (auto-deploys from main branch push)
 
 ## SESSION 3 GOAL ✅ COMPLETE
 1. ✅ Upgrade odds_fetcher.py: all_books(), fetch_game_lines(), QuotaTracker, retry logic
@@ -143,15 +156,34 @@ This works because books occasionally misprice relative to the consensus.
 7. ✅ Mobile view polish — max 720px, flex wrap, iPhone-safe (Session 8)
 8. 🔲 Streamlit Cloud deploy — pending user action at share.streamlit.io
 
-## SESSION 9 GOAL (IN PROGRESS — R&D working)
-1. 🔲 efficiency_feed.py: add all 30 NBA teams (NetRtg → AdjEM equivalent, same 0-20 scaling)
-2. 🔲 kill_switch_feed.py: expand NBA rest data to full 30-team schedule
-3. 🔲 kill_switch_feed.py: expand NFL wind data to full 32-team stadium map
-4. 🔲 Soccer drift: assess whether open-price tracking is feasible from Odds API
+## SESSION 9 GOAL ✅ COMPLETE
+1. ✅ efficiency_feed.py: all 30 NBA franchises added (NetRtg×2.2, league field, list_teams filter)
+2. ✅ kill_switch_feed.py: full 30-team NBA rest/pace coverage
+3. ✅ kill_switch_feed.py: full 32-team NFL stadium wind map
+4. ✅ Soccer drift: cache_open_prices() added to odds_fetcher.py (zero API cost pattern)
+5. ✅ app.py: UI redesign — Precision Instrument aesthetic, header bug fixed, softer bg
+
+## SESSION 10 GOAL (NEXT)
+1. 🔲 efficiency_feed.py: NCAAB expansion to ~60 programs (current 24 misses most mid-major)
+     Priority: ACC/Big 12/SEC teams appearing in NCAAB odds feed → currently default 8.0 gap
+     Run: python3 -c "from data.efficiency_feed import list_teams; print(list_teams('NCAAB'))"
+2. 🔲 Architecture advisory: can Odds API commence_time diffs derive actual NBA rest days?
+     (Replace static stub in kill_switch_feed — advisory only, no code)
+3. 🔲 Multi-page planning: st.navigation() + st.Page() structure for future expansion
+     Pages: Live Analysis (current), Bet History, P&L Tracker, Odds Comparison
 
 ## CURRENT STATE
-Last completed: Session 8 — app.py UI complete, pushed
-Last git commit: 88491c2 (app.py Session 8)
+Last completed: Session 9 — data expansion + UI redesign, pushed to GitHub
+Last git commit: 8d9d0c1 (app.py UI redesign)
 Tests: 65 total (45 math + 20 fetcher), all passing
-Quota: ~18,316 remaining
-Next: Deploy to Streamlit Cloud (user action) → Session 9 data expansion from R&D
+Quota: ~18,307 remaining (used 9 this session — 3 pipeline test + 6 earlier)
+Streamlit Cloud: deployed, auto-deploys from main
+Next: Session 10 — NCAAB efficiency expansion (R&D task) + optional rest-days advisory
+
+## UI RESEARCH FINDINGS (Session 9 — for future multi-page build)
+- Stay with Streamlit until genuinely outgrown. Deployment solved, Claude Code iteration fastest.
+- For multi-page: st.navigation() + st.Page() is the correct approach (Streamlit 1.36+)
+- Best plugins for premium look: streamlit-extras (cards/badges), streamlit-aggrid (bet table)
+- Long-term migration target if going public/mobile: FastAPI + HTMX (not React, not Reflex yet)
+- Design reference: civixsolutions.com — "normal on surface, neo-brutal on hover" conceit
+  Font pairing (Fraunces serif + mono data) worth adopting for future multi-page build
