@@ -90,8 +90,13 @@ API: The Odds API v4 — key in .streamlit/secrets.toml (never commit)
   TITANIUM header bug fixed (letters as individual spans — no letter-spacing wrap).
   Sport chips restyled. Well-priced neutral card. Cleaner bet cards.
 
+## WHAT'S BUILT AND WORKING (as of Session 10)
+- data/efficiency_feed.py: NCAAB expanded 24 → 80 teams (Session 10)
+  ACC (17), Big 12 (13), Big Ten (14), SEC (14), Big East (8), WCC/MWC/A-10 (11), low-major (3)
+  Full mascot-name aliases for all 80 teams. 110 total (30 NBA + 80 NCAAB).
+  Unknown teams still fall back to _DEFAULT_GAP (8.0). Drop-in replacement, no API changes.
+
 ## WHAT'S STUBBED (TODO)
-- NCAAB efficiency_feed expansion: only 24 teams, many mid-major fall back to default 8.0
 - Streamlit Cloud deploy: DONE (auto-deploys from main branch push)
 
 ## SESSION 3 GOAL ✅ COMPLETE
@@ -163,22 +168,28 @@ This works because books occasionally misprice relative to the consensus.
 4. ✅ Soccer drift: cache_open_prices() added to odds_fetcher.py (zero API cost pattern)
 5. ✅ app.py: UI redesign — Precision Instrument aesthetic, header bug fixed, softer bg
 
-## SESSION 10 GOAL (NEXT)
-1. 🔲 efficiency_feed.py: NCAAB expansion to ~60 programs (current 24 misses most mid-major)
-     Priority: ACC/Big 12/SEC teams appearing in NCAAB odds feed → currently default 8.0 gap
-     Run: python3 -c "from data.efficiency_feed import list_teams; print(list_teams('NCAAB'))"
-2. 🔲 Architecture advisory: can Odds API commence_time diffs derive actual NBA rest days?
-     (Replace static stub in kill_switch_feed — advisory only, no code)
+## SESSION 10 GOAL ✅ COMPLETE
+1. ✅ efficiency_feed.py: NCAAB expanded 24 → 80 teams (ACC/Big 12/Big Ten/SEC/Big East/WCC/MWC/A-10)
+2. 🔲 Architecture advisory: commence_time diffs for NBA rest days (R&D researched, v36 code TBD)
 3. 🔲 Multi-page planning: st.navigation() + st.Page() structure for future expansion
-     Pages: Live Analysis (current), Bet History, P&L Tracker, Odds Comparison
+
+## SESSION 11 GOAL (NEXT)
+1. 🔲 NBA rest days: implement compute_rest_days_from_schedule(raw_games) → dict[str, int | None]
+     Logic: sort each team's games by commence_time, diff between consecutive games → rest days
+     Wire into _apply_nba_kill() in edge_calculator.py — 2-line signature change
+     Fallback: if team has only 1 game in fetch window → use kill_switch_feed stub
+     Zero additional API calls. Use raw_games already fetched by calculate_edges().
+2. 🔲 Multi-page planning: st.navigation() + st.Page() — advisory + scaffold only
+     Pages: Live Analysis (current app), Bet History, P&L Tracker, Odds Comparison
+     Deliverable: updated app.py with st.navigation() wired, stub pages, no broken functionality
 
 ## CURRENT STATE
-Last completed: Session 9 — data expansion + UI redesign, pushed to GitHub
-Last git commit: 8d9d0c1 (app.py UI redesign)
+Last completed: Session 10 — NCAAB efficiency expansion, pushed to GitHub
+Last git commit: db4b843 (efficiency_feed NCAAB 24→80)
 Tests: 65 total (45 math + 20 fetcher), all passing
-Quota: ~18,307 remaining (used 9 this session — 3 pipeline test + 6 earlier)
+Quota: ~18,307 remaining (unchanged this session — no API calls)
 Streamlit Cloud: deployed, auto-deploys from main
-Next: Session 10 — NCAAB efficiency expansion (R&D task) + optional rest-days advisory
+Next: Session 11 — NBA rest days from schedule + multi-page scaffold
 
 ## UI RESEARCH FINDINGS (Session 9 — for future multi-page build)
 - Stay with Streamlit until genuinely outgrown. Deployment solved, Claude Code iteration fastest.
