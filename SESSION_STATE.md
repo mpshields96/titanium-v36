@@ -69,8 +69,17 @@ API: The Odds API v4 — key in .streamlit/secrets.toml (never commit)
 - run_pipeline.py: updated to use calculate_edges() as single entry point — live tested ✓
   76 NCAAB games, kill switch routing clean, 0 false crashes
 
+## WHAT'S BUILT AND WORKING (as of Session 8)
+- app.py: full Streamlit UI — "Military Intelligence Terminal" aesthetic
+  Dark theme (#0A0A0F), JetBrains Mono, amber accent (#F59E0B)
+  Sport selector grouped checkboxes, EXECUTE button, progress per sport
+  Bet cards: NUCLEAR/STANDARD/LEAN tier color coded, nemesis block, FLAG badges
+  Error states: missing API key, fetch error, 0 edges (neutral message)
+  Quota status footer, st.session_state for result persistence
+
 ## WHAT'S STUBBED (TODO)
-- app.py: full Streamlit UI wiring (Session 8)
+- data expansion: NBA/NFL full team coverage in efficiency_feed + kill_switch_feed (Session 9)
+- Streamlit Cloud deploy: pending (awaiting user action at share.streamlit.io)
 
 ## SESSION 3 GOAL ✅ COMPLETE
 1. ✅ Upgrade odds_fetcher.py: all_books(), fetch_game_lines(), QuotaTracker, retry logic
@@ -130,13 +139,19 @@ This works because books occasionally misprice relative to the consensus.
 3. ✅ Kill switches implemented in edge_calculator.py (Session 6)
 4. ✅ data/kill_switch_feed.py promoted (Session 6)
 5. ✅ calculate_edges() — main pipeline entry point (Session 7)
-6. 🔲 Wire Streamlit app.py: button → fetch → edge → rank → display table (Session 8)
-7. 🔲 Mobile view polish (iPhone layout)
-8. 🔲 Deployment checklist + push to Streamlit Cloud
+6. ✅ Wire Streamlit app.py — mobile-first UI, dark terminal aesthetic (Session 8)
+7. ✅ Mobile view polish — max 720px, flex wrap, iPhone-safe (Session 8)
+8. 🔲 Streamlit Cloud deploy — pending user action at share.streamlit.io
+
+## SESSION 9 GOAL (IN PROGRESS — R&D working)
+1. 🔲 efficiency_feed.py: add all 30 NBA teams (NetRtg → AdjEM equivalent, same 0-20 scaling)
+2. 🔲 kill_switch_feed.py: expand NBA rest data to full 30-team schedule
+3. 🔲 kill_switch_feed.py: expand NFL wind data to full 32-team stadium map
+4. 🔲 Soccer drift: assess whether open-price tracking is feasible from Odds API
 
 ## CURRENT STATE
-Last completed: Session 7 — calculate_edges() promoted, full pipeline clean
-Last git commit: pending (commit after updating this file)
+Last completed: Session 8 — app.py UI complete, pushed
+Last git commit: 88491c2 (app.py Session 8)
 Tests: 65 total (45 math + 20 fetcher), all passing
-Quota: ~18,319 remaining
-Next: Streamlit app.py UI wiring → mobile polish → deploy
+Quota: ~18,316 remaining
+Next: Deploy to Streamlit Cloud (user action) → Session 9 data expansion from R&D
