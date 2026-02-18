@@ -220,66 +220,165 @@ def fractional_kelly(win_prob: float, american_odds: int, fraction: float = 0.25
 
 
 # ---------------------------------------------------------------------------
-# Kill switches
+# Kill switches — Session 6
+# ---------------------------------------------------------------------------
+#
+# All four return (killed: bool, reason: str).
+# killed=True = abort bet. killed=False = safe (reason="" or a FLAG string).
+# FLAG reasons are non-fatal — surface in output but do not drop the bet.
+# KILL / FORCE_UNDER reasons are fatal — bet_ranker must drop or override.
+#
+# Inputs are provided by data/kill_switch_feed.py (same pattern as efficiency_feed).
+# Wire-in pattern:
+#   inputs = get_nba_kill_inputs(bet_team, opp_team, bet.line, bet.market_type)
+#   killed, reason = nba_kill_switch(**{k: v for k, v in inputs.items() if k != 'data_live'})
+#   if killed: continue
 # ---------------------------------------------------------------------------
 
-def nba_kill_switch(rest_disadvantage: bool, spread: float) -> bool:
+
+def nba_kill_switch(
+    rest_disadvantage: bool,
+    spread: float,
+    star_absent: bool = False,
+    avg_margin: float = 5.0,
+    b2b: bool = False,
+    pace_std_dev: float = 0.0,
+    market_type: str = "spread",
+) -> tuple[bool, str]:
     """
-    NBA kill switch: abort if team has rest disadvantage AND spread < -4.
+    NBA kill switch per V36.1 spec.
+
+    Spec rule: rest_disadvantage AND spread inside -4 AND market_type=spread → KILL.
+    Extended: star absent inside avg margin, B2B flag, high pace variance on totals.
 
     Args:
-        rest_disadvantage: True if the favored team played more recently.
-        spread: Market spread for the favored team (negative = favorite).
+        rest_disadvantage: Bet team is on shorter rest than opponent.
+        spread:            Market spread line (negative = favourite).
+        star_absent:       Primary star player confirmed out.
+        avg_margin:        Team's average winning/losing margin (default 5.0).
+        b2b:               Bet team playing second game of back-to-back.
+        pace_std_dev:      Std dev of pace across last N games (high = volatile).
+        market_type:       "spread", "moneyline", "total", "prop".
 
     Returns:
-        True if bet should be aborted, False if safe to proceed.
+        (killed, reason) — killed=True means abort.
     """
-    # TODO Session 3: Implement
-    pass
+    if rest_disadvantage and market_type == "spread" and abs(spread) < 4:
+        return True, "KILL: Rest disadvantage with spread inside -4 — abort spread"
+
+    if star_absent and abs(spread) < avg_margin:
+        return True, "KILL: Star absence with spread inside average margin"
+
+    if b2b:
+        return False, "FLAG: B2B — reduce Kelly by 50%"
+
+    if pace_std_dev > 4 and market_type == "total":
+        return True, "KILL: High pace variance — skip total"
+
+    return False, ""
 
 
-def nfl_kill_switch(wind_mph: float, total: float) -> str:
+def nfl_kill_switch(
+    wind_mph: float,
+    total: float,
+    backup_qb: bool = False,
+    market_type: str = "total",
+) -> tuple[bool, str]:
     """
-    NFL kill switch: if wind > 15mph AND total > 42, force Under or Pass.
+    NFL kill switch per V36.1 spec.
+
+    Spec rule: wind > 15mph AND total > 42 AND market_type=total → FORCE_UNDER or PASS.
+    Extended: backup QB start, extreme wind >20mph.
 
     Args:
-        wind_mph: Wind speed at game location in mph.
-        total: Market total (over/under line).
+        wind_mph:    Forecasted wind speed at game time in mph.
+        total:       Over/under market line.
+        backup_qb:   Starting QB confirmed out, backup starting.
+        market_type: "spread", "moneyline", "total", "prop".
 
     Returns:
-        "UNDER" to force under bet, "PASS" to skip entirely, "OK" if no kill.
+        (killed, reason) — killed=True means abort (or force under per reason string).
+        FORCE_UNDER in reason: if betting over, kill it; under is still valid.
     """
-    # TODO Session 3: Implement
-    pass
+    if backup_qb:
+        return True, "KILL: Backup QB — require 10%+ edge to proceed"
+
+    if wind_mph > 20:
+        return True, "KILL: Wind >20mph — skip all totals"
+
+    if wind_mph > 15 and total > 42 and market_type == "total":
+        return True, "FORCE_UNDER: Wind >15mph with high total — take under or pass"
+
+    return False, ""
 
 
-def ncaab_kill_switch(three_point_reliance: float, is_away: bool) -> bool:
+def ncaab_kill_switch(
+    three_point_reliance: float,
+    is_away: bool,
+    tempo_diff: float = 0.0,
+    conference_tournament: bool = False,
+    market_type: str = "spread",
+) -> tuple[bool, str]:
     """
-    NCAAB kill switch: fade if team's 3P reliance > 40% AND they're away.
+    NCAAB kill switch per V36.1 spec.
+
+    Spec rule: 3P reliance > 40% AND away game → FADE.
+    Extended: tempo mismatch > 10 possessions on totals, tournament pressure flag.
 
     Args:
-        three_point_reliance: Fraction of offense from 3-pointers (0.0 to 1.0).
-        is_away: True if this team is the away team.
+        three_point_reliance: Fraction of offense from 3-pointers (0.0–1.0).
+        is_away:              Bet team is the away team.
+        tempo_diff:           Possession difference per 40 min between teams.
+        conference_tournament: Game is a conference tournament game.
+        market_type:          "spread", "moneyline", "total", "prop".
 
     Returns:
-        True if bet should be faded (aborted), False if safe to proceed.
+        (killed, reason) — killed=True means abort.
     """
-    # TODO Session 3: Implement
-    pass
+    if three_point_reliance > 0.40 and is_away:
+        return True, f"KILL: 3PT reliance {three_point_reliance:.0%} on road — fade"
+
+    if tempo_diff > 10 and market_type == "total":
+        return True, f"KILL: Tempo diff {tempo_diff:.1f} possessions — skip total"
+
+    if conference_tournament:
+        return False, "FLAG: Conference tournament — require 8%+ edge"
+
+    return False, ""
 
 
-def soccer_kill_switch(market_drift_pct: float) -> bool:
+def soccer_kill_switch(
+    market_drift_pct: float,
+    dead_rubber: bool = False,
+    key_creator_out: bool = False,
+    market_type: str = "moneyline",
+) -> tuple[bool, str]:
     """
-    Soccer kill switch: abort if market has drifted > 10% against our position.
+    Soccer kill switch per V36.1 spec.
+
+    Spec rule: market drift > 10% against position → ABORT.
+    Extended: dead rubber games, key creator confirmed absent.
 
     Args:
-        market_drift_pct: Percentage the market has moved against our position.
+        market_drift_pct: Fraction the line moved against position since open
+                          (e.g. 0.12 = 12% drift). Computed in kill_switch_feed.
+        dead_rubber:      Game has no meaningful stakes.
+        key_creator_out:  Primary chance-creator confirmed absent.
+        market_type:      "moneyline", "total", "spread", "prop".
 
     Returns:
-        True if bet should be aborted, False if safe to proceed.
+        (killed, reason) — killed=True means abort.
     """
-    # TODO Session 4: Implement
-    pass
+    if market_drift_pct > 0.10:
+        return True, f"KILL: Market drifted {market_drift_pct:.1%} against position — abort"
+
+    if dead_rubber:
+        return True, "KILL: Dead rubber — skip"
+
+    if key_creator_out:
+        return False, "FLAG: Key creator out — downgrade significantly"
+
+    return False, ""
 
 
 # ---------------------------------------------------------------------------

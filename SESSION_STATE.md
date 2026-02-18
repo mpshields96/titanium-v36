@@ -55,8 +55,15 @@ API: The Odds API v4 — key in .streamlit/secrets.toml (never commit)
 - run_pipeline.py: full end-to-end CLI test: fetch → efficiency → edge → rank → format ✓
 - PROJECT_INDEX.md: repo index created (94% token reduction for future sessions)
 
+## WHAT'S BUILT AND WORKING (as of Session 6, partial)
+- edge_calculator.py: all 4 kill switches implemented — nba/nfl/ncaab/soccer_kill_switch
+  all return tuple[bool, str], spec rules + extended rules, verified test cases pass
+- data/kill_switch_feed.py: stub input layer for all 4 kill switches
+  NBA rest/pace, NFL wind, NCAAB 3PT/tempo, Soccer drift computed at runtime
+  Same pattern as efficiency_feed — data_live flag gates UI display
+
 ## WHAT'S STUBBED (TODO in Session 5+)
-- edge_calculator.py: calculate_edges() routing stub, all kill switch stubs
+- edge_calculator.py: calculate_edges() routing stub (kill switches now real, not called yet)
 - app.py: full Streamlit UI wiring
 
 ## SESSION 3 GOAL ✅ COMPLETE
@@ -111,18 +118,19 @@ This works because books occasionally misprice relative to the consensus.
 - efficiency_gap defaults to 8.0 (moderate) — real values come from KenPom in Session 5.
 - Kill switches (nba/nfl/ncaab/soccer) still stubbed — Session 5 work.
 
-## SESSION 5 GOAL (IN PROGRESS)
+## SESSION 5/6 GOAL (IN PROGRESS)
 1. ✅ Promote efficiency_feed.py (KenPom mock) — wired into rank_bets, live tested
 2. ✅ PROJECT_INDEX.md created (repo index for 94% token reduction)
-3. 🔲 Implement kill switches in edge_calculator.py
-4. 🔲 Wire calculate_edges() routing function
-5. 🔲 Wire Streamlit app.py: button → fetch → edge → rank → display table
-6. 🔲 Mobile view polish (iPhone layout)
-7. 🔲 Deployment checklist + push to Streamlit Cloud
+3. ✅ Kill switches implemented in edge_calculator.py (Session 6)
+4. ✅ data/kill_switch_feed.py promoted (Session 6)
+5. 🔲 Wire calculate_edges() routing function (call kill switches in pipeline)
+6. 🔲 Wire Streamlit app.py: button → fetch → edge → rank → display table
+7. 🔲 Mobile view polish (iPhone layout)
+8. 🔲 Deployment checklist + push to Streamlit Cloud
 
 ## CURRENT STATE
-Last completed: Session 5 (partial) — efficiency_feed promoted, run_pipeline.py built, PROJECT_INDEX.md created
+Last completed: Session 6 (partial) — kill switches + kill_switch_feed promoted
 Last git commit: pending (commit after updating this file)
 Tests: 65 total (45 math + 20 fetcher), all passing
-Quota: ~18,322 remaining
-Next: Kill switches → calculate_edges() → Streamlit UI → deploy
+Quota: ~18,319 remaining
+Next: calculate_edges() wiring → Streamlit UI → deploy
