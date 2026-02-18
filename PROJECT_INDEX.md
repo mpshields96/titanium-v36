@@ -1,12 +1,12 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-18
+Generated: 2026-02-18 (updated Session 7)
 
 ## Quick Start
 ```bash
 python3 -m pytest tests/ -v          # Run all 65 tests (must pass before each session)
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test
-streamlit run app.py                 # Launch UI (Session 5+)
+streamlit run app.py                 # Launch UI (Session 8+)
 ```
 
 ## Project Structure
@@ -16,17 +16,18 @@ titanium-v36/
 ├── SESSION_STATE.md             # Session memory & resume instructions
 ├── PROJECT_INDEX.md             # This file (94% token reduction vs full codebase read)
 ├── requirements.txt             # Dependencies
-├── run_pipeline.py              # End-to-end CLI test script
+├── run_pipeline.py              # End-to-end CLI test (uses calculate_edges as entry point)
 ├── .streamlit/
 │   └── secrets.toml             # API key (NEVER commit)
-├── app.py                       # Streamlit UI layer (stub → Session 5)
+├── app.py                       # Streamlit UI layer (Session 8 — stub)
 ├── odds_fetcher.py              # Odds API interface
-├── edge_calculator.py           # Betting math & collar enforcement
+├── edge_calculator.py           # Betting math, collar, kill switches, calculate_edges
 ├── bet_ranker.py                # Diversity engine & Sharp Score ranking
 ├── ncaab_parser.py              # NCAAB game parser + collar filter
 ├── originator_engine.py         # Monte Carlo simulation (stable — do not touch)
 ├── data/
 │   ├── efficiency_feed.py       # KenPom/Barttorvik static data (25 NCAAB teams)
+│   ├── kill_switch_feed.py      # Kill switch input stubs: rest, wind, 3PT%, drift
 │   └── team_stats_bunker.py     # Fallback NBA/NFL stats (static, updated weekly)
 └── tests/
     ├── test_validation.py       # 45 core math tests
@@ -53,11 +54,12 @@ Classes: `QuotaTracker` — tracks API usage per session.
 
 ---
 
-### edge_calculator.py — Betting Math
-No API calls, no UI. All probability math only.
+### edge_calculator.py — Betting Math & Kill Switches
+No API calls, no UI. All probability math + kill switch logic only.
 
 | Function | Returns | Notes |
 |----------|---------|-------|
+| `calculate_edges(sport, raw_games, louisiana_mode, min_edge)` | `list[BetCandidate]` | **Main entry point** — Session 7 |
 | `passes_collar(american_odds)` | `bool` | -180 to +150 only |
 | `_implied_probability(american_odds)` | `float` | Vig-inclusive |
 | `no_vig_probability(odds_a, odds_b)` | `(float, float)` | Fair probs both sides |
@@ -66,12 +68,14 @@ No API calls, no UI. All probability math only.
 | `calculate_sharp_score(edge_pct, rlm_confirmed, efficiency_gap, ...)` | `(float, dict)` | 0-100 composite |
 | `sharp_to_size(sharp_score)` | `str` | NUCLEAR/STANDARD/LEAN tier label |
 | `run_nemesis(bet, sport)` | `dict` | Adversarial counter-thesis |
-| `parse_game_markets(game, sport)` | `list[BetCandidate]` | **Main entry point** — consensus edge detection |
-| `_consensus_fair_prob(team, market_key, side, bookmakers)` | `(float, float, int)` | mean, std_dev, n_books |
+| `parse_game_markets(game, sport)` | `list[BetCandidate]` | Consensus edge detection |
+| `nba/nfl/ncaab/soccer_kill_switch(...)` | `(bool, str)` | Session 6 — spec + extended rules |
 
-Kill switches (all stubbed — Session 5): `nba_kill_switch`, `nfl_kill_switch`, `ncaab_kill_switch`, `soccer_kill_switch`
+Internal: `_SPORT_ROUTING` maps 12 sports → fetch key + kill family. `_apply_X_kill()` private helpers route per sport.
 
-Classes: `BetCandidate` — dataclass with sport, matchup, market_type, target, line, price, edge_pct, win_prob, market_implied, fair_implied, kelly_size, signal, event_id, commence_time, book, sharp_score, sharp_breakdown, nemesis, simulation.
+Classes: `BetCandidate` — sport, matchup, market_type, target, line, price, edge_pct, win_prob, market_implied, fair_implied, kelly_size, signal, event_id, commence_time, book, sharp_score, sharp_breakdown, nemesis, simulation, **kill_reason**.
+
+`calculate_edges()` pipeline: fetch → parse_game_markets → filter min_edge → kill switch → return live candidates. `kill_reason=""` = clean. `kill_reason="FLAG:..."` = kept with warning. `kill_reason="KILL:..."` = dropped (won't appear in output).
 
 ---
 
@@ -101,6 +105,8 @@ Classes: `NCAABBetOpportunity` — matchup, home_team, away_team, bet_type, team
 
 ---
 
+## Data Layer
+
 ### data/efficiency_feed.py — KenPom/Barttorvik Static Data
 No API calls, no math beyond scaling. Static data + lookup only.
 
@@ -112,6 +118,20 @@ No API calls, no math beyond scaling. Static data + lookup only.
 | `list_teams()` | `list[str]` | 25 canonical names |
 
 Teams: Duke, Kansas, Kentucky, Houston, UConn, Auburn, Michigan St, Marquette, Purdue, Tennessee, Texas, Gonzaga, Creighton, Illinois, Baylor, Indiana, Ole Miss, Virginia, Miami FL, Nebraska, DePaul, Bryant, Alabama St, Texas Southern. Unknown → 8.0 default.
+
+---
+
+### data/kill_switch_feed.py — Kill Switch Input Layer (Session 6)
+No API calls, no math. Stub data keyed to kill switch function signatures. Same pattern as efficiency_feed.
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `get_nba_kill_inputs(bet_team, opp_team, spread, market_type, star_absent)` | `dict` | Rest days, B2B flag, pace std dev |
+| `get_nfl_kill_inputs(home_team, total, backup_qb, market_type)` | `dict` | Wind mph stub forecast |
+| `get_ncaab_kill_inputs(bet_team, opp_team, is_away, conf_tournament, market_type)` | `dict` | 3PT reliance, tempo diff |
+| `get_soccer_kill_inputs(open_price, current_price, dead_rubber, key_creator_out, market_type)` | `dict` | Market drift (runtime computed) |
+
+All return dict + `data_live: bool`. `data_live=False` = stub — UI should note "Data unavailable" rather than trust the kill decision.
 
 ---
 
@@ -130,10 +150,11 @@ Known bug: `mean` input should be projected margin, not `bet.line` — tracked, 
 
 ### run_pipeline.py — End-to-End CLI Test
 ```
-run_full_pipeline(sport_key, sport_label) → None
-  [1] fetch_game_lines → [2] build_efficiency_data → [3] parse_game_markets
+run_full_pipeline(sport) → None
+  [1] fetch_game_lines → [2] build_efficiency_data → [3] calculate_edges(sport)
   → [4] rank_bets(efficiency_data=...) → [5] format_bet_table
 ```
+Uses `calculate_edges()` as single entry point. Surfaces FLAG'd bets inline.
 
 ---
 
@@ -149,7 +170,7 @@ run_full_pipeline(sport_key, sport_label) → None
 | Sharp Score tiers | ≥90 = NUCLEAR 2.0u \| ≥80 = STANDARD 1.0u \| else = LEAN 0.5u |
 | Sharp threshold | 40 pts pre-nemesis (temp — raise to 75 when KenPom wired) |
 
-Kill switches: NBA rest+spread | NFL wind+total | NCAAB 3P+away | Soccer drift (all stubbed)
+Kill switches: NBA rest+spread | NFL wind+total | NCAAB 3P+away | Soccer drift
 
 ---
 
@@ -161,6 +182,9 @@ Kill switches: NBA rest+spread | NFL wind+total | NCAAB 3P+away | Soccer drift (
 | 2 | ✅ | odds_fetcher.py, 20 tests |
 | 3 | ✅ | odds_fetcher upgrade, originator_engine, ncaab_parser, consensus edge |
 | 4 | ✅ | bet_ranker.py, Sharp Score, nemesis, full pipeline live-tested |
-| 5 | 🔲 | efficiency_feed promoted ✅ · kill switches · Streamlit UI · deploy |
+| 5 | ✅ | efficiency_feed promoted, run_pipeline.py, PROJECT_INDEX.md |
+| 6 | ✅ | kill switches implemented, kill_switch_feed.py promoted |
+| 7 | ✅ | calculate_edges() — unified entry point, run_pipeline refactored |
+| 8 | 🔲 | Streamlit UI wired, mobile layout, deploy |
 
-Tests: **65 passing** (45 math + 20 fetcher) · Quota: ~18,322 remaining
+Tests: **65 passing** (45 math + 20 fetcher) · Quota: ~18,319 remaining
