@@ -78,11 +78,13 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 11 | ✅ Done | compute_rest_days_from_schedule(), _apply_nba_kill() live rest, st.navigation() scaffold |
 | 12 | ✅ Done | Nemesis demoted to display-only, rest_edge wired to Sharp Score (NBA), NCAAB 3P to 80 teams, tempo sourced from efficiency_feed |
 | 13 | ✅ Done | SHARP_THRESHOLD 40→45, compute_rlm() (passive RLM, 3% implied prob, zero API cost), wired into run_pipeline() — 85/85 tests |
+| 14 | ✅ Done | bet_card_renderer.py promoted (R&D), render_bet_slate() wired, .streamlit/config.toml, data/__init__.py fix, UI polish — 85/85 tests |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
 - **HANDOFF.md at that path is the authoritative spec** — read it directly, don't rely solely on user's chat summary
 - Only promote code that has been live-tested in R&D
+- **Import path diff when promoting:** R&D uses `from core.edge_calculator import` / `from core.odds_fetcher import` — v36 is root-level, use `from edge_calculator import` / `from odds_fetcher import`. Also strip `sys.path.insert(0, ...)` blocks.
 - Known R&D bugs — DO NOT promote until fixed:
   - run_trinity_simulation receives bet.line as mean instead of projected margin (unfixed)
   - RLM Sharp Score component: passive RLM now wired (Session 13). Activates when open-price cache
@@ -98,6 +100,9 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Soccer bulk markets: h2h,totals only (btts/h2h_3_way cause 422 on bulk endpoint)
 - All sports use fetch_batch_odds() — no per-event prop calls (API tier limitation)
 - `_KILL_ROUTER` has no "nba" entry by design — NBA needs `schedule_rest` kwarg, handled by explicit branch in `calculate_edges()` before the router is hit. Do not add it back.
+- `data/__init__.py` must stay — Streamlit Cloud requires it for subpackage imports
+- `bet_card_renderer.py` uses inline styles only — Streamlit strips `<style>` tags from `st.markdown()` HTML
+- `st.Page(icon=...)` requires real emoji or Material shortcodes — Unicode geometric chars (◈ ◇) crash the app
 
 ## If Starting a New Chat Session
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)
