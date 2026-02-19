@@ -194,8 +194,13 @@ This works because books occasionally misprice relative to the consensus.
      Live Analysis (working), Bet History / P&L Tracker / Odds Comparison (stubs).
      All 75 tests passing.
 
-## SESSION 14 GOAL (NEXT)
-1. 🔲 TBD — user to define
+## SESSION 14 GOAL ✅ COMPLETE
+1. ✅ Promote bet_card_renderer.py from R&D — render_bet_card() + render_bet_slate()
+2. ✅ Wire render_bet_slate() into app.py results section (replaces old inline renderer)
+3. ✅ .streamlit/config.toml created — native theme backing CSS
+4. ✅ data/__init__.py created — fixes Streamlit Cloud subpackage ImportError
+5. ✅ app.py: sidebar expanded, soccer 3-col layout, empty-state icon fixed
+6. ✅ 85/85 tests passing
 
 ## WHAT'S BUILT AND WORKING (as of Session 12)
 - bet_ranker.py: Nemesis demoted to display-only annotation. No score adjustment, no removal.
@@ -227,13 +232,27 @@ This works because books occasionally misprice relative to the consensus.
 - bet_ranker.py: unused is_prop param removed from sharp_to_size() call sites
 - All cleanup is structural only — zero behaviour changes. 85/85 tests green.
 
+## WHAT'S BUILT AND WORKING (as of Session 14)
+- bet_card_renderer.py: promoted from R&D — render_bet_card() + render_bet_slate()
+  Tier colours: NUCLEAR amber (#F59E0B) / STANDARD blue (#3B82F6) / LEAN teal (#14B8A6)
+  Score decomposition bar (Edge/RLM/Eff/Sit segments), RLM badge (violet, conditional),
+  FLAG/KILL banners, Nemesis block, Monte Carlo sim row, commence_time display
+  Inline styles only — Streamlit strips <style> tags from markdown
+- app.py: wired render_bet_slate() — results section uses single st.markdown call
+  Removed old inline render_bet_card() and _get_tier/_get_size_label/_get_tier_label helpers
+- .streamlit/config.toml: created — native dark theme backing custom CSS
+  primaryColor #E8A020, backgroundColor #0D1117, baseRadius none, monospace font
+- data/__init__.py: created — fixes Streamlit Cloud ImportError on subpackage imports
+- app.py: sidebar expanded by default, soccer 3-col layout, empty-state icon fixed (◈→—)
+- 85/85 tests passing throughout
+
 ## CURRENT STATE
-Last completed: Session 13 cleanup — edge_calculator.py dead code + stale docs removed
-Last git commit: c3954ad (cleanup: remove dead code and fix stale docs in edge_calculator)
+Last completed: Session 14 — bet_card_renderer.py promoted, UI polish committed
+Last git commit: 5a26089 (Promote bet_card_renderer.py from R&D — richer tier-coded cards)
 Tests: 85 total, all passing
-Quota: ~18,307 remaining (no API calls this session)
+Quota: ~18,307 remaining (no new API calls in Sessions 13 cleanup / 14)
 Streamlit Cloud: deployed, auto-deploys from main
-Next: Session 14 — TBD
+Next: Session 15 — Await instruction. Candidates: NFL expansion, live NBA/NCAAB night verification
 
 ## ORIENTATION (read this first in any new session)
 1. Read PROJECT_INDEX.md — 229 lines, covers all modules, functions, Sharp Score formula, kill switches, test counts. 94% token reduction vs reading all source files.
