@@ -85,7 +85,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 17-post | ✅ Done | eff_data all-sports fix, st.html() card rendering fix, header padding fix, Supabase MCP setup |
 | 18 | ✅ Done | page_bet_history() full impl (P&L strip, Pending, History Log + MARK RESULT), + TRACK BET on Live Analysis cards, render_slate_header/footer helpers — 95/95 tests |
 | 19 | ✅ Done | efficiency_feed.py MLB/MLS/NFL promotion (234 teams total), Hawks alias collision fix, 11 new tests — 106/106 tests |
-| 20 | ✅ Done | docs/MASTER_ROADMAP.md created, page_pnl_tracker() fully built (equity curve, ROI by sport, win rate by market), CLAUDE.md + SESSION_STATE.md updated — 106/106 tests |
+| 20 | ✅ Done | docs/MASTER_ROADMAP.md created, page_pnl_tracker() fully built, RLM 2.0: data/price_history_store.py + Supabase price_history table + _extract_open_prices() refactor — 116/116 tests |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -100,9 +100,12 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - **SHARP_THRESHOLD raise gate (45→50):** Do NOT raise until `RLM live sessions observed` counter in SESSION_STATE.md CURRENT STATE reaches ≥5. Increment manually each session RLM fires on live data.
 - **`std_dev` in `BetCandidate`:** ✅ Done Session 16. `std_dev: float = 0.0` field on BetCandidate. Passed from `_consensus_fair_prob()` at 3 call sites. BOOKS: TIGHT/MODERATE/WIDE badge in `bet_card_renderer.py`. Display-only, zero score impact. F2 (Sharp Score component) **permanently rejected** — R&D validated r=+0.020, no linear relationship. High std_dev = one outlier book = source of edge. Do not add to scoring.
 - Known R&D bugs — DO NOT promote until fixed:
-  - run_trinity_simulation receives bet.line as mean instead of projected margin (unfixed)
+  - run_trinity_simulation receives bet.line as mean instead of projected margin (unfixed in v36;
+    R&D Session 17 fixed call site in `core/titanium.py` — same pattern applies to v36 when simulation is used for sizing)
   - RLM Sharp Score component: passive RLM now wired (Session 13). Activates when open-price cache
     has data AND a 3% implied prob shift is detected. Will score 0 on first run (cold cache).
+    RLM 2.0: `data/price_history_store.py` live (Session 20) — multi-day open prices now persisted in Supabase.
+    True first-ever-seen price injected into cache on session start. RLM now fires on overnight moves.
 - Fixed in R&D, ready for promotion review:
   - Props edge bug: fixed (consensus fair_prob across books, same pattern as game lines)
 - Edge detection method (PROVEN): consensus vig-free mean across all books = model.
