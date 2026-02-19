@@ -144,7 +144,7 @@ Tier colour coding:
 
 ---
 
-### data/efficiency_feed.py — AdjEM Static Data (142 teams)
+### data/efficiency_feed.py — AdjEM Static Data (234 teams)
 No API calls. Static data + lookup only.
 
 | Function | Returns | Notes |
@@ -152,9 +152,9 @@ No API calls. Static data + lookup only.
 | `get_efficiency_gap(home_team, away_team)` | `float` | 0–20 scale, 10.0 = even |
 | `build_efficiency_data(games)` | `dict[str,float]` | event_id → gap, for rank_bets() |
 | `get_team_data(team_name)` | `dict\|None` | adj_o, adj_d, adj_em, tempo |
-| `list_teams(league=None)` | `list[str]` | "NBA" / "NCAAB" / "NHL" / None = all 142 |
+| `list_teams(league=None)` | `list[str]` | "NBA" / "NCAAB" / "NHL" / "MLB" / "MLS" / "NFL" / None = all 234 |
 
-Coverage: 30 NBA (NetRtg×2.2 → AdjEM equiv) + 80 NCAAB (ACC/Big 12/Big Ten/SEC/Big East/WCC/MWC/A-10 + top mid-majors) + 32 NHL (GF60-GA60 × 10 → AdjEM equiv, Session 17). Unknown teams → 8.0 default gap.
+Coverage: 30 NBA (NetRtg×2.2 → AdjEM equiv) + 80 NCAAB (ACC/Big 12/Big Ten/SEC/Big East/WCC/MWC/A-10 + top mid-majors) + 32 NHL (GF60-GA60 × 10 → AdjEM equiv, Session 17) + 30 MLB (run differential → AdjEM proxy, Session 19) + 30 MLS (xG differential → AdjEM proxy, Session 19) + 32 NFL (point differential → AdjEM proxy, Session 19). Hawks alias collision fixed (Session 19). Unknown teams → 8.0 default gap.
 
 **Single source of truth for NCAAB tempo** — `kill_switch_feed.get_ncaab_tempo()` calls `get_team_data()`. No duplicate data.
 
@@ -277,6 +277,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 16 | ✅ | Injury leverage stubs (kill_switch_feed), `std_dev` on BetCandidate, BOOKS badge on card |
 | 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy, aliases for NY Rangers/Islanders + Vegas |
 | 18 | ✅ | `page_bet_history()` full impl, `+ TRACK BET` on Live Analysis cards, `render_slate_header/footer` helpers |
+| 19 | ✅ | `efficiency_feed.py` MLB/MLS/NFL promotion (234 teams), Hawks alias fix, 11 new tests |
 
-Last commit: `53046b6` · Tests: **95 passing** · Quota: ~18,250 remaining
-Next session (19): Await R&D Session 17 output (MLB/MLS efficiency data). C deferred (RLM gate 0/5).
+Last commit: `e0e58d3` · Tests: **106 passing** · Quota: ~18,250 remaining
+Next session (20): Await further instructions.
