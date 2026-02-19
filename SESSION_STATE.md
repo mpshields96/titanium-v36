@@ -247,17 +247,36 @@ This works because books occasionally misprice relative to the consensus.
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 15 — /sc:estimate for B+C+F, feature backlog updated, transition prep
-Last git commit: 3c7f7a5 (Session 15: add FEATURE BACKLOG to SESSION_STATE.md)
-Tests: 85 total, all passing
-Quota: ~18,307 remaining (no new API calls in Sessions 13–15)
+Last completed: Session 16 — Feature B (injury leverage stubs) + Feature F1 (std_dev consensus badge)
+Last git commit: 019f26c (Session 16: Feature B + Feature F1)
+Tests: 93 total, all passing (+8 new: TestInjuryLeverageStubs x4, TestConsensusBadge x4)
+Quota: ~18,307 remaining (no new API calls in Sessions 13–16)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
-Next session (new chat): Build B + F1. Defer C until RLM gate met.
-  - B: Add injury_leverage manual stubs to kill_switch_feed.py + wire into rank_bets()
-  - F1: Add std_dev field to BetCandidate + consensus badge in bet_card_renderer.py
-  - C: Add RLM session counter to SESSION_STATE.md only — do NOT raise threshold yet
+## SESSION 16 GOAL ✅ COMPLETE
+1. ✅ Feature B: get_nba_injury_leverage() + get_ncaab_injury_leverage() stubs in kill_switch_feed.py
+   - Both return (0.0, False) — data_live=False. rank_bets() reads from situational_data (path was already live).
+2. ✅ Feature F1: std_dev: float = 0.0 added to BetCandidate
+   - Passed into BetCandidate at 3 call sites (spreads L686, moneylines L730, totals L777)
+   - _consensus_badge_html() added to bet_card_renderer.py — TIGHT/MODERATE/WIDE tiers
+   - Wired into render_bet_card() header row (after RLM badge)
+3. ✅ Feature C deferred — RLM gate still unmet (0/5 sessions observed)
+4. ✅ F2 (std_dev Sharp Score component) — R&D validated: REJECT permanently
+   - R&D tested 580 sides: Pearson r=+0.020, no linear relationship
+   - Discount A (penalty) breaks core mechanism — high std_dev = one outlier book = source of edge
+   - Discount B (badge) = correct approach → already delivered in F1
+   - F2 closed, not deferred
+
+## R&D SESSION 15 FINDINGS (action items for v36)
+Feature B2 — ESPN Unofficial Injury API:
+  - Endpoint: https://site.api.espn.com/apis/site/v2/sports/basketball/nba/injuries (no auth, ~0.4s)
+  - NBA: 105 players across Out/Day-To-Day/Suspension statuses — data exists
+  - NCAAB: 0 records — endpoint does not cover college basketball
+  - Blocker 1: Position weights hit cap (5.0) on 3/5 teams tested — needs usage% cross-reference
+  - Blocker 2: Unofficial endpoint — needs 2+ weeks stability monitoring before v36 promotion
+  - R&D file: titanium-experimental/core/espn_injury_fetcher.py (do not promote yet)
+  - v36 stubs remain as-is until both blockers resolved
 
 ## SESSION 15 GOAL ✅ COMPLETE
 1. ✅ Feature backlog saved permanently to SESSION_STATE.md (4 categories: Ready/Seasonal/Blocked/Deferred)
@@ -351,7 +370,7 @@ Priority order within each group. Update as seasons change.
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| **`std_dev` steam signal** | Small | `_consensus_fair_prob()` already computes std_dev — discarded. Use as confidence flag on cards or Sharp Score sub-component. Zero API cost. |
+| **`std_dev` badge (F1)** | ✅ Done | Delivered Session 16. BOOKS: TIGHT/MODERATE/WIDE badge on card. F2 (Sharp Score component) validated by R&D and permanently rejected (r=+0.020, no linear relationship). |
 | **NHL efficiency data** | Medium | 32 teams. NHL is in-season Feb–June. sparse API coverage for games >3 days out is normal — h2h only, spreads/totals open closer to game day. Pattern: same as NBA NetRtg → AdjEM conversion. |
 | **Bet History page** | Medium | Stub page exists. Needs: local JSON/CSV to persist bets, record-bet button on card, outcome tracking, P&L summary. Pure UI — no math, no API. |
 | **RLM threshold raise (45→50)** | Trivial | DATA GATE: raise only after RLM fires consistently on 5+ live sessions with observed signals. Do NOT raise on theory. |
@@ -370,7 +389,7 @@ Priority order within each group. Update as seasons change.
 
 | Feature | Blocker | Notes |
 |---------|---------|-------|
-| **Injury leverage** | No injury data source | Odds API doesn't provide it. Would need ESPN API or manual stub. Always 0 until resolved. |
+| **Injury leverage (NBA)** | ESPN unofficial endpoint not stable | R&D (Session 15) found endpoint works but position weights cap at 5.0 for 3/5 teams — needs usage% cross-reference. Also needs 2+ weeks stability monitoring. NCAAB: endpoint returns 0 records — no path forward for college. v36 stubs exist (return 0.0). Wire when B2 blockers resolved. |
 | **Motivation component** | Subjective / no source | Rat poison per CLAUDE.md. Do not add. |
 | **`public_on_side` upgrade** | Action Network or similar | RLM heuristic (price < -105) is Phase 1 placeholder. Upgrade when consensus % data available. |
 | **Bet History outcomes** | No results source | Odds API doesn't provide final scores. Would need a sports data API (ESPN, sportsdata.io) to auto-resolve bets. Manual outcome entry is an option. |
