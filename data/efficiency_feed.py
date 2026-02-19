@@ -1,30 +1,31 @@
 """
 efficiency_feed.py — TITANIUM V36.1
 =====================================
-Mock efficiency data layer for NBA (NetRtg) and NCAAB (KenPom/Barttorvik).
+Mock efficiency data layer for NBA (NetRtg), NCAAB (KenPom/Barttorvik), and NHL (GF60-GA60).
 No live scraping. Static snapshot calibrated to ~2024-25 season.
 
 Promoted from R&D (titanium-experimental/core/data/efficiency_feed.py) — Session 5.
 Updated Session 9: all 30 NBA franchises added. league field on every entry.
 Updated Session 10: NCAAB expanded 24 → 80 teams (ACC, Big 12, Big Ten, SEC, Big East, WCC/MWC/A-10).
 Fix applied: added "Texas Southern Tigers" alias before Session 5 promotion.
+Updated Session 17: all 32 NHL franchises added (GF60-GA60 × 10 AdjEM proxy).
 
 Provides:
     get_efficiency_gap(home_team, away_team) -> float
         Returns a 0-20 scaled score representing the strength differential
-        between two teams. Works for both NBA and NCAAB — both use the same
+        between two teams. Works for NBA, NCAAB, and NHL — all use the same
         adj_em field and the same scaling math.
 
     get_team_data(team_name) -> dict | None
         Returns raw efficiency data for a single team.
 
     list_teams(league=None) -> list[str]
-        Returns all canonical team names. Pass league="NBA" or "NCAAB" to filter.
+        Returns all canonical team names. Pass league="NBA", "NCAAB", or "NHL" to filter.
 
     build_efficiency_data(games) -> dict[str, float]
         Maps event_id → efficiency_gap for use as rank_bets(efficiency_data=...).
 
-Scaling (identical for NBA and NCAAB):
+Scaling (identical for NBA, NCAAB, and NHL):
     AdjEM differential = home_adj_em - away_adj_em
     Clamped to [-30, +30], scaled to [0, 20]:
         gap = (differential + 30) / 60 * 20
@@ -38,9 +39,15 @@ NBA data source: Net Rating (NetRtg) used as AdjEM equivalent.
 NCAAB data source: KenPom/Barttorvik AdjEM.
     Range: elite ~+30, average ~0, poor ~-15.
 
+NHL data source: GF60-GA60 goal differential × 10.
+    GF60-GA60 range: elite ~+1.2 to +1.5, average ~0, poor ~-1.0 to -1.5.
+    Multiplied by 10 → adj_em range ±12–15 — fits within ±30 clamp, stays comparable.
+    tempo: 0.0 — not meaningful for hockey (field required by schema).
+
 Teams included:
     NBA:   All 30 franchises (~2024-25 NetRtg calibrated)
     NCAAB: 80 programs — ACC, Big 12, Big Ten, SEC, Big East, WCC/MWC/A-10, low-major
+    NHL:   All 32 franchises (~2024-25 GF60-GA60 calibrated)
 
 DO NOT add API calls, Streamlit calls, or betting math to this file.
 """
@@ -422,6 +429,118 @@ _TEAM_DATA: dict[str, dict] = {
     "Texas Southern": {
         "adj_o": 97.3,  "adj_d": 114.8, "adj_em": -17.5, "tempo": 68.9, "league": "NCAAB",
     },
+
+    # =========================================================================
+    # NHL — GF60-GA60 × 10 as AdjEM proxy (~2024-25 season)
+    # GF60 = goals for per 60 min (5v5). GA60 = goals against per 60 min.
+    # adj_em = (GF60 - GA60) × 10 — fits within ±30 clamp, stays comparable.
+    # adj_o = GF60 × 10 (attack proxy). adj_d = GA60 × 10 (defence proxy, lower = better).
+    # tempo: 0.0 — not meaningful for hockey; field required by schema.
+    # =========================================================================
+
+    # --- NHL Elite tier (adj_em 10-15) ---
+    "Florida Panthers": {
+        "adj_o": 28.4, "adj_d": 14.8, "adj_em": 13.6, "tempo": 0.0, "league": "NHL",
+    },
+    "Vancouver Canucks": {
+        "adj_o": 27.1, "adj_d": 14.3, "adj_em": 12.8, "tempo": 0.0, "league": "NHL",
+    },
+    "Colorado Avalanche": {
+        "adj_o": 29.3, "adj_d": 17.0, "adj_em": 12.3, "tempo": 0.0, "league": "NHL",
+    },
+    "Dallas Stars": {
+        "adj_o": 27.8, "adj_d": 15.8, "adj_em": 12.0, "tempo": 0.0, "league": "NHL",
+    },
+    "New York Rangers": {
+        "adj_o": 27.4, "adj_d": 15.7, "adj_em": 11.7, "tempo": 0.0, "league": "NHL",
+    },
+    "Winnipeg Jets": {
+        "adj_o": 27.9, "adj_d": 16.5, "adj_em": 11.4, "tempo": 0.0, "league": "NHL",
+    },
+    "Boston Bruins": {
+        "adj_o": 27.2, "adj_d": 16.3, "adj_em": 10.9, "tempo": 0.0, "league": "NHL",
+    },
+    "Carolina Hurricanes": {
+        "adj_o": 26.8, "adj_d": 15.9, "adj_em": 10.9, "tempo": 0.0, "league": "NHL",
+    },
+
+    # --- NHL Strong tier (adj_em 4-10) ---
+    "Edmonton Oilers": {
+        "adj_o": 29.6, "adj_d": 20.4, "adj_em": 9.2,  "tempo": 0.0, "league": "NHL",
+    },
+    "Vegas Golden Knights": {
+        "adj_o": 27.3, "adj_d": 18.4, "adj_em": 8.9,  "tempo": 0.0, "league": "NHL",
+    },
+    "New Jersey Devils": {
+        "adj_o": 26.7, "adj_d": 18.1, "adj_em": 8.6,  "tempo": 0.0, "league": "NHL",
+    },
+    "Tampa Bay Lightning": {
+        "adj_o": 27.1, "adj_d": 18.8, "adj_em": 8.3,  "tempo": 0.0, "league": "NHL",
+    },
+    "Nashville Predators": {
+        "adj_o": 25.8, "adj_d": 18.1, "adj_em": 7.7,  "tempo": 0.0, "league": "NHL",
+    },
+    "Toronto Maple Leafs": {
+        "adj_o": 28.2, "adj_d": 21.1, "adj_em": 7.1,  "tempo": 0.0, "league": "NHL",
+    },
+    "Minnesota Wild": {
+        "adj_o": 25.9, "adj_d": 19.1, "adj_em": 6.8,  "tempo": 0.0, "league": "NHL",
+    },
+    "Ottawa Senators": {
+        "adj_o": 26.4, "adj_d": 20.0, "adj_em": 6.4,  "tempo": 0.0, "league": "NHL",
+    },
+    "Los Angeles Kings": {
+        "adj_o": 25.7, "adj_d": 19.5, "adj_em": 6.2,  "tempo": 0.0, "league": "NHL",
+    },
+
+    # --- NHL Mid tier (adj_em -2 to 4) ---
+    "Pittsburgh Penguins": {
+        "adj_o": 25.6, "adj_d": 21.8, "adj_em": 3.8,  "tempo": 0.0, "league": "NHL",
+    },
+    "Seattle Kraken": {
+        "adj_o": 25.3, "adj_d": 21.6, "adj_em": 3.7,  "tempo": 0.0, "league": "NHL",
+    },
+    "New York Islanders": {
+        "adj_o": 24.8, "adj_d": 21.3, "adj_em": 3.5,  "tempo": 0.0, "league": "NHL",
+    },
+    "Calgary Flames": {
+        "adj_o": 25.1, "adj_d": 21.8, "adj_em": 3.3,  "tempo": 0.0, "league": "NHL",
+    },
+    "St. Louis Blues": {
+        "adj_o": 25.4, "adj_d": 22.2, "adj_em": 3.2,  "tempo": 0.0, "league": "NHL",
+    },
+    "Detroit Red Wings": {
+        "adj_o": 25.2, "adj_d": 22.4, "adj_em": 2.8,  "tempo": 0.0, "league": "NHL",
+    },
+    "Philadelphia Flyers": {
+        "adj_o": 24.9, "adj_d": 22.4, "adj_em": 2.5,  "tempo": 0.0, "league": "NHL",
+    },
+    "Washington Capitals": {
+        "adj_o": 26.1, "adj_d": 24.1, "adj_em": 2.0,  "tempo": 0.0, "league": "NHL",
+    },
+    "Buffalo Sabres": {
+        "adj_o": 25.6, "adj_d": 24.0, "adj_em": 1.6,  "tempo": 0.0, "league": "NHL",
+    },
+    "Anaheim Ducks": {
+        "adj_o": 24.3, "adj_d": 23.1, "adj_em": 1.2,  "tempo": 0.0, "league": "NHL",
+    },
+    "Montreal Canadiens": {
+        "adj_o": 24.6, "adj_d": 23.5, "adj_em": 1.1,  "tempo": 0.0, "league": "NHL",
+    },
+
+    # --- NHL Lower tier (adj_em < -2) ---
+    "Columbus Blue Jackets": {
+        "adj_o": 23.8, "adj_d": 25.3, "adj_em": -1.5, "tempo": 0.0, "league": "NHL",
+    },
+    "Chicago Blackhawks": {
+        "adj_o": 23.1, "adj_d": 26.2, "adj_em": -3.1, "tempo": 0.0, "league": "NHL",
+    },
+    "San Jose Sharks": {
+        "adj_o": 22.4, "adj_d": 26.8, "adj_em": -4.4, "tempo": 0.0, "league": "NHL",
+    },
+    "Utah Hockey Club": {
+        "adj_o": 24.7, "adj_d": 22.6, "adj_em": 2.1,  "tempo": 0.0, "league": "NHL",
+    },
 }
 
 # Aliases for common name variations from Odds API
@@ -565,6 +684,59 @@ _ALIASES: dict[str, str] = {
     "Davidson Wildcats":         "Davidson",
     # Low-major
     "Texas Southern Tigers":     "Texas Southern",   # explicit alias — prevents Texas partial match
+
+    # --- NHL aliases (Odds API uses full city+nickname) ---
+    # Collision risk: NY Rangers vs NY Islanders — both need explicit aliases.
+    # Partial match on "New York" would return whichever comes first in dict order.
+    "Rangers":                   "New York Rangers",
+    "New York Rangers Hockey":   "New York Rangers",
+    "NY Rangers":                "New York Rangers",
+    "Islanders":                 "New York Islanders",
+    "New York Islanders Hockey": "New York Islanders",
+    "NY Islanders":              "New York Islanders",
+    # Vegas name variant — Odds API may return either form
+    "Las Vegas Golden Knights":  "Vegas Golden Knights",
+    "Golden Knights":            "Vegas Golden Knights",
+    # Other common short-form variants
+    "Panthers":                  "Florida Panthers",
+    "Canucks":                   "Vancouver Canucks",
+    "Avalanche":                 "Colorado Avalanche",
+    "Stars":                     "Dallas Stars",
+    "Jets":                      "Winnipeg Jets",
+    "Bruins":                    "Boston Bruins",
+    "Hurricanes":                "Carolina Hurricanes",
+    "Canes":                     "Carolina Hurricanes",
+    "Oilers":                    "Edmonton Oilers",
+    "Devils":                    "New Jersey Devils",
+    "Lightning":                 "Tampa Bay Lightning",
+    "Bolts":                     "Tampa Bay Lightning",
+    "Predators":                 "Nashville Predators",
+    "Preds":                     "Nashville Predators",
+    "Maple Leafs":               "Toronto Maple Leafs",
+    "Leafs":                     "Toronto Maple Leafs",
+    "Wild":                      "Minnesota Wild",
+    "Senators":                  "Ottawa Senators",
+    "Sens":                      "Ottawa Senators",
+    "Kings":                     "Los Angeles Kings",
+    "LAK":                       "Los Angeles Kings",
+    "Penguins":                  "Pittsburgh Penguins",
+    "Pens":                      "Pittsburgh Penguins",
+    "Kraken":                    "Seattle Kraken",
+    "Flames":                    "Calgary Flames",
+    "Blues":                     "St. Louis Blues",
+    "Red Wings":                 "Detroit Red Wings",
+    "Flyers":                    "Philadelphia Flyers",
+    "Capitals":                  "Washington Capitals",
+    "Caps":                      "Washington Capitals",
+    "Sabres":                    "Buffalo Sabres",
+    "Ducks":                     "Anaheim Ducks",
+    "Canadiens":                 "Montreal Canadiens",
+    "Habs":                      "Montreal Canadiens",
+    "Blue Jackets":              "Columbus Blue Jackets",
+    "Blackhawks":                "Chicago Blackhawks",
+    "Hawks":                     "Chicago Blackhawks",
+    "Sharks":                    "San Jose Sharks",
+    "Utah HC":                   "Utah Hockey Club",
 }
 
 # Scaling constants

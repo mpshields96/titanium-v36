@@ -247,10 +247,10 @@ This works because books occasionally misprice relative to the consensus.
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 16 — Feature B (injury leverage stubs) + Feature F1 (std_dev consensus badge)
-Last git commit: 019f26c (Session 16: Feature B + Feature F1)
-Tests: 93 total, all passing (+8 new: TestInjuryLeverageStubs x4, TestConsensusBadge x4)
-Quota: ~18,307 remaining (no new API calls in Sessions 13–16)
+Last completed: Session 17 — NHL efficiency data (32 teams, GF60-GA60 × 10 AdjEM proxy)
+Last git commit: TBD (Session 17: NHL efficiency data)
+Tests: 95 total, all passing (+2 new: TestNHLEfficiency x2)
+Quota: ~18,307 remaining (no new API calls in Sessions 13–17)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
@@ -371,7 +371,7 @@ Priority order within each group. Update as seasons change.
 | Feature | Effort | Notes |
 |---------|--------|-------|
 | **`std_dev` badge (F1)** | ✅ Done | Delivered Session 16. BOOKS: TIGHT/MODERATE/WIDE badge on card. F2 (Sharp Score component) validated by R&D and permanently rejected (r=+0.020, no linear relationship). |
-| **NHL efficiency data** | Medium | 32 teams. NHL is in-season Feb–June. sparse API coverage for games >3 days out is normal — h2h only, spreads/totals open closer to game day. Pattern: same as NBA NetRtg → AdjEM conversion. |
+| **NHL efficiency data** | ✅ Done | Delivered Session 17. 32 teams, GF60-GA60 × 10 AdjEM proxy. Arizona Coyotes removed (relocated to Utah HC in 2024-25). Aliases wired for NY Rangers/Islanders collision + Las Vegas/Vegas GK variant. |
 | **Bet History page** | Medium | Stub page exists. Needs: local JSON/CSV to persist bets, record-bet button on card, outcome tracking, P&L summary. Pure UI — no math, no API. |
 | **RLM threshold raise (45→50)** | Trivial | DATA GATE: raise only after RLM fires consistently on 5+ live sessions with observed signals. Do NOT raise on theory. |
 | **P&L Tracker page** | Medium | Stub page exists. Depends on Bet History being built first (needs outcome data). |

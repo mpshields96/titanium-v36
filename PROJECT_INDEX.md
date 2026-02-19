@@ -1,9 +1,9 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-18 (Session 16)
+Generated: 2026-02-18 (Session 17)
 
 ## Quick Start
 ```bash
-python3 -m pytest tests/ -v          # 93 tests — must pass before each session
+python3 -m pytest tests/ -v          # 95 tests — must pass before each session
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
@@ -30,11 +30,11 @@ titanium-v36/
 ├── originator_engine.py         # Monte Carlo — DO NOT TOUCH unless asked
 ├── data/
 │   ├── __init__.py              # Empty — makes data/ a proper Python package (Session 14)
-│   ├── efficiency_feed.py       # 110 teams (30 NBA + 80 NCAAB) — AdjEM static data
+│   ├── efficiency_feed.py       # 142 teams (30 NBA + 80 NCAAB + 32 NHL) — AdjEM static data
 │   ├── kill_switch_feed.py      # Kill switch input stubs: rest, wind, 3PT%, drift, injury leverage
 │   └── team_stats_bunker.py     # Fallback static stats
 └── tests/
-    ├── test_validation.py       # 53 tests — math, collar, kelly, injury stubs, consensus badge
+    ├── test_validation.py       # 55 tests — math, collar, kelly, injury stubs, consensus badge, NHL efficiency
     └── test_odds_fetcher.py     # 40 tests — API, rest days, RLM
 ```
 
@@ -152,9 +152,9 @@ No API calls. Static data + lookup only.
 | `get_efficiency_gap(home_team, away_team)` | `float` | 0–20 scale, 10.0 = even |
 | `build_efficiency_data(games)` | `dict[str,float]` | event_id → gap, for rank_bets() |
 | `get_team_data(team_name)` | `dict\|None` | adj_o, adj_d, adj_em, tempo |
-| `list_teams(league=None)` | `list[str]` | "NBA" / "NCAAB" / None = all 110 |
+| `list_teams(league=None)` | `list[str]` | "NBA" / "NCAAB" / "NHL" / None = all 142 |
 
-Coverage: 30 NBA (NetRtg×2.2 → AdjEM equiv) + 80 NCAAB (ACC/Big 12/Big Ten/SEC/Big East/WCC/MWC/A-10 + top mid-majors). Unknown teams → 8.0 default gap.
+Coverage: 30 NBA (NetRtg×2.2 → AdjEM equiv) + 80 NCAAB (ACC/Big 12/Big Ten/SEC/Big East/WCC/MWC/A-10 + top mid-majors) + 32 NHL (GF60-GA60 × 10 → AdjEM equiv, Session 17). Unknown teams → 8.0 default gap.
 
 **Single source of truth for NCAAB tempo** — `kill_switch_feed.get_ncaab_tempo()` calls `get_team_data()`. No duplicate data.
 
@@ -253,9 +253,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 
 | File | Count | Covers |
 |------|-------|--------|
-| `test_validation.py` | 53 | collar, kelly, edge math, profit calc, injury stubs, consensus badge |
+| `test_validation.py` | 55 | collar, kelly, edge math, profit calc, injury stubs, consensus badge, NHL efficiency |
 | `test_odds_fetcher.py` | 40 | API fetch, preferred book, rest days, RLM |
-| **Total** | **93** | all passing |
+| **Total** | **95** | all passing |
 
 ---
 
@@ -271,6 +271,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 14 | ✅ | `bet_card_renderer.py` promoted from R&D, `.streamlit/config.toml` dark theme, `data/__init__.py` |
 | 15 | ✅ | Feature backlog saved, /sc:estimate B+C+F completed, session transition prep |
 | 16 | ✅ | Injury leverage stubs (kill_switch_feed), `std_dev` on BetCandidate, BOOKS badge on card |
+| 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy, aliases for NY Rangers/Islanders + Vegas |
 
-Last commit: `36dd7c9` · Tests: **93 passing** · Quota: ~18,307 remaining
-Next session (17): NHL efficiency data OR Bet History page. Discuss at session start. C deferred (RLM gate 0/5).
+Last commit: TBD · Tests: **95 passing** · Quota: ~18,307 remaining
+Next session (18): Bet History page (session-only vs CSV vs persistent — decide storage first). C deferred (RLM gate 0/5).

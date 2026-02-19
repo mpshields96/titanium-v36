@@ -431,3 +431,25 @@ class TestConsensusBadge:
     def test_zero_std_dev_returns_empty(self):
         html = _consensus_badge_html(0.0)
         assert html == ""
+
+
+# ============================================================================
+# 10. NHL EFFICIENCY DATA
+#     All 32 NHL franchises in efficiency_feed.py.
+#     get_efficiency_gap() returns float in [0, 20] for NHL matchups.
+#     list_teams("NHL") returns exactly 32 entries.
+# ============================================================================
+
+class TestNHLEfficiency:
+    """NHL efficiency data coverage and gap calculation."""
+
+    def test_nhl_gap_returns_valid_float(self):
+        from data.efficiency_feed import get_efficiency_gap
+        gap = get_efficiency_gap("Florida Panthers", "San Jose Sharks")
+        assert isinstance(gap, float)
+        assert 0.0 <= gap <= 20.0
+
+    def test_nhl_list_teams_returns_32(self):
+        from data.efficiency_feed import list_teams
+        nhl_teams = list_teams("NHL")
+        assert len(nhl_teams) == 32
