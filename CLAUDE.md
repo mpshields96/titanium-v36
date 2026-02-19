@@ -63,6 +63,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Module-level caches (e.g. `_OPEN_PRICE_CACHE`) need `setup_method` teardown in tests — call clear function before each test or tests bleed state
 - Pass `raw_games` into `calculate_edges(sport, raw_games=raw_games)` to avoid double API call — it skips internal fetch when provided
 - Never import `edge_calculator` from `odds_fetcher.py` — circular import (`edge_calculator` already imports `odds_fetcher`)
+- Before removing a function parameter, grep all call sites first: `grep -rn "function_name(" .` — easy to miss cross-file callers (e.g. `sharp_to_size` had callers in `bet_ranker.py`)
 - End every session: `/sc:save` → `/claude-md-management:revise-claude-md` → `git commit`
 - End responses with a "Loading screen tip" — one relevant `/sc:` command or tool reminder for the user
 
@@ -96,6 +97,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - louisiana_mode is a flag in parse_prop_markets, not a separate file
 - Soccer bulk markets: h2h,totals only (btts/h2h_3_way cause 422 on bulk endpoint)
 - All sports use fetch_batch_odds() — no per-event prop calls (API tier limitation)
+- `_KILL_ROUTER` has no "nba" entry by design — NBA needs `schedule_rest` kwarg, handled by explicit branch in `calculate_edges()` before the router is hit. Do not add it back.
 
 ## If Starting a New Chat Session
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)
