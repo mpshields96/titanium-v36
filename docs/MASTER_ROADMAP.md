@@ -1,5 +1,6 @@
 # TITANIUM V36.1 — Master Roadmap & To-Do List
 # Created: Session 20 (2026-02-19)
+# Last updated: Session 20 end-of-session / v36 Session 21 prep (2026-02-19)
 # Source: /sc:analyze edge_calculator.py + sport coverage audit
 # This is the authoritative checklist. Update status as items complete.
 # Accessible by: v36 chat, R&D chat, any future Claude session.
@@ -64,51 +65,50 @@
   → updates `situational_data` in session state → re-ranks with updated injury_leverage.
 - **Owner:** v36 builds the UI button after B2 is promoted. R&D already has the module.
 
-### CEILING 3: Sharp Money Timing — Overnight Line Movement [R] ← Local JSON POC built R&D Session 18
-- **Problem:** RLM currently catches intra-session movement only (open price cached at session start,
-  compared to current). If sharp money hits at 2am and moves the line by 20 cents before you open
-  the app at 8am, our open-price cache starts from the already-moved price. Invisible.
-- **Solution:** Persistent open-price store — save the *first-ever-seen* price for each event_id
-  to Supabase, not just in-session memory.
-  - On session start: fetch current prices. For any event_id already in DB, use stored price as open.
-  - For new event_ids: store current price as open baseline.
-  - RLM then compares against the TRUE open (first time we ever saw that game) not today's first fetch.
-- **Impact:** Transforms RLM from intra-session to multi-day. A line that moved from -3 to -6.5 over
-  3 days now shows as a massive RLM signal instead of 0.
-- **Where it lands:** `data/` new file `price_history_store.py` (same pattern as `bet_history_store.py`).
-  `odds_fetcher.cache_open_prices()` checks DB first. Supabase already configured.
-- **Owner:** R&D designs the schema. v36 builds the store + wires into `cache_open_prices()`.
-- **This is HIGH value. Upgrade RLM from a weak signal to a strong one.**
+### CEILING 3: Sharp Money Timing — Overnight Line Movement [x] ← COMPLETE v36 Session 20
+- **Built:** `data/price_history_store.py` — Supabase persistence layer. `price_history` table live.
+  `record_new_events()` + `inject_into_cache()` wired into `run_pipeline()` in `app.py`.
+  `inject_into_cache()` pre-seeds `_OPEN_PRICE_CACHE` with true multi-day open prices before
+  `cache_open_prices()` runs. `ON CONFLICT DO NOTHING` at DB layer enforces never-overwrite.
+  `purge_old_events(14)` prevents unbounded table growth.
+  10 new tests. 116/116 passing. Commit `361a90e`.
+- **Status:** LIVE. RLM now compares against true first-ever-seen price across sessions.
+  First live fire expected when a game is seen across multiple sessions.
 
 ---
 
 ## SECTION 3 — R&D EXPERIMENTAL BACKLOG
 
-### R&D EXP 1: CLV Tracker [R] ← Built R&D Session 18
+### R&D EXP 1: CLV Tracker [~] ← Built + smoke-tested R&D Session 18. Live run pending.
 - **What:** Closing Line Value — compare our bet price to the closing price at kickoff.
   Positive average CLV = empirical proof the edge detection method works.
-- **Data needed:** Already have open prices (session cache). Need closing prices (fetch same game
-  near tipoff or use Odds API historical endpoint if available on our tier).
+- **Status:** `core/clv_tracker.py` built. Needs one live NBA game day run to confirm end-to-end.
+  R&D Session 21: run `log_clv_snapshot()` on live game + confirm CSV output.
+- **Schema clarification (confirmed R&D Session 20):** R&D CSV schema is the working format.
+  v36 Supabase schema will differ at promotion (see HANDOFF.md schema delta table).
+  Do NOT rewrite `clv_tracker.py` — run live as-is.
 - **Output:** Per-bet CLV column in Bet History. Session-level CLV summary in P&L Tracker.
 - **File:** `core/clv_tracker.py` in R&D. NOT in odds_fetcher.py.
-- **CSV columns:** event_id, sport, matchup, market_type, our_price, closing_price, clv_pct, recorded_at
-- **Why now:** Zero new infrastructure. Uses existing RLM cache + Supabase bet history.
-- **Owner:** R&D builds standalone `core/clv_tracker.py`. v36 wires into Bet History page.
+- **v36 wire-in:** After R&D live run confirmed → v36 builds `data/clv_store.py` + UI column.
+- **Owner:** R&D live run. v36 promotes after confirmation.
 
-### R&D EXP 2: Pinnacle Consensus Probe [R] ← Built R&D Session 18. Needs 1 live run.
+### R&D EXP 2: Pinnacle Consensus Probe [~] ← `core/pinnacle_probe.py` built R&D Session 18. Live run pending.
 - **What:** Check if Pinnacle appears in Odds API response on current tier. If yes, add to consensus.
-- **Simple test:** Fetch any NBA game and `print([b["key"] for b in game["bookmakers"]])`. Look for "pinnacle".
+- **Status:** Script built. R&D Session 21: run `python3 core/pinnacle_probe.py` on NBA game day.
 - **If available:** Add "pinnacle" to top of `_BOOK_PREFERENCE` in `odds_fetcher.py`. Consensus auto-improves.
 - **If not available:** Document API tier cost to unlock. User decision.
-- **Owner:** R&D 10-minute probe. Report findings in HANDOFF.md.
+- **Owner:** R&D live run. v36 promotes if Pinnacle available on current tier.
 
-### R&D EXP 3: Sharp Score Calibration Study [R] ← Script being built R&D Session 19
+### R&D EXP 3: Sharp Score Calibration Study [~] ← Script complete R&D Session 20. Gate: 30+ tracked outcomes.
 - **What:** Validate that Sharp Score weights (Edge 40 / RLM 25 / Eff 20 / Sit 15) are optimal.
   Use Supabase bet history outcomes (when 30+ bets have results) to run Pearson correlation per component.
+- **Status:** `core/sharp_score_calibration.py` built and live-tested (0 resolved bets → exits gracefully).
+  Supabase connection confirmed working. Script is ready — just needs data.
+- **Run when:** v36 has 30+ resolved bets in `bet_history` (outcome IS NOT NULL).
+  Command: `python3 core/sharp_score_calibration.py` (in R&D env — supabase package installed).
 - **Question:** Does efficiency_gap actually predict outcome? Is RLM 25 pts too high or too low?
-- **Output:** Weight adjustment recommendations or confirmation that current weights are correct.
-- **Gate:** Need 30-50 bets with recorded outcomes. Check Supabase data volume first.
-- **Owner:** R&D analysis script. No v36 changes until validated.
+- **Output:** `results/sharp_score_calibration.txt` — Pearson r per component + weight recommendations.
+- **Owner:** Auto-runnable when data is available. R&D reports findings. v36 makes weight calls.
 
 ### R&D EXP 4: Live Weather API for NFL Wind [ ]
 - **See SECTION 1 GAP 1 above.** R&D builds standalone module. Aug 2026 deadline.
@@ -181,15 +181,18 @@
 
 ---
 
-## SECTION 5 — PERSISTENT RLM UPGRADE (HIGH VALUE)
-See CEILING 3 above. This is architecturally significant enough to call out separately.
+## SECTION 5 — PERSISTENT RLM UPGRADE (HIGH VALUE) — [x] COMPLETE
+See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90e`.
 
-### RLM 2.0: Persistent Open-Price Store [ ]
-- **New table in Supabase:** `price_history` — columns: event_id, side, open_price, first_seen_at.
-- **New file in v36:** `data/price_history_store.py` — same pattern as `bet_history_store.py`.
-- **Modified:** `odds_fetcher.cache_open_prices()` — check DB first, only write if event_id not seen.
-- **Result:** RLM fires on multi-day line movement, not just intra-session. Major signal upgrade.
-- **Owner:** R&D designs schema. v36 builds and wires.
+### RLM 2.0: Persistent Open-Price Store [x]
+- **Table:** `price_history` in Supabase — event_id UNIQUE, home_price, away_price, first_seen_at.
+- **File:** `data/price_history_store.py` — `record_new_events()`, `inject_into_cache()`,
+  `purge_old_events(14)`, `price_history_status()`.
+- **Wired:** `run_pipeline()` in `app.py` calls store before `cache_open_prices()`.
+  `inject_into_cache()` pre-seeds `_OPEN_PRICE_CACHE` with historical baselines.
+- **Tests:** 10 new tests in `tests/test_price_history_store.py`. 116/116 total.
+- **Next step for this feature:** Monitor — next live RLM fire should show multi-day movement data.
+  When RLM fires 5 live sessions: raise SHARP_THRESHOLD 45 → 50 (see SESSION_STATE.md gate).
 
 ---
 
@@ -200,6 +203,17 @@ See CEILING 3 above. This is architecturally significant enough to call out sepa
 [x] = Complete
 
 ## GATE DATES
+- **ROLLING:** v36 30+ resolved bets → run `core/sharp_score_calibration.py` (R&D EXP 3)
+- **ROLLING:** RLM live sessions ≥ 5 → raise SHARP_THRESHOLD 45 → 50 (currently 0/5)
+- **ROLLING (any NBA game day):** Run `python3 core/pinnacle_probe.py` + `log_clv_snapshot()` (EXP 1, EXP 2)
 - 2026-03-04: B2 ESPN injury endpoint stability check (GAP 2, CEILING 2, UI 3)
 - 2026-03-27: MLB season starts (efficiency data already promoted — no action needed)
 - 2026-08-01: NFL/NCAAF season prep window opens (GAP 1, R&D EXP 4, R&D EXP 7)
+
+## SESSION COMPLETION LOG
+| Session | Completed items |
+|---------|----------------|
+| v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |
+| v36 S20 cont. | CEILING 3 / SECTION 5 (RLM 2.0 persistent store) — `price_history_store.py` + Supabase table + tests |
+| v36 S19 (2026-02-18) | MLB/MLS/NFL efficiency data (234 teams), Hawks collision fix |
+| R&D S20 (2026-02-19) | EXP 3 script built (`sharp_score_calibration.py`), EXP 1 + EXP 2 scripts built (need live run) |

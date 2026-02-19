@@ -1,9 +1,9 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-19 (Session 20)
+Generated: 2026-02-19 (Session 20 — post-commit 361a90e)
 
 ## Quick Start
 ```bash
-python3 -m pytest tests/ -v          # 106 tests — must pass before each session
+python3 -m pytest tests/ -v          # 116 tests — must pass before each session
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
@@ -16,14 +16,16 @@ titanium-v36/
 ├── CLAUDE.md                    # Architecture rules + session workflow
 ├── SESSION_STATE.md             # Session memory & resume instructions
 ├── PROJECT_INDEX.md             # This file (94% token reduction)
-├── requirements.txt             # streamlit, pytest, requests, pandas, numpy, scipy
+├── requirements.txt             # streamlit, pytest, requests, pandas, numpy, scipy, supabase
 ├── run_pipeline.py              # End-to-end CLI test
+├── docs/
+│   └── MASTER_ROADMAP.md        # Feature roadmap + priority ordering (Session 20)
 ├── .streamlit/
-│   ├── secrets.toml             # ODDS_API_KEY (NEVER commit)
+│   ├── secrets.toml             # ODDS_API_KEY, SUPABASE_URL, SUPABASE_KEY (NEVER commit)
 │   └── config.toml              # Native dark theme (Session 14) — gold/teal palette, monospace
 ├── app.py                       # Streamlit UI — 4 pages via st.navigation()
 ├── bet_card_renderer.py         # HTML card renderer (Session 14) — no math, no API
-├── odds_fetcher.py              # Odds API + RLM cache
+├── odds_fetcher.py              # Odds API + RLM cache + _extract_open_prices
 ├── edge_calculator.py           # Betting math, kill switches, pipeline entry point
 ├── bet_ranker.py                # Diversity engine + Sharp Score ranking
 ├── ncaab_parser.py              # NCAAB-specific game parser
@@ -32,11 +34,25 @@ titanium-v36/
 │   ├── __init__.py              # Empty — makes data/ a proper Python package (Session 14)
 │   ├── efficiency_feed.py       # 234 teams (30 NBA + 80 NCAAB + 32 NHL + 30 MLB + 30 MLS + 32 NFL) — AdjEM static data
 │   ├── kill_switch_feed.py      # Kill switch input stubs: rest, wind, 3PT%, drift, injury leverage
+│   ├── bet_history_store.py     # Supabase bet_history persistence layer (Session 18)
+│   ├── price_history_store.py   # Supabase price_history persistence layer — RLM 2.0 (Session 20)
 │   └── team_stats_bunker.py     # Fallback static stats
 └── tests/
-    ├── test_validation.py       # 66 tests — math, collar, kelly, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards
-    └── test_odds_fetcher.py     # 40 tests — API, rest days, RLM
+    ├── test_validation.py           # 66 tests — math, collar, kelly, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards
+    ├── test_odds_fetcher.py         # 40 tests — API, rest days, RLM, _extract_open_prices
+    └── test_price_history_store.py  # 10 tests — is_configured, record_new_events, inject_into_cache (Session 20)
 ```
+
+---
+
+## Supabase Tables
+
+| Table | Purpose | Key columns |
+|-------|---------|-------------|
+| `bet_history` | Track bets placed, outcomes, P&L | event_id, matchup, market_type, price, edge_pct, result, profit |
+| `price_history` | RLM 2.0 — first-ever-seen open prices per event | event_id (UNIQUE), home_price, away_price, first_seen_at |
+
+Both tables gated behind `is_configured()` in their respective store modules. All Supabase I/O uses lazy imports to avoid breaking tests without credentials.
 
 ---
 
@@ -53,6 +69,7 @@ No math, no UI. HTTP calls + session-scoped price cache.
 | `preferred_book(bookmakers)` | `dict\|None` | DraftKings > FanDuel > BetMGM > BetRivers > Caesars |
 | `all_books(bookmakers)` | `list` | All books sorted by preference |
 | `get_quota_status()` | `str` | used/remaining/last_call_cost |
+| `_extract_open_prices(game)` | `dict[str,float]` | **Session 20** — extract {"home": price, "away": price} from raw game dict; tries PREFERRED_BOOKS order, uses first h2h market found; returns {} if no usable prices |
 | `cache_open_prices(games)` | `int` | Freeze open prices (first call wins, frozen after) |
 | `get_open_price(event_id, side)` | `float\|None` | Return cached open price |
 | `clear_open_price_cache()` | `None` | Reset — call in test setup_method |
@@ -61,7 +78,7 @@ No math, no UI. HTTP calls + session-scoped price cache.
 
 Classes: `QuotaTracker` — tracks API usage per session.
 
-**Circular import warning:** `edge_calculator` imports `odds_fetcher`. Never import `edge_calculator` from `odds_fetcher`.
+**Circular import warning:** `edge_calculator` imports `odds_fetcher`. Never import `edge_calculator` from `odds_fetcher`. `_extract_open_prices` is imported by `price_history_store` via deferred import for the same reason.
 
 ---
 
@@ -116,8 +133,10 @@ No API calls, no math. Pure HTML string generation for Streamlit.
 
 | Function | Returns | Notes |
 |----------|---------|-------|
-| `render_bet_card(bet, rank=0)` | `str` | HTML card for one BetCandidate — safe for `st.markdown(..., unsafe_allow_html=True)` |
+| `render_bet_card(bet, rank=0)` | `str` | HTML card for one BetCandidate |
 | `render_bet_slate(bets, title="Today's Slate")` | `str` | Full slate — header + all cards + total Kelly footer |
+| `render_slate_header(bets, title="")` | `str` | **Session 18** — header fragment only (for per-card Track Bet button loop) |
+| `render_slate_footer(bets)` | `str` | **Session 18** — footer fragment only (total Kelly) |
 
 Internal helpers (not public API):
 
@@ -141,6 +160,47 @@ Tier colour coding:
 | `PASS` | Grey `#6B7280` | — |
 
 **Design constraints:** Pure stdlib. Inline styles only (Streamlit strips `<style>` tags from markdown). Font stack: `IBM Plex Mono`, `Fira Code`, monospace.
+
+---
+
+### data/price_history_store.py — RLM 2.0 Persistence (Session 20)
+No math, no UI. Supabase read/write for first-ever-seen open prices.
+
+**Problem solved:** In-session `_OPEN_PRICE_CACHE` only captures the price at first fetch this session. If sharp money moved the line at 2am before the app opens at 8am, RLM is blind to that move. This store persists the true multi-day first-seen price.
+
+**Wire-in pattern (app.py `run_pipeline`, before `cache_open_prices`):**
+```python
+from data.price_history_store import is_configured, record_new_events, inject_into_cache
+if is_configured():
+    record_new_events(raw_games)   # write first-seen prices for new event_ids
+    inject_into_cache(raw_games)   # pre-seed _OPEN_PRICE_CACHE with historical prices
+cache_open_prices(raw_games)       # existing call — no change
+```
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `is_configured()` | `bool` | True if SUPABASE_URL + SUPABASE_KEY present in secrets |
+| `record_new_events(games)` | `int` | Write first-seen prices to price_history for new event_ids; uses INSERT ON CONFLICT DO NOTHING — safe to call multiple times; returns rows written |
+| `get_historical_open_price(event_id)` | `dict\|None` | `{"home": price, "away": price}` for one event_id; None if not found |
+| `fetch_all_open_prices(event_ids)` | `dict[str,dict]` | Batch fetch stored prices; returns `{event_id: {"home": p, "away": p}}` for known events only |
+| `inject_into_cache(games)` | `int` | Pre-seed `_OPEN_PRICE_CACHE` with historical prices before `cache_open_prices()` runs; skips already-cached event_ids; returns count injected |
+| `purge_old_events(days_old=14)` | `int` | Delete price_history rows older than N days; prevents unbounded growth |
+| `price_history_status()` | `str` | One-line status string with row count; used in run_pipeline() logging |
+
+All Supabase I/O gated behind `is_configured()`. Uses deferred import for `odds_fetcher._extract_open_prices` to avoid circular import.
+
+---
+
+### data/bet_history_store.py — Bet Tracking Persistence (Session 18)
+No math, no UI. Supabase read/write for tracked bets.
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `is_configured()` | `bool` | True if Supabase credentials present |
+| `insert_bet(bet, notes)` | `dict\|None` | Write new tracked bet row |
+| `fetch_pending_bets()` | `list` | All bets without a result |
+| `fetch_all_bets()` | `list` | Full history log |
+| `update_outcome(row_id, result, profit)` | `bool` | Mark result + profit on existing row |
 
 ---
 
@@ -198,13 +258,15 @@ Pages via `st.navigation()` + `st.Page()` (Streamlit 1.36+):
 - `page_pnl_tracker()` — fully functional (Session 20) — equity curve, ROI by sport, win rate by market
 - `page_odds_comparison()` — stub
 
-`run_pipeline(selected_sports)` → pre-fetches `raw_games` per sport → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(sport, raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. One API call per sport total.
+`run_pipeline(selected_sports)` → pre-fetches `raw_games` per sport → **RLM 2.0: `record_new_events()` + `inject_into_cache()`** (if Supabase configured) → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(sport, raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. One API call per sport total.
 
 **Session 14:** Inline `render_bet_card()` removed from `app.py`. Now imports `render_bet_slate` from `bet_card_renderer`. Theme handled by `.streamlit/config.toml` instead of inline CSS.
 
 **Session 17 post-session:** `st.html()` replaces `st.markdown(unsafe_allow_html=True)` for card slate — Streamlit 1.54 sandboxes large HTML into a code block via `st.markdown`. Always use `st.html()` for full HTML documents/blocks. `eff_data.update()` now runs for all sports (was NCAAB-only — NHL efficiency data was built but never reaching `rank_bets()`). Header top padding 2rem → 3.5rem.
 
 **Session 18:** `page_bet_history()` fully implemented (P&L strip, Pending Results + MARK RESULT flow, History Log table). Live Analysis now loops `st.html(render_bet_card(...))` per bet + `+ TRACK BET` button → `insert_bet()`. All Supabase I/O gated behind `is_configured()`. `render_slate_header()` and `render_slate_footer()` added to `bet_card_renderer.py`.
+
+**Session 20:** `page_pnl_tracker()` fully implemented (equity curve chart, ROI by sport bar chart, win rate by market type). `run_pipeline()` now calls `record_new_events()` + `inject_into_cache()` before `cache_open_prices()` when Supabase is configured — enabling true multi-day RLM line movement detection.
 
 ---
 
@@ -217,7 +279,7 @@ score = edge_pts(0–40) + rlm_pts(0–25) + efficiency_pts(0–20) + situationa
 | Component | Source | Live? |
 |-----------|--------|-------|
 | edge_pct | consensus books | ✅ |
-| rlm_confirmed | `_OPEN_PRICE_CACHE` (3% implied shift) | ✅ cold on 1st run |
+| rlm_confirmed | `_OPEN_PRICE_CACHE` (3% implied shift) — now seeded from Supabase `price_history` | ✅ cold on 1st run without DB; warm with RLM 2.0 |
 | efficiency_gap | efficiency_feed (234 teams) | ✅ |
 | rest_edge | schedule rest days | ✅ NBA only |
 | injury_leverage | kill_switch_feed stubs (Session 16) | ❌ always 0.0 — ESPN B2 endpoint not stable |
@@ -258,8 +320,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | File | Count | Covers |
 |------|-------|--------|
 | `test_validation.py` | 66 | collar, kelly, edge math, profit calc, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards |
-| `test_odds_fetcher.py` | 40 | API fetch, preferred book, rest days, RLM |
-| **Total** | **106** | all passing |
+| `test_odds_fetcher.py` | 40 | API fetch, preferred book, rest days, RLM, _extract_open_prices |
+| `test_price_history_store.py` | 10 | is_configured, record_new_events (writes + skips), inject_into_cache (full/partial/no-overwrite) |
+| **Total** | **116** | all passing |
 
 ---
 
@@ -278,7 +341,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy, aliases for NY Rangers/Islanders + Vegas |
 | 18 | ✅ | `page_bet_history()` full impl, `+ TRACK BET` on Live Analysis cards, `render_slate_header/footer` helpers |
 | 19 | ✅ | `efficiency_feed.py` MLB/MLS/NFL promotion (234 teams), Hawks alias fix, 11 new tests |
-| 20 | ✅ | `docs/MASTER_ROADMAP.md` created, `page_pnl_tracker()` fully built (equity curve, ROI by sport, win rate by market), CLAUDE.md + SESSION_STATE.md + PROJECT_INDEX.md updated |
+| 20 | ✅ | `data/price_history_store.py` (RLM 2.0 persistent open-price store), `_extract_open_prices()` in odds_fetcher.py, `page_pnl_tracker()` fully built, `docs/MASTER_ROADMAP.md`, Supabase `price_history` table live |
 
-Last commit: `c35cfb5` · Tests: **106 passing** · Quota: ~18,250 remaining
-Next session (21): RLM 2.0 persistent open-price store (data/price_history_store.py + Supabase price_history table). B2 gate check 2026-03-04.
+Last commit: `361a90e` · Tests: **116 passing** · Quota: ~18,250 remaining
+Next session (21): await further instructions or next backlog item from SESSION_STATE.md. B2 gate check 2026-03-04.

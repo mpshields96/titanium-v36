@@ -252,28 +252,30 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 20 — MASTER_ROADMAP created + P&L Tracker page built
-Last git commit: 9e0b8de (pushed to origin/main) — session 20 in progress
-Tests: 106 total, all passing
+Last completed: Session 20 — RLM 2.0 persistent open-price store + MASTER_ROADMAP + P&L Tracker
+Last git commit: 361a90e (pushed to origin/main)
+Tests: 116 total, all passing
 Quota: ~18,250 remaining (no API calls Sessions 19–20)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
 ### What was built in Session 20
-1. `memory/MASTER_ROADMAP.md` — authoritative to-do list: 5 sections covering math gaps,
+1. `docs/MASTER_ROADMAP.md` — authoritative to-do list: 5 sections covering math gaps,
    structural ceiling fixes (Pinnacle, late lineup, overnight RLM), R&D backlog (10 items),
    Streamlit UI backlog, RLM 2.0 spec. Status-tracked with [ ] / [R] / [~] / [x] legend.
-2. `CLAUDE.md` — added step 5 to "If Starting a New Chat Session": points to MASTER_ROADMAP.md
-3. `data/efficiency_feed.py` — docstring typo fixed: "202 teams" → "234 teams" (linter regression, commit 497bff9)
-4. `app.py` — `page_pnl_tracker()` fully implemented (was stub):
-   - Summary strip: Net Units (green/red), Win Rate (gold), Resolved count, Total tracked
-   - W/L/P pill row
-   - Equity curve: `st.line_chart()` over cumulative net units per resolved bet (sorted by created_at)
-   - ROI by sport table: Sport / Record / Win% / Units
-   - Win rate by market type table: Market / Record / Win% / Units
-   - Refresh P&L button with session cache bust
-   All using `st.html()` for HTML blocks (Streamlit 1.54+ pattern), inline styles, IBM Plex Mono font.
-   Supabase is_configured() guard + "pnl_data" session cache (independent of bet_history_data cache).
+   Updated at session end: CEILING 3 / SECTION 5 marked [x]. EXP 1/2/3 updated to [~].
+2. `CLAUDE.md` — Chat Roles & File Access table, mandatory Loading screen tip rule. Session 20 log entry.
+3. `data/efficiency_feed.py` — docstring typo fixed: "202 teams" → "234 teams"
+4. `app.py` — `page_pnl_tracker()` fully implemented (was stub). Summary strip, equity curve,
+   ROI by sport, win rate by market type. st.html() + is_configured() guard pattern.
+5. **RLM 2.0 — `data/price_history_store.py`** (NEW) — Supabase persistence layer for first-ever-seen
+   open prices. `record_new_events()` + `inject_into_cache()` + `purge_old_events(14)`.
+   DB UNIQUE(event_id) + ON CONFLICT DO NOTHING enforces no-overwrite. Wired into `run_pipeline()`.
+6. `odds_fetcher.py` — extracted `_extract_open_prices()` helper (no-op refactor, reusable).
+7. Supabase `price_history` table created (event_id UNIQUE, home_price, away_price, first_seen_at, 2 indexes).
+8. `tests/test_price_history_store.py` — 10 new tests. All Supabase I/O mocked. 116/116 total.
+9. HANDOFF.md (R&D) — Session 21 instructions written: Task 0 (Pinnacle probe), Task 1 (CLV live run),
+   Task 2 (Odds Comparison data layer design). R&D Session 20 questions answered.
 
 ### What was built in Session 19
 1. `data/efficiency_feed.py` — promoted MLB (30), MLS (30), NFL (32) from R&D Session 17.
