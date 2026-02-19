@@ -1,5 +1,5 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-19 (Session 20 wrap-up — post-commit 51a7929 — transition to Session 21 new chat)
+Generated: 2026-02-19 (Session 21 — post-cleanup + Odds Comparison build)
 
 ## Quick Start
 ```bash
@@ -36,6 +36,7 @@ titanium-v36/
 │   ├── kill_switch_feed.py      # Kill switch input stubs: rest, wind, 3PT%, drift, injury leverage
 │   ├── bet_history_store.py     # Supabase bet_history persistence layer (Session 18)
 │   ├── price_history_store.py   # Supabase price_history persistence layer — RLM 2.0 (Session 20)
+│   ├── odds_comparator.py       # Odds Comparison data layer — build_odds_comparison() + to_dataframes() (Session 21)
 │   └── team_stats_bunker.py     # Fallback static stats
 └── tests/
     ├── test_validation.py           # 66 tests — math, collar, kelly, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards
@@ -191,6 +192,23 @@ All Supabase I/O gated behind `is_configured()`. Uses deferred import for `odds_
 
 ---
 
+### data/odds_comparator.py — Odds Comparison Data Layer (Session 21)
+No API calls, no math, no UI. Pure transformation of raw game dicts.
+Promoted from R&D `core/odds_comparator.py`. No pandas dependency.
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `build_odds_comparison(game)` | `dict` | Transform one raw game dict → structured comparison dict with all books, all markets, best_price per side, line_consensus, line_split flag |
+| `to_dataframes(comp)` | `(h2h_rows, spread_rows, total_rows)` | Convert comparison dict → three list-of-dicts for `st.dataframe()` or `st.table()`. No pandas dep — v36 wraps in `pd.DataFrame()` |
+
+**Output shape keys:** `event_id`, `matchup`, `home_team`, `away_team`, `books` (preference-sorted), `markets.h2h`, `markets.spreads` (with `line_consensus`, `line_split`), `markets.totals`, `best_price` (per side/market).
+
+**Wire-in (app.py):** `st.session_state["raw_games"]` populated by `run_pipeline()`. `page_odds_comparison()` reads it, calls `build_odds_comparison()` per selected game. Zero extra API calls.
+
+**`_BOOK_PREFERENCE`** mirrors `odds_fetcher.PREFERRED_BOOKS`. If Pinnacle is added to PREFERRED_BOOKS, update this list to match.
+
+---
+
 ### data/bet_history_store.py — Bet Tracking Persistence (Session 18)
 No math, no UI. Supabase read/write for tracked bets.
 
@@ -253,20 +271,22 @@ Known bug: `mean` input should be projected margin, not `bet.line`. Tracked in R
 No business logic, no API calls, no math.
 
 Pages via `st.navigation()` + `st.Page()` (Streamlit 1.36+):
-- `page_live_analysis()` — fully functional — runs full pipeline, renders via `render_bet_slate()`
+- `page_live_analysis()` — fully functional — runs full pipeline, renders via per-card `render_bet_card()` loop
 - `page_bet_history()` — fully functional (Session 18) — P&L strip, Pending, History Log, MARK RESULT
 - `page_pnl_tracker()` — fully functional (Session 20) — equity curve, ROI by sport, win rate by market
-- `page_odds_comparison()` — stub
+- `page_odds_comparison()` — **fully functional (Session 21)** — game selector, ML/Spread/Total tables, BEST price badges, LINE SPLIT warnings
 
-`run_pipeline(selected_sports)` → pre-fetches `raw_games` per sport → **RLM 2.0: `record_new_events()` + `inject_into_cache()`** (if Supabase configured) → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(sport, raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. One API call per sport total.
+`run_pipeline(selected_sports)` → pre-fetches `raw_games` per sport → accumulates `all_raw_games` (event_id → game dict, for Odds Comparison) → **RLM 2.0: `record_new_events()` + `inject_into_cache()`** (if Supabase configured) → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(sport, raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. One API call per sport total. Stores `raw_games` in `st.session_state["raw_games"]`.
 
-**Session 14:** Inline `render_bet_card()` removed from `app.py`. Now imports `render_bet_slate` from `bet_card_renderer`. Theme handled by `.streamlit/config.toml` instead of inline CSS.
+**Session 14:** Inline `render_bet_card()` removed from `app.py`. Theme handled by `.streamlit/config.toml` instead of inline CSS.
 
-**Session 17 post-session:** `st.html()` replaces `st.markdown(unsafe_allow_html=True)` for card slate — Streamlit 1.54 sandboxes large HTML into a code block via `st.markdown`. Always use `st.html()` for full HTML documents/blocks. `eff_data.update()` now runs for all sports (was NCAAB-only — NHL efficiency data was built but never reaching `rank_bets()`). Header top padding 2rem → 3.5rem.
+**Session 17 post-session:** `st.html()` replaces `st.markdown(unsafe_allow_html=True)` for card slate — Streamlit 1.54 sandboxes large HTML into a code block via `st.markdown`. Always use `st.html()` for full HTML documents/blocks. `eff_data.update()` now runs for all sports unconditionally.
 
-**Session 18:** `page_bet_history()` fully implemented (P&L strip, Pending Results + MARK RESULT flow, History Log table). Live Analysis now loops `st.html(render_bet_card(...))` per bet + `+ TRACK BET` button → `insert_bet()`. All Supabase I/O gated behind `is_configured()`. `render_slate_header()` and `render_slate_footer()` added to `bet_card_renderer.py`.
+**Session 18:** `page_bet_history()` fully implemented. Live Analysis loops `st.html(render_bet_card(...))` per bet + `+ TRACK BET` button. `render_slate_header()` and `render_slate_footer()` added to `bet_card_renderer.py`.
 
-**Session 20:** `page_pnl_tracker()` fully implemented (equity curve chart, ROI by sport bar chart, win rate by market type). `run_pipeline()` now calls `record_new_events()` + `inject_into_cache()` before `cache_open_prices()` when Supabase is configured — enabling true multi-day RLM line movement detection.
+**Session 20:** `page_pnl_tracker()` fully implemented. `run_pipeline()` now calls `record_new_events()` + `inject_into_cache()` before `cache_open_prices()` when Supabase configured.
+
+**Session 21:** `page_odds_comparison()` fully implemented. `data/odds_comparator.py` promoted from R&D. `run_pipeline()` stores `all_raw_games` in session state for zero-API-cost Odds Comparison. App.py cleanup: removed dead imports (`format_bet_table`, `render_bet_slate`, `fetch_pending_bets`), fixed `del` → `.pop()` cache bust, removed duplicate `import streamlit as st`, cleared `tracked_*` keys at pipeline start, wrapped post-loop in `finally` block.
 
 ---
 

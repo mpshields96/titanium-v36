@@ -19,8 +19,8 @@ from datetime import datetime
 import streamlit as st
 
 from edge_calculator import calculate_edges, _SPORT_ROUTING
-from bet_ranker import rank_bets, format_bet_table
-from bet_card_renderer import render_bet_card, render_bet_slate, render_slate_header, render_slate_footer
+from bet_ranker import rank_bets
+from bet_card_renderer import render_bet_card, render_slate_header, render_slate_footer
 from data.efficiency_feed import build_efficiency_data
 from odds_fetcher import fetch_game_lines, get_quota_status, cache_open_prices, compute_rlm
 
@@ -641,7 +641,6 @@ def render_sport_selector() -> list[str]:
 
 
 # render_bet_card() removed — promoted to bet_card_renderer.py (Session 14).
-# Use: from bet_card_renderer import render_bet_slate
 
 
 # ---------------------------------------------------------------------------
@@ -651,9 +650,15 @@ def render_sport_selector() -> list[str]:
 def run_pipeline(selected_sports: list[str]):
     """Execute the full edge-detection pipeline for selected sports."""
     all_candidates = []
+    all_raw_games  = {}   # event_id → raw game dict — for Odds Comparison page
     eff_data       = {}
     rlm_data       = {}   # event_id → bool: True = RLM confirmed
     n              = len(selected_sports)
+
+    # Clear per-card tracked state from prior run so stale ✓ TRACKED labels
+    # don't reappear for the same event_id on a fresh scan.
+    for k in [k for k in st.session_state if k.startswith("tracked_") or k.startswith("track_")]:
+        del st.session_state[k]
 
     progress = st.progress(0, text="")
 
@@ -667,6 +672,10 @@ def run_pipeline(selected_sports: list[str]):
                 routing   = _SPORT_ROUTING.get(sport, {})
                 sport_key = routing.get("sport_key", "")
                 raw_games = fetch_game_lines(sport_key) if sport_key else []
+
+                # Accumulate for Odds Comparison page (zero extra API calls)
+                for g in raw_games:
+                    all_raw_games[g["id"]] = g
 
                 # RLM 2.0: persist first-ever-seen prices to Supabase so multi-day
                 # line movement is visible across sessions, not just intra-session.
@@ -708,14 +717,17 @@ def run_pipeline(selected_sports: list[str]):
                     return
                 status.update(label=f"{sport} — fetch error: {err}", state="error")
 
-    progress.progress(100, text="Ranking...")
-    ranked = rank_bets(all_candidates, efficiency_data=eff_data, rlm_data=rlm_data)
+    try:
+        progress.progress(100, text="Ranking...")
+        ranked = rank_bets(all_candidates, efficiency_data=eff_data, rlm_data=rlm_data)
 
-    st.session_state["results"]     = ranked
-    st.session_state["last_run"]    = datetime.now()
-    st.session_state["last_sports"] = selected_sports
-    st.session_state["running"]     = False
-    progress.empty()
+        st.session_state["results"]     = ranked
+        st.session_state["last_run"]    = datetime.now()
+        st.session_state["last_sports"] = selected_sports
+        st.session_state["raw_games"]   = all_raw_games  # event_id → game dict
+    finally:
+        st.session_state["running"] = False
+        progress.empty()
 
 
 # ---------------------------------------------------------------------------
@@ -877,7 +889,6 @@ def page_bet_history():
     from data.bet_history_store import (
         is_configured,
         fetch_bets,
-        fetch_pending_bets,
         compute_pnl_summary,
         update_outcome,
     )
@@ -1063,7 +1074,7 @@ def page_bet_history():
                     try:
                         update_outcome(bet["id"], chosen, pnl)
                         # Bust the cache so the page refreshes from DB
-                        del st.session_state["bet_history_data"]
+                        st.session_state.pop("bet_history_data", None)
                         st.rerun()
                     except Exception as exc:
                         st.error(f"Failed to update: {exc}")
@@ -1315,7 +1326,6 @@ def page_pnl_tracker():
             margin-bottom:0.5rem;">EQUITY CURVE</div>
 """)
         # Use Streamlit native chart — works reliably in Streamlit Cloud
-        import streamlit as st
         st.line_chart(df, color="#14B8A6", height=180)
 
     # ── ROI by sport ──────────────────────────────────────────────
@@ -1443,14 +1453,129 @@ def page_pnl_tracker():
 
 
 def page_odds_comparison():
-    """Odds Comparison — side-by-side line shopping across books. (Coming soon)"""
+    """Odds Comparison — side-by-side line shopping across all books."""
+    from data.odds_comparator import build_odds_comparison, to_dataframes
+
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-    st.markdown("""
-<div class="empty-state" style="padding-top: 5rem;">
-  <div class="empty-state-icon">—</div>
-  <div class="empty-state-text">Odds Comparison<br><br>Side-by-side line shopping across all books.<br>Coming in a future session.</div>
+
+    # ── Header ────────────────────────────────────────────────────
+    render_header()
+    st.markdown("---")
+    st.markdown('<div class="t-section-label">Odds Comparison</div>', unsafe_allow_html=True)
+
+    # ── No data state ─────────────────────────────────────────────
+    raw_games: dict = st.session_state.get("raw_games", {})
+    if not raw_games:
+        st.html("""
+<div class="empty-state" style="padding-top: 3rem;">
+  <div class="empty-state-icon">⚖️</div>
+  <div class="empty-state-text">No slate loaded.<br><br>Run a scan on the Live Analysis page first,<br>then return here to compare book prices.</div>
 </div>
-""", unsafe_allow_html=True)
+""")
+        return
+
+    # ── Game selector ─────────────────────────────────────────────
+    game_list = list(raw_games.values())
+    game_labels = [
+        f"{g.get('away_team', '?')} @ {g.get('home_team', '?')}"
+        for g in game_list
+    ]
+    selected_label = st.selectbox(
+        "Select game",
+        options=game_labels,
+        key="odds_comp_game",
+        label_visibility="collapsed",
+    )
+    selected_idx   = game_labels.index(selected_label)
+    selected_game  = game_list[selected_idx]
+
+    comp = build_odds_comparison(selected_game)
+    h2h_rows, spread_rows, total_rows = to_dataframes(comp)
+
+    books     = comp["books"]
+    home      = comp["home_team"]
+    away      = comp["away_team"]
+    best      = comp["best_price"]
+    sp_mkts   = comp["markets"]["spreads"]
+    tot_mkts  = comp["markets"]["totals"]
+
+    # ── Helper: best-price badge ──────────────────────────────────
+    def _best_badge(info: dict | None) -> str:
+        if not info:
+            return ""
+        return (
+            f'<span style="font-size:0.65rem;color:#14B8A6;'
+            f'letter-spacing:0.06em;margin-left:0.4rem;">'
+            f'BEST {info["price"]:+d} @ {info["book"].upper()}</span>'
+        )
+
+    def _split_badge(split: bool) -> str:
+        if not split:
+            return ""
+        return (
+            '<span style="font-size:0.65rem;color:#F59E0B;'
+            'letter-spacing:0.06em;margin-left:0.5rem;">⚠ LINE SPLIT</span>'
+        )
+
+    # ── Moneyline ─────────────────────────────────────────────────
+    st.html(
+        f'<div style="font-size:0.7rem;color:#8B949E;letter-spacing:0.12em;'
+        f'text-transform:uppercase;margin:1.2rem 0 0.4rem 0;">Moneyline'
+        + _best_badge(best.get("h2h_home"))
+        + f'</div>'
+    )
+    if h2h_rows:
+        import pandas as pd
+        df_h2h = pd.DataFrame(h2h_rows).set_index("Book")
+        st.dataframe(df_h2h, use_container_width=True)
+    else:
+        st.caption("No moneyline data available.")
+
+    # ── Spreads ───────────────────────────────────────────────────
+    spread_label = (
+        f"Spreads — consensus {sp_mkts['line_consensus']:+g}"
+        if sp_mkts["line_consensus"] is not None
+        else "Spreads"
+    )
+    st.html(
+        f'<div style="font-size:0.7rem;color:#8B949E;letter-spacing:0.12em;'
+        f'text-transform:uppercase;margin:1.2rem 0 0.4rem 0;">{spread_label}'
+        + _split_badge(sp_mkts["line_split"])
+        + _best_badge(best.get("spread_home"))
+        + f'</div>'
+    )
+    if spread_rows:
+        df_spread = pd.DataFrame(spread_rows).set_index("Book")
+        st.dataframe(df_spread, use_container_width=True)
+    else:
+        st.caption("No spread data available.")
+
+    # ── Totals ────────────────────────────────────────────────────
+    total_label = (
+        f"Totals — consensus {tot_mkts['line_consensus']:g}"
+        if tot_mkts["line_consensus"] is not None
+        else "Totals"
+    )
+    st.html(
+        f'<div style="font-size:0.7rem;color:#8B949E;letter-spacing:0.12em;'
+        f'text-transform:uppercase;margin:1.2rem 0 0.4rem 0;">{total_label}'
+        + _split_badge(tot_mkts["line_split"])
+        + _best_badge(best.get("total_over"))
+        + f'</div>'
+    )
+    if total_rows:
+        df_total = pd.DataFrame(total_rows).set_index("Book")
+        st.dataframe(df_total, use_container_width=True)
+    else:
+        st.caption("No totals data available.")
+
+    # ── Books coverage note ───────────────────────────────────────
+    st.html(
+        f'<div style="font-size:0.6rem;color:#6B7280;margin-top:1rem;">'
+        f'{len(books)} book{"s" if len(books) != 1 else ""} with data: '
+        f'{", ".join(b.upper() for b in books)}'
+        f'</div>'
+    )
 
 
 # ---------------------------------------------------------------------------
