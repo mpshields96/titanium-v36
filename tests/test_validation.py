@@ -30,6 +30,11 @@ from edge_calculator import (
     calculate_profit,
     passes_collar,
 )
+from data.kill_switch_feed import (
+    get_nba_injury_leverage,
+    get_ncaab_injury_leverage,
+)
+from bet_card_renderer import _consensus_badge_html
 
 
 # ============================================================================
@@ -372,3 +377,57 @@ class TestPassesCollar:
 
     def test_even_money_plus_100_passes(self):
         assert passes_collar(100) is True
+
+
+# ============================================================================
+# 8. INJURY LEVERAGE STUBS
+#    Both stubs must return (0.0, False) — no live data source wired yet.
+#    data_live=False is the gate for "Data unavailable" display in UI.
+# ============================================================================
+
+class TestInjuryLeverageStubs:
+    """Injury leverage stubs return neutral values with data_live=False."""
+
+    def test_nba_stub_returns_zero_leverage(self):
+        leverage, _ = get_nba_injury_leverage("Boston Celtics", "New York Knicks")
+        assert leverage == 0.0
+
+    def test_nba_stub_data_live_is_false(self):
+        _, data_live = get_nba_injury_leverage("Boston Celtics", "New York Knicks")
+        assert data_live is False
+
+    def test_ncaab_stub_returns_zero_leverage(self):
+        leverage, _ = get_ncaab_injury_leverage("Duke", "UConn")
+        assert leverage == 0.0
+
+    def test_ncaab_stub_data_live_is_false(self):
+        _, data_live = get_ncaab_injury_leverage("Duke", "UConn")
+        assert data_live is False
+
+
+# ============================================================================
+# 9. CONSENSUS BADGE THRESHOLDS
+#    std_dev < 0.02  → TIGHT (books agree)
+#    std_dev 0.02–0.04 → MODERATE
+#    std_dev > 0.04  → WIDE (books disagree)
+#    std_dev == 0.0  → empty string (unknown)
+# ============================================================================
+
+class TestConsensusBadge:
+    """_consensus_badge_html() renders correct tier labels at threshold boundaries."""
+
+    def test_tight_threshold_below_002(self):
+        html = _consensus_badge_html(0.01)
+        assert "TIGHT" in html
+
+    def test_wide_threshold_above_004(self):
+        html = _consensus_badge_html(0.05)
+        assert "WIDE" in html
+
+    def test_moderate_at_midpoint(self):
+        html = _consensus_badge_html(0.03)
+        assert "MODERATE" in html
+
+    def test_zero_std_dev_returns_empty(self):
+        html = _consensus_badge_html(0.0)
+        assert html == ""

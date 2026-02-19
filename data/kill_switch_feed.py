@@ -12,6 +12,7 @@ Provides inputs for:
     nfl_kill_switch()    — weather/wind, QB status
     ncaab_kill_switch()  — 3PT reliance, tempo data
     soccer_kill_switch() — market drift, lineup status
+    injury_leverage      — NBA/NCAAB injury impact stub (always 0.0 until data source wired)
 
 Real sources (future wiring):
     - Wind:          Weather API (OpenWeather or similar) keyed to stadium + game time
@@ -408,6 +409,47 @@ def get_ncaab_kill_inputs(
         "market_type": market_type,
         "data_live": tpr_live and bt_live and ot_live,
     }
+
+
+# ---------------------------------------------------------------------------
+# Injury leverage stubs
+# ---------------------------------------------------------------------------
+#
+# injury_leverage: float in [-1.0, +1.0].
+#   Positive = favours bet team (opponent's star is out).
+#   Negative = hurts bet team (our star is out).
+#   0.0 = neutral or unknown.
+#
+# data_live=False on all stubs — no injury data source is wired.
+# UI should display "Data unavailable", not treat as a kill signal.
+# Wire when a live injury feed (ESPN API, RotowWire, etc.) is available.
+# ---------------------------------------------------------------------------
+
+_DEFAULT_INJURY_LEVERAGE = 0.0
+
+
+def get_nba_injury_leverage(bet_team: str, opp_team: str) -> tuple[float, bool]:
+    """
+    Return (injury_leverage, data_live) for an NBA matchup.
+
+    injury_leverage: float [-1, +1]. Positive favours bet_team.
+    data_live: always False — no live injury source wired yet.
+
+    Wire-in when ESPN API or RotowWire feed is available.
+    """
+    return _DEFAULT_INJURY_LEVERAGE, False
+
+
+def get_ncaab_injury_leverage(bet_team: str, opp_team: str) -> tuple[float, bool]:
+    """
+    Return (injury_leverage, data_live) for an NCAAB matchup.
+
+    injury_leverage: float [-1, +1]. Positive favours bet_team.
+    data_live: always False — no live injury source wired yet.
+
+    Wire-in when a reliable NCAAB injury feed is available.
+    """
+    return _DEFAULT_INJURY_LEVERAGE, False
 
 
 # ---------------------------------------------------------------------------

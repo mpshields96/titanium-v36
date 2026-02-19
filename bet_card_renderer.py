@@ -200,6 +200,47 @@ def _nemesis_html(nemesis: dict, text_color: str) -> str:
     )
 
 
+def _consensus_badge_html(std_dev: float) -> str:
+    """
+    Return consensus-width badge HTML based on std_dev of vig-free probs across books.
+
+    Thresholds (probability units, 0–1 scale):
+        < 0.02  → TIGHT   (green)  — books agree, high confidence
+        0.02–0.04 → MODERATE (amber) — normal spread
+        > 0.04  → WIDE    (red)   — books disagree, one outlier may be the edge source
+
+    Returns empty string when std_dev == 0.0 (unknown / not captured).
+
+    Note: High std_dev does NOT mean the bet is bad — it often means one book disagrees
+    and that book IS the source of the edge (R&D Session 15 validated). Badge is
+    informational only. Zero score impact.
+    """
+    if std_dev <= 0.0:
+        return ""
+
+    if std_dev < 0.02:
+        label, bg, color = "TIGHT", "#14532D", "#86EFAC"      # green
+    elif std_dev <= 0.04:
+        label, bg, color = "MODERATE", "#78350F", "#FCD34D"   # amber
+    else:
+        label, bg, color = "WIDE", "#7F1D1D", "#FCA5A5"       # red
+
+    return (
+        f'<span style="'
+        f'display:inline-block;'
+        f'background:{bg};'
+        f'color:{color};'
+        f'font-size:0.62rem;'
+        f'font-weight:700;'
+        f'letter-spacing:0.07em;'
+        f'padding:2px 6px;'
+        f'border-radius:3px;'
+        f'margin-left:6px;'
+        f'vertical-align:middle;'
+        f'">BOOKS: {label}</span>'
+    )
+
+
 def _score_bar_html(score: float, breakdown: dict, accent: str) -> str:
     """
     Mini score decomposition bar.
@@ -297,6 +338,9 @@ def render_bet_card(bet: BetCandidate, rank: int = 0) -> str:
 
     # RLM badge
     rlm_html = _rlm_badge_html(bet.sharp_breakdown)
+
+    # Consensus-width badge
+    consensus_badge = _consensus_badge_html(getattr(bet, "std_dev", 0.0))
 
     # Price display
     price_display = _fmt_price(bet.price)
@@ -407,6 +451,7 @@ def render_bet_card(bet: BetCandidate, rank: int = 0) -> str:
             border-radius:4px;
           ">{tier_lbl}</span>
           {rlm_html}
+          {consensus_badge}
         </div>
         <span style="
           font-size:0.78rem;

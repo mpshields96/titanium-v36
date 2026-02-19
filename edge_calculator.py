@@ -63,6 +63,8 @@ class BetCandidate:
     # Set by _apply_nba_kill() when live schedule data is available — Session 12
     rest_days: Optional[int] = None   # Bet team's rest days. None = stub used. 0 = B2B.
     opp_rest_days: Optional[int] = None   # Opponent's rest days.
+    # Set by parse_game_markets() — Session 16. Display-only consensus width badge.
+    std_dev: float = 0.0   # Std dev of vig-free probs across books. 0 = unknown.
 
 
 # ---------------------------------------------------------------------------
@@ -698,6 +700,7 @@ def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
                 event_id=event_id,
                 commence_time=commence_time,
                 book=f"Best: {best_book_name} ({n_books} books)",
+                std_dev=std_dev,
             ))
 
     # --- Moneylines ---
@@ -742,6 +745,7 @@ def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
                 event_id=event_id,
                 commence_time=commence_time,
                 book=f"Best: {best_book_name} ({n_books} books)",
+                std_dev=std_dev,
             ))
 
     # --- Totals ---
@@ -789,6 +793,7 @@ def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
                 event_id=event_id,
                 commence_time=commence_time,
                 book=f"Best: {best_book_name} ({n_books} books)",
+                std_dev=std_dev,
             ))
 
     return candidates
