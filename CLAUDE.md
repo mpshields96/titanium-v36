@@ -65,7 +65,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Never import `edge_calculator` from `odds_fetcher.py` — circular import (`edge_calculator` already imports `odds_fetcher`)
 - Before removing a function parameter, grep all call sites first: `grep -rn "function_name(" .` — easy to miss cross-file callers (e.g. `sharp_to_size` had callers in `bet_ranker.py`)
 - End every session: `/sc:save` → `/claude-md-management:revise-claude-md` → `git commit`
-- End responses with a "Loading screen tip" — one relevant `/sc:` command or tool reminder for the user
+- **MANDATORY — Loading screen tip:** End EVERY response (not just session-end) with a one-line tip in the format `Loading screen tip: ...` — one relevant `/sc:` command or tool reminder. This is a non-negotiable UX behavior. New sessions must not wait to be reminded of this rule.
 
 ## Session Progress Log
 | Session | Status | What was built |
@@ -128,6 +128,21 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 3. Wait for test confirmation, then state what you want to build
 4. For fast orientation: read `PROJECT_INDEX.md` first — covers all modules, functions, Sharp Score formula, kill switches. 94% token reduction vs reading source files.
 5. For backlog and roadmap: read `docs/MASTER_ROADMAP.md` — authoritative to-do list covering math gaps, structural ceiling fixes, R&D backlog, and UI work. In-repo file, readable by R&D chat too.
+
+## Chat Roles & File Access (non-negotiable)
+Two Claude Code chats exist for this project. File permissions are STRICTLY enforced:
+
+| Chat | titanium-v36/ | titanium-experimental/ |
+|------|--------------|------------------------|
+| **v36 chat (this chat)** | Full read + write | Full read + write |
+| **R&D chat** | READ ONLY — never modifies | Full read + write |
+
+Rules:
+- **v36 chat is the promotion gate.** Nothing lands in v36 unless explicitly written here.
+- **R&D chat CANNOT modify any v36 files.** Not CLAUDE.md, not SESSION_STATE.md, not any .py files.
+- When promoting R&D code to v36: v36 chat reads R&D files, then writes v36 files. Never the reverse.
+- HANDOFF.md in `titanium-experimental/` is the communication channel. R&D writes it; v36 reads it.
+- SESSION_STATE.md in `titanium-v36/` is v36-only. R&D reads it for context only.
 
 ## Deployment Checklist
 - [ ] No API keys in code
