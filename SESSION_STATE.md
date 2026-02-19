@@ -252,25 +252,40 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 20 — full wrap-up + transition prep for Session 21 new chat
-Last git commit: 51a7929 (pushed to origin/main)
+Last completed: Session 21 — Odds Comparison page (UI 2) + app.py cleanup
+Last git commit: 8c3047c (pushed to origin/main)
 Tests: 116 total, all passing
-Quota: ~18,250 remaining (no API calls Sessions 19–20)
+Quota: ~18,250 remaining (no API calls Sessions 19–21)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
-### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 21)
-This is the first session for the new v36 chat. All context is fresh.
-Required reading before any code: PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
+### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 22)
+Session 21 complete. Read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
 Then: python3 -m pytest tests/ -v (confirm 116/116)
-Then: read HANDOFF.md in titanium-experimental for R&D Session 21 output before deciding what to build.
+Then: read HANDOFF.md in titanium-experimental for R&D Session 22 output before deciding what to build.
 
-Session 21 priorities (from MASTER_ROADMAP.md):
-- Wait for R&D Session 21 output: Pinnacle probe result + CLV live run result + Odds Comparison data layer
-- If CLV confirmed: build data/clv_store.py (Supabase) + Bet History UI column (UI 5)
-- If Pinnacle available on current tier: add "pinnacle" to PREFERRED_BOOKS in odds_fetcher.py
-- If B2 gate cleared (2026-03-04): promote espn_injury_fetcher.py to v36 (see HANDOFF.md B2 wire-in spec)
-- UI 2 (Odds Comparison page): build after R&D delivers build_odds_comparison() data layer
+Session 22 priorities (from MASTER_ROADMAP.md):
+- B2 gate check: on/after 2026-03-04 — run print_stability_report() in R&D, check espn_stability.log
+  If gate cleared: promote espn_injury_fetcher.py to v36 (see HANDOFF.md B2 wire-in spec)
+- CLV wire-in: once R&D live run confirmed → build data/clv_store.py + Bet History UI column (UI 5)
+- Pinnacle probe: once R&D live run confirmed → if available, add "pinnacle" to PREFERRED_BOOKS
+
+### What was built in Session 21
+1. `data/odds_comparator.py` (NEW) — promoted from R&D Session 21. Pure transformation, no API calls.
+   `build_odds_comparison(game)` + `to_dataframes(comp)`. `line_split` flag, `best_price` dict.
+   `_BOOK_PREFERENCE` hardcoded (mirrors `odds_fetcher.PREFERRED_BOOKS` — sync if Pinnacle added).
+2. `app.py` — `page_odds_comparison()` fully built (replaces stub).
+   Game selectbox (all games in current slate), h2h/spreads/totals st.dataframe() tables,
+   BEST price badges, LINE SPLIT warning banners, empty-state guard when no slate loaded.
+3. `app.py` — `all_raw_games` accumulation in `run_pipeline()`. Stored as `st.session_state["raw_games"]`.
+   Zero extra API calls — raw_games already fetched per sport, now persisted for UI 2.
+4. `app.py` cleanup (all confirmed 116/116 throughout):
+   - Removed dead imports: `format_bet_table`, `render_bet_slate`, `fetch_pending_bets`
+   - `del st.session_state[...]` → `.pop(key, None)` (safe missing-key guard)
+   - Removed duplicate `import streamlit as st` inside `page_pnl_tracker()`
+   - Removed stale comment re: `render_bet_slate`
+   - Added `tracked_*/track_*` key cleanup loop at `run_pipeline()` start
+   - Wrapped post-loop ranking in `try/finally` to ensure `running` flag always resets
 
 ### What was built in Session 20
 1. `docs/MASTER_ROADMAP.md` — authoritative to-do list: 5 sections covering math gaps,

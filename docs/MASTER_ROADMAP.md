@@ -160,11 +160,11 @@
 - **Data source:** Supabase `bet_history` table. `fetch_bets(limit=500)` → `compute_pnl_summary()`.
 - **File:** `app.py` → `page_pnl_tracker()`.
 
-### UI 2: Odds Comparison Page [ ]
-- **What:** Side-by-side book prices for any game in the current slate.
-  Line shopper view — shows where each book is on spread/total/ML.
-- **Data source:** `raw_games` already fetched by pipeline. No new API calls.
-- **Value:** Helps user identify best book to bet manually when Titanium flags an edge.
+### UI 2: Odds Comparison Page [x] — COMPLETE (Session 21)
+- **Built:** Game selectbox, side-by-side h2h/spreads/totals dataframes, BEST price badges, LINE SPLIT warnings.
+- **Data source:** `raw_games` accumulated in `run_pipeline()` → `st.session_state["raw_games"]`. No new API calls.
+- **Files:** `data/odds_comparator.py` (promoted from R&D) + `app.py` → `page_odds_comparison()`.
+- **Also built Session 21:** app.py cleanup (dead imports removed, del→pop fix, tracked_* key hygiene, try/finally on pipeline).
 
 ### UI 3: Refresh Injuries Button (post-B2) [ ]
 - **What:** On-demand re-fetch of ESPN injury data mid-session.
@@ -213,7 +213,9 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| v36 S21 (2026-02-19) | UI 2 (Odds Comparison page), `data/odds_comparator.py` promoted, app.py cleanup |
 | v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |
 | v36 S20 cont. | CEILING 3 / SECTION 5 (RLM 2.0 persistent store) — `price_history_store.py` + Supabase table + tests |
 | v36 S19 (2026-02-18) | MLB/MLS/NFL efficiency data (234 teams), Hawks collision fix |
+| R&D S21 (2026-02-19) | `core/odds_comparator.py` built + validated (12/12 checks). Pinnacle probe + CLV live run blocked by wifi. |
 | R&D S20 (2026-02-19) | EXP 3 script built (`sharp_score_calibration.py`), EXP 1 + EXP 2 scripts built (need live run) |
