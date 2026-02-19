@@ -140,7 +140,7 @@ def rank_bets(
     # --- Step 6: Return top 10 with tier labels ---
     final = diversified[:MAX_TOTAL_BETS]
     for bet in final:
-        bet.signal = sharp_to_size(bet.sharp_score, is_prop=(bet.market_type == "prop"))
+        bet.signal = sharp_to_size(bet.sharp_score)
 
     return final
 
@@ -226,7 +226,7 @@ def format_bet_table(bets: list[BetCandidate]) -> str:
     }
 
     for i, bet in enumerate(bets, 1):
-        tier = sharp_to_size(bet.sharp_score, bet.market_type == "prop")
+        tier = sharp_to_size(bet.sharp_score)
         label = tier_labels.get(tier, "")
 
         lines.append(f"\n#{i} {label} {bet.matchup}")

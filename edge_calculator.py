@@ -23,6 +23,13 @@ import math
 from dataclasses import dataclass, field
 from typing import Optional
 
+from data.kill_switch_feed import (
+    get_nba_kill_inputs,
+    get_nfl_kill_inputs,
+    get_ncaab_kill_inputs,
+    get_soccer_kill_inputs,
+)
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -79,24 +86,6 @@ def passes_collar(american_odds: int) -> bool:
 # ---------------------------------------------------------------------------
 # Edge calculation
 # ---------------------------------------------------------------------------
-
-def calculate_edges(raw_odds: list, sport: str) -> list:
-    """
-    Main entry point called by app.py.
-    Filters raw odds through collar, calculates edge for each market,
-    applies kill switches, and returns passing bets.
-
-    Args:
-        raw_odds: Output from odds_fetcher.fetch_batch_odds() or fetch_events().
-        sport: One of "NBA", "NFL", "NCAAB", "NHL", "Soccer".
-
-    Returns:
-        List of bet candidate dicts, each containing:
-        {matchup, type, target, line, price, edge_pct, win_prob, kelly_size, signal}
-    """
-    # TODO Session 3: Implement per-sport routing
-    pass
-
 
 def _implied_probability(american_odds: int) -> float:
     """
@@ -408,7 +397,8 @@ def calculate_sharp_score(
       EFFICIENCY (20 pts):  caller-provided 0-20 scaled gap (KenPom/Barttorvik)
       SITUATIONAL (15 pts): rest + injury + motivation + matchup, capped at 15
 
-    NOTE: RLM always 0 until line movement tracking is implemented (known gap).
+    NOTE: RLM fires when _OPEN_PRICE_CACHE has data and a ≥3% implied prob shift
+    is detected (Session 13). Cold on first run — activates on session refresh.
     NOTE: efficiency_gap defaults to 8.0 in bet_ranker (moderate) when no data.
 
     Returns:
@@ -434,11 +424,11 @@ def calculate_sharp_score(
     return round(total, 1), breakdown
 
 
-def sharp_to_size(sharp_score: float, is_prop: bool = False) -> str:
+def sharp_to_size(sharp_score: float) -> str:
     """
     Map Sharp Score to bet tier label.
 
-    Thresholds (V36.1 — temporary until efficiency/situational data wired):
+    Thresholds (V36.1 — efficiency + situational components live):
       >= 90 → NUCLEAR_2.0U
       >= 80 → STANDARD_1.0U
       else  → LEAN_0.5U   (all bets that survived pipeline get at least LEAN)
@@ -462,7 +452,8 @@ def run_nemesis(bet: BetCandidate, sport: str) -> dict:
     market-specific match.
 
     Returns dict with: counter, probability, adjustment, remove.
-    remove=True means nemesis counter prob > 40% — drop the bet entirely.
+    remove is computed (prob > 0.40) for display context only — bet_ranker.py
+    does NOT consume it. Nemesis is display-only since Session 12.
     """
     # Each entry: (counter_text, probability, adjustment, applicable_market_types)
     nemesis_cases = {
@@ -838,7 +829,6 @@ def _apply_nba_kill(
                        team has a non-None value, live rest days override the stub.
                        None teams (only 1 game in window) still fall back to stub.
     """
-    from data.kill_switch_feed import get_nba_kill_inputs
     parts = bet.matchup.split(" @ ", 1)
     away = parts[0].strip() if len(parts) == 2 else ""
     home = parts[1].strip() if len(parts) == 2 else ""
@@ -866,7 +856,6 @@ def _apply_nba_kill(
 
 def _apply_nfl_kill(bet: BetCandidate) -> tuple[bool, str]:
     """Route an NFL BetCandidate through the kill switch via stub feed."""
-    from data.kill_switch_feed import get_nfl_kill_inputs
     parts = bet.matchup.split(" @ ", 1)
     home = parts[1].strip() if len(parts) == 2 else ""
     total = bet.line if bet.market_type == "total" else 0.0
@@ -876,7 +865,6 @@ def _apply_nfl_kill(bet: BetCandidate) -> tuple[bool, str]:
 
 def _apply_ncaab_kill(bet: BetCandidate) -> tuple[bool, str]:
     """Route an NCAAB BetCandidate through the kill switch via stub feed."""
-    from data.kill_switch_feed import get_ncaab_kill_inputs
     parts = bet.matchup.split(" @ ", 1)
     away = parts[0].strip() if len(parts) == 2 else ""
     home = parts[1].strip() if len(parts) == 2 else ""
@@ -892,7 +880,6 @@ def _apply_ncaab_kill(bet: BetCandidate) -> tuple[bool, str]:
 
 def _apply_soccer_kill(bet: BetCandidate) -> tuple[bool, str]:
     """Route a soccer BetCandidate through the kill switch via stub feed."""
-    from data.kill_switch_feed import get_soccer_kill_inputs
     # No open_price available at parse time — drift detection is passive (returns 0.0)
     inputs = get_soccer_kill_inputs(
         open_price=None, current_price=float(bet.price), market_type=bet.market_type,
@@ -901,8 +888,9 @@ def _apply_soccer_kill(bet: BetCandidate) -> tuple[bool, str]:
 
 
 # Kill switch router: sport family → routing function
+# NOTE: "nba" is intentionally absent — NBA requires schedule_rest kwarg and
+# is handled by the explicit branch in calculate_edges() before this router is hit.
 _KILL_ROUTER = {
-    "nba":    _apply_nba_kill,
     "ncaab":  _apply_ncaab_kill,
     "nfl":    _apply_nfl_kill,
     "soccer": _apply_soccer_kill,
