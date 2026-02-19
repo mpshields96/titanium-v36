@@ -20,7 +20,7 @@ import streamlit as st
 
 from edge_calculator import calculate_edges, _SPORT_ROUTING
 from bet_ranker import rank_bets, format_bet_table
-from bet_card_renderer import render_bet_slate
+from bet_card_renderer import render_bet_card, render_bet_slate, render_slate_header, render_slate_footer
 from data.efficiency_feed import build_efficiency_data
 from odds_fetcher import fetch_game_lines, get_quota_status, cache_open_prices, compute_rlm
 
@@ -776,6 +776,8 @@ def page_live_analysis():
 """, unsafe_allow_html=True)
 
         else:
+            from data.bet_history_store import insert_bet, is_configured as _is_configured
+
             st.markdown(f"""
 <div class="results-meta">
   <span class="results-count">{result_count} bet{"s" if result_count != 1 else ""} found</span>
@@ -783,7 +785,52 @@ def page_live_analysis():
 </div>
 """, unsafe_allow_html=True)
 
-            st.html(render_bet_slate(ranked, title=""))
+            # Slate header (tier summary)
+            st.html(render_slate_header(ranked, title=""))
+
+            # Per-card loop: card HTML + Track Bet button
+            _track_enabled = _is_configured()
+            for i, bet in enumerate(ranked):
+                st.html(render_bet_card(bet, rank=i + 1))
+
+                if _track_enabled:
+                    track_key = f"track_{bet.event_id}_{bet.market_type}_{i}"
+                    tracked_key = f"tracked_{bet.event_id}_{bet.market_type}_{i}"
+
+                    if st.session_state.get(tracked_key):
+                        st.markdown(
+                            '<div style="font-size:0.65rem;color:#22C55E;'
+                            'letter-spacing:0.1em;margin:-6px 0 8px 2px;">✓ TRACKED</div>',
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        if st.button(
+                            "+ TRACK BET",
+                            key=track_key,
+                            use_container_width=False,
+                        ):
+                            try:
+                                insert_bet(
+                                    sport=bet.sport,
+                                    matchup=bet.matchup,
+                                    market_type=bet.market_type,
+                                    target=bet.target,
+                                    line=bet.line,
+                                    price=bet.price,
+                                    edge_pct=bet.edge_pct,
+                                    sharp_score=int(bet.sharp_score),
+                                    signal=bet.signal,
+                                    kelly_size=bet.kelly_size,
+                                )
+                                st.session_state[tracked_key] = True
+                                # Bust bet history cache so the History page reflects it
+                                st.session_state.pop("bet_history_data", None)
+                                st.rerun()
+                            except Exception as exc:
+                                st.error(f"Track failed: {exc}")
+
+            # Slate footer (total Kelly)
+            st.html(render_slate_footer(ranked))
 
     else:
         st.markdown("""
@@ -815,12 +862,318 @@ def page_live_analysis():
 # ---------------------------------------------------------------------------
 
 def page_bet_history():
-    """Bet History — log of past bets and outcomes. (Coming soon)"""
+    """Bet History — log of tracked bets and outcomes."""
+    from data.bet_history_store import (
+        is_configured,
+        fetch_bets,
+        fetch_pending_bets,
+        compute_pnl_summary,
+        update_outcome,
+    )
+
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-    st.markdown("""
-<div class="empty-state" style="padding-top: 5rem;">
-  <div class="empty-state-icon">—</div>
-  <div class="empty-state-text">Bet History<br><br>Track recorded bets and outcomes.<br>Coming in a future session.</div>
+
+    # ── Page header ──────────────────────────────────────────────
+    render_header()
+    st.markdown("---")
+    st.markdown('<div class="t-section-label">Bet History</div>', unsafe_allow_html=True)
+
+    # ── Config guard ─────────────────────────────────────────────
+    if not is_configured():
+        st.html("""
+<div style="
+  padding: 20px 22px;
+  background: #161B22;
+  border: 1px solid #30363D;
+  border-left: 3px solid #EF4444;
+  border-radius: 4px;
+  margin-top: 16px;
+  font-family: 'IBM Plex Mono', monospace;
+">
+  <div style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.18em; color: #EF4444; text-transform: uppercase; margin-bottom: 8px;">
+    SUPABASE NOT CONFIGURED
+  </div>
+  <div style="font-size: 0.75rem; color: #8B949E; line-height: 1.6;">
+    Add <span style="color: #E8A020;">SUPABASE_URL</span> and <span style="color: #E8A020;">SUPABASE_KEY</span>
+    to <span style="color: #E6EDF3;">.streamlit/secrets.toml</span> to enable bet tracking.
+  </div>
+</div>
+""")
+        return
+
+    # ── Fetch + cache ─────────────────────────────────────────────
+    if "bet_history_data" not in st.session_state:
+        st.session_state["bet_history_data"] = fetch_bets()
+
+    all_bets     = st.session_state["bet_history_data"]
+    pending_bets = [b for b in all_bets if b.get("outcome") is None]
+    resolved_bets = [b for b in all_bets if b.get("outcome") in ("WIN", "LOSS", "PUSH")]
+    summary      = compute_pnl_summary(all_bets)
+
+    # ── P&L Summary strip ────────────────────────────────────────
+    net   = summary["net_units"]
+    net_color = "#22C55E" if net > 0 else ("#EF4444" if net < 0 else "#6E7681")
+    net_sign  = "+" if net > 0 else ""
+
+    st.html(f"""
+<div style="
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 14px 0 20px;
+">
+  <div style="
+    background: #161B22;
+    border: 1px solid #21262D;
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+  ">
+    <div style="font-size: 0.55rem; font-weight: 500; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase; margin-bottom: 5px;">Tracked</div>
+    <div style="font-size: 1.1rem; font-weight: 600; color: #E6EDF3;">{summary['total_tracked']}</div>
+  </div>
+  <div style="
+    background: #161B22;
+    border: 1px solid #21262D;
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+  ">
+    <div style="font-size: 0.55rem; font-weight: 500; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase; margin-bottom: 5px;">Win Rate</div>
+    <div style="font-size: 1.1rem; font-weight: 600; color: #E6EDF3;">{summary['win_rate'] * 100:.0f}%</div>
+  </div>
+  <div style="
+    background: #161B22;
+    border: 1px solid #21262D;
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+  ">
+    <div style="font-size: 0.55rem; font-weight: 500; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase; margin-bottom: 5px;">Net Units</div>
+    <div style="font-size: 1.1rem; font-weight: 600; color: {net_color};">{net_sign}{net:.2f}u</div>
+  </div>
+  <div style="
+    background: #161B22;
+    border: 1px solid #21262D;
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+  ">
+    <div style="font-size: 0.55rem; font-weight: 500; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase; margin-bottom: 5px;">Pending</div>
+    <div style="font-size: 1.1rem; font-weight: 600; color: #E8A020;">{len(pending_bets)}</div>
+  </div>
+</div>
+""")
+
+    # ── Pending bets ─────────────────────────────────────────────
+    st.markdown('<div class="t-section-label" style="margin-top: 8px;">Pending Results</div>', unsafe_allow_html=True)
+
+    if not pending_bets:
+        st.html("""
+<div style="
+  padding: 18px 20px;
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  text-align: center;
+  margin-bottom: 6px;
+">
+  <div style="font-size: 0.7rem; color: #6E7681; letter-spacing: 0.1em;">No pending bets</div>
+</div>
+""")
+    else:
+        for bet in pending_bets:
+            # Signal badge colour
+            sig = bet.get("signal", "")
+            if "NUCLEAR" in sig:
+                sig_color = "#E8A020"
+                sig_bg    = "rgba(232,160,32,0.1)"
+                sig_bd    = "rgba(232,160,32,0.3)"
+            elif "STANDARD" in sig:
+                sig_color = "#3B82F6"
+                sig_bg    = "rgba(59,130,246,0.1)"
+                sig_bd    = "rgba(59,130,246,0.25)"
+            else:
+                sig_color = "#14B8A6"
+                sig_bg    = "rgba(20,184,166,0.1)"
+                sig_bd    = "rgba(20,184,166,0.25)"
+
+            price_raw = bet.get("price", 0)
+            price_fmt = f"+{price_raw}" if price_raw > 0 else str(price_raw)
+            edge_fmt  = f"{bet.get('edge_pct', 0) * 100:.1f}%"
+            score_fmt = str(int(bet.get("sharp_score", 0)))
+
+            # Left: bet info card
+            col_info, col_ctrl = st.columns([3, 2])
+            with col_info:
+                st.html(f"""
+<div style="
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 4px;
+  padding: 12px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  height: 100%;
+">
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+    <span style="font-size: 0.62rem; font-weight: 500; letter-spacing: 0.08em; color: #8B949E;">{bet.get('sport','')}</span>
+    <span style="
+      font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em;
+      color: {sig_color}; background: {sig_bg}; border: 1px solid {sig_bd};
+      padding: 1px 6px; border-radius: 2px;
+    ">{sig}</span>
+  </div>
+  <div style="font-size: 0.9rem; font-weight: 600; color: #E6EDF3; margin-bottom: 4px; line-height: 1.3;">
+    {bet.get('matchup','')}
+  </div>
+  <div style="font-size: 0.72rem; color: #8B949E; margin-bottom: 8px;">
+    {bet.get('market_type','')} &nbsp;·&nbsp; {bet.get('target','')}
+  </div>
+  <div style="display: flex; gap: 14px;">
+    <span style="font-size: 0.68rem; color: #6E7681;">Price &nbsp;<span style="color: #E6EDF3; font-weight: 600;">{price_fmt}</span></span>
+    <span style="font-size: 0.68rem; color: #6E7681;">Edge &nbsp;<span style="color: #14B8A6; font-weight: 600;">{edge_fmt}</span></span>
+    <span style="font-size: 0.68rem; color: #6E7681;">Score &nbsp;<span style="color: #E8A020; font-weight: 600;">{score_fmt}</span></span>
+  </div>
+</div>
+""")
+
+            with col_ctrl:
+                outcome_key = f"outcome_{bet['id']}"
+                chosen = st.selectbox(
+                    "Result",
+                    options=["WIN", "LOSS", "PUSH"],
+                    key=outcome_key,
+                    label_visibility="collapsed",
+                )
+                if st.button("MARK RESULT", key=f"mark_{bet['id']}", use_container_width=True):
+                    kelly = float(bet.get("kelly_size") or 0.5)
+                    pnl   = kelly if chosen == "WIN" else (-kelly if chosen == "LOSS" else 0.0)
+                    try:
+                        update_outcome(bet["id"], chosen, pnl)
+                        # Bust the cache so the page refreshes from DB
+                        del st.session_state["bet_history_data"]
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(f"Failed to update: {exc}")
+
+    # ── History log ──────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown('<div class="t-section-label">History Log</div>', unsafe_allow_html=True)
+
+    if not resolved_bets:
+        st.html("""
+<div style="
+  padding: 28px 20px;
+  font-family: 'IBM Plex Mono', monospace;
+  text-align: center;
+">
+  <div style="font-size: 0.7rem; color: #6E7681; letter-spacing: 0.1em;">No resolved bets yet</div>
+</div>
+""")
+    else:
+        # Build rows HTML
+        rows_html = ""
+        for i, bet in enumerate(resolved_bets):
+            row_bg    = "#161B22" if i % 2 == 0 else "#1C2433"
+            outcome   = bet.get("outcome", "")
+            if outcome == "WIN":
+                out_color = "#22C55E"
+                out_bg    = "rgba(34,197,94,0.1)"
+                out_bd    = "rgba(34,197,94,0.25)"
+            elif outcome == "LOSS":
+                out_color = "#EF4444"
+                out_bg    = "rgba(239,68,68,0.1)"
+                out_bd    = "rgba(239,68,68,0.25)"
+            else:
+                out_color = "#6E7681"
+                out_bg    = "rgba(110,118,129,0.1)"
+                out_bd    = "rgba(110,118,129,0.25)"
+
+            pnl_val   = bet.get("pnl_units") or 0.0
+            pnl_color = "#22C55E" if pnl_val > 0 else ("#EF4444" if pnl_val < 0 else "#6E7681")
+            pnl_sign  = "+" if pnl_val > 0 else ""
+
+            price_raw = bet.get("price", 0)
+            price_fmt = f"+{price_raw}" if price_raw > 0 else str(price_raw)
+            edge_fmt  = f"{bet.get('edge_pct', 0) * 100:.1f}%"
+            score_fmt = str(int(bet.get("sharp_score", 0)))
+
+            # Date: trim to MM/DD HH:MM
+            raw_dt = bet.get("created_at", "")
+            try:
+                from datetime import datetime as _dt
+                dt_obj  = _dt.fromisoformat(raw_dt.replace("Z", "+00:00"))
+                date_fmt = dt_obj.strftime("%m/%d %H:%M")
+            except Exception:
+                date_fmt = raw_dt[:10] if raw_dt else "—"
+
+            matchup_short = bet.get("matchup", "")
+            market_str    = bet.get("market_type", "")
+
+            rows_html += f"""
+<div style="
+  display: grid;
+  grid-template-columns: 64px 1fr 52px 44px 40px 36px 52px 46px;
+  gap: 0 6px;
+  align-items: center;
+  padding: 9px 12px;
+  background: {row_bg};
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  border-bottom: 1px solid #21262D;
+">
+  <span style="color: #6E7681; white-space: nowrap;">{date_fmt}</span>
+  <span style="color: #E6EDF3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{matchup_short}</span>
+  <span style="color: #8B949E; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{market_str}</span>
+  <span style="color: #8B949E;">{price_fmt}</span>
+  <span style="color: #14B8A6;">{edge_fmt}</span>
+  <span style="color: #E8A020;">{score_fmt}</span>
+  <span style="
+    text-align: center;
+    font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
+    color: {out_color}; background: {out_bg}; border: 1px solid {out_bd};
+    padding: 2px 5px; border-radius: 2px;
+  ">{outcome}</span>
+  <span style="color: {pnl_color}; font-weight: 600;">{pnl_sign}{pnl_val:.2f}u</span>
+</div>
+"""
+
+        st.html(f"""
+<div style="
+  border: 1px solid #21262D;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+">
+  <!-- Column headers -->
+  <div style="
+    display: grid;
+    grid-template-columns: 64px 1fr 52px 44px 40px 36px 52px 46px;
+    gap: 0 6px;
+    padding: 7px 12px;
+    background: #0D1117;
+    border-bottom: 1px solid #30363D;
+    font-family: 'IBM Plex Mono', monospace;
+  ">
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Date</span>
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Matchup</span>
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Type</span>
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Price</span>
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Edge</span>
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Score</span>
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Result</span>
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">P&amp;L</span>
+  </div>
+  {rows_html}
+</div>
+""")
+
+    # ── Footer ───────────────────────────────────────────────────
+    st.markdown(f"""
+<div class="t-footer">
+  <span class="t-footer-item">{summary['wins']}W &nbsp;{summary['losses']}L &nbsp;{summary['pushes']}P</span>
+  <span class="t-footer-item">{summary['resolved']} resolved of {summary['total_tracked']} tracked</span>
 </div>
 """, unsafe_allow_html=True)
 

@@ -512,6 +512,65 @@ def render_bet_card(bet: BetCandidate, rank: int = 0) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Slate header / footer (for per-card loop pattern in app.py)
+# ---------------------------------------------------------------------------
+
+def render_slate_header(bets: list, title: str = "Today's Slate") -> str:
+    """
+    Return the slate header HTML (count + tier summary).
+    Use with render_bet_card() in a loop + render_slate_footer().
+    """
+    if not bets:
+        return ""
+
+    tier_counts: dict = {}
+    for b in bets:
+        sig = b.signal or sharp_to_size(b.sharp_score, b.market_type == "prop")
+        tier_counts[sig] = tier_counts.get(sig, 0) + 1
+
+    tier_summary_parts = []
+    for sig in ["NUCLEAR_2.0U", "STANDARD_1.0U", "LEAN_0.5U"]:
+        count = tier_counts.get(sig, 0)
+        if count:
+            cfg = _tier_config(sig)
+            short = sig.split("_")[0]
+            tier_summary_parts.append(
+                f'<span style="color:{cfg["accent"]};font-weight:700;">'
+                f'{count} {short}</span>'
+            )
+
+    tier_summary = " &nbsp;·&nbsp; ".join(tier_summary_parts) if tier_summary_parts else "0 bets"
+
+    return (
+        f'<div style="'
+        f'font-family:\'IBM Plex Mono\',monospace;'
+        f'margin-bottom:16px;'
+        f'">'
+        f'<div style="font-size:1.1rem;font-weight:800;color:#F9FAFB;">{title}</div>'
+        f'<div style="font-size:0.75rem;color:#6B7280;margin-top:3px;">'
+        f'{len(bets)} bet{"s" if len(bets) != 1 else ""} &nbsp;·&nbsp; '
+        f'{tier_summary}'
+        f'</div>'
+        f'</div>'
+    )
+
+
+def render_slate_footer(bets: list) -> str:
+    """Return the total Kelly footer HTML."""
+    total_kelly = sum(b.kelly_size for b in bets)
+    return (
+        f'<div style="'
+        f'font-size:0.72rem;color:#6B7280;'
+        f'border-top:1px solid #1F2937;'
+        f'padding-top:10px;margin-top:4px;'
+        f'">'
+        f'Total Kelly exposure: '
+        f'<span style="color:#D1D5DB;font-weight:600;">{total_kelly:.2f}u</span>'
+        f'</div>'
+    )
+
+
+# ---------------------------------------------------------------------------
 # Slate renderer
 # ---------------------------------------------------------------------------
 
