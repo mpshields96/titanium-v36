@@ -10,7 +10,7 @@ Updated Session 10: NCAAB expanded 24 → 80 teams (ACC, Big 12, Big Ten, SEC, B
 Fix applied: added "Texas Southern Tigers" alias before Session 5 promotion.
 Updated Session 17: all 32 NHL franchises added (GF60-GA60 × 10 AdjEM proxy).
 Updated Session 19: MLB (30), MLS (30), NFL (32) added. Hawks alias collision fixed.
-    Total: 202 teams (NBA 30 + NCAAB 80 + NHL 32 + MLB 30 + MLS 30 + NFL 32).
+    Total: 234 teams (NBA 30 + NCAAB 80 + NHL 32 + MLB 30 + MLS 30 + NFL 32).
 
 Provides:
     get_efficiency_gap(home_team, away_team) -> float
