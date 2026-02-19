@@ -1,9 +1,9 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-18 (Session 14)
+Generated: 2026-02-18 (Session 16)
 
 ## Quick Start
 ```bash
-python3 -m pytest tests/ -v          # 85 tests — must pass before each session
+python3 -m pytest tests/ -v          # 93 tests — must pass before each session
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
@@ -31,10 +31,10 @@ titanium-v36/
 ├── data/
 │   ├── __init__.py              # Empty — makes data/ a proper Python package (Session 14)
 │   ├── efficiency_feed.py       # 110 teams (30 NBA + 80 NCAAB) — AdjEM static data
-│   ├── kill_switch_feed.py      # Kill switch input stubs: rest, wind, 3PT%, drift
+│   ├── kill_switch_feed.py      # Kill switch input stubs: rest, wind, 3PT%, drift, injury leverage
 │   └── team_stats_bunker.py     # Fallback static stats
 └── tests/
-    ├── test_validation.py       # 45 tests — math, collar, kelly
+    ├── test_validation.py       # 53 tests — math, collar, kelly, injury stubs, consensus badge
     └── test_odds_fetcher.py     # 40 tests — API, rest days, RLM
 ```
 
@@ -85,7 +85,9 @@ No API calls, no UI. Math + kill switch logic only.
 Internal: `_SPORT_ROUTING` maps 12 sports → fetch key + kill family. `_apply_nba_kill(bet, schedule_rest)` overlays live rest days.
 
 **BetCandidate fields:**
-`sport, matchup, market_type, target, line, price, edge_pct, win_prob, market_implied, fair_implied, kelly_size, signal, event_id, commence_time, book, sharp_score, sharp_breakdown, nemesis, simulation, kill_reason, rest_days, opp_rest_days`
+`sport, matchup, market_type, target, line, price, edge_pct, win_prob, market_implied, fair_implied, kelly_size, signal, event_id, commence_time, book, sharp_score, sharp_breakdown, nemesis, simulation, kill_reason, rest_days, opp_rest_days, std_dev`
+
+`std_dev: float = 0.0` — std dev of vig-free probs across books (Session 16). Passed from `_consensus_fair_prob()` at 3 call sites. Display-only via BOOKS badge. Zero score impact.
 
 `kill_reason=""` = clean · `"FLAG:..."` = kept with warning · `"KILL:..."` = dropped
 
@@ -123,6 +125,7 @@ Internal helpers (not public API):
 |--------|---------|
 | `_tier_config(signal)` | Lookup colour/label config dict for a signal string |
 | `_rlm_badge_html(breakdown)` | Violet RLM badge — shown only when `breakdown["rlm"] > 0` |
+| `_consensus_badge_html(std_dev)` | **Session 16** — BOOKS: TIGHT/MODERATE/WIDE badge. `<0.02` green · `0.02–0.04` amber · `>0.04` red · `0.0` empty |
 | `_kill_reason_banner_html(kill_reason, accent)` | FLAG → amber advisory · KILL/FORCE_UNDER → red error · `""` → empty |
 | `_nemesis_html(nemesis, text_color)` | Nemesis counter-thesis block (display-only, Session 12) |
 | `_score_bar_html(score, breakdown, accent)` | Mini decomposition bar: Edge/RLM/Eff/Sit segments |
@@ -166,6 +169,8 @@ No API calls, no math. Stub data keyed to kill switch signatures.
 | `get_nfl_kill_inputs(home_team, total, backup_qb, market_type)` | `dict` | Wind mph — all 32 teams + full stadium map |
 | `get_ncaab_kill_inputs(bet_team, opp_team, is_away, conf_tournament, market_type)` | `dict` | 3PT reliance (80 teams) · tempo from efficiency_feed |
 | `get_soccer_kill_inputs(open_price, current_price, dead_rubber, key_creator_out, market_type)` | `dict` | Drift computed at runtime from open-price cache |
+| `get_nba_injury_leverage(bet_team, opp_team)` | `(float, bool)` | **Session 16** stub — always `(0.0, False)`. Wire when ESPN B2 blockers cleared. |
+| `get_ncaab_injury_leverage(bet_team, opp_team)` | `(float, bool)` | **Session 16** stub — always `(0.0, False)`. ESPN endpoint has no NCAAB data. |
 
 All return dict + `data_live: bool`. When `data_live=False`, kill decision is stub — note "Data unavailable" in UI rather than trust the kill.
 
@@ -211,7 +216,7 @@ score = edge_pts(0–40) + rlm_pts(0–25) + efficiency_pts(0–20) + situationa
 | rlm_confirmed | `_OPEN_PRICE_CACHE` (3% implied shift) | ✅ cold on 1st run |
 | efficiency_gap | efficiency_feed (110 teams) | ✅ |
 | rest_edge | schedule rest days | ✅ NBA only |
-| injury_leverage | — | ❌ always 0 |
+| injury_leverage | kill_switch_feed stubs (Session 16) | ❌ always 0.0 — ESPN B2 endpoint not stable |
 | motivation | — | ❌ always 0 |
 | matchup_score | — | ❌ always 0 |
 
@@ -248,9 +253,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 
 | File | Count | Covers |
 |------|-------|--------|
-| `test_validation.py` | 45 | collar, kelly, edge math, profit calc |
+| `test_validation.py` | 53 | collar, kelly, edge math, profit calc, injury stubs, consensus badge |
 | `test_odds_fetcher.py` | 40 | API fetch, preferred book, rest days, RLM |
-| **Total** | **85** | all passing |
+| **Total** | **93** | all passing |
 
 ---
 
@@ -265,6 +270,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 13 | ✅ | `SHARP_THRESHOLD` 40→45, `compute_rlm()` passive RLM, end-to-end pipeline wiring |
 | 14 | ✅ | `bet_card_renderer.py` promoted from R&D, `.streamlit/config.toml` dark theme, `data/__init__.py` |
 | 15 | ✅ | Feature backlog saved, /sc:estimate B+C+F completed, session transition prep |
+| 16 | ✅ | Injury leverage stubs (kill_switch_feed), `std_dev` on BetCandidate, BOOKS badge on card |
 
-Last commit: `3c7f7a5` · Tests: **85 passing** · Quota: ~18,307 remaining
-Next session (16): Build B (injury leverage stubs) + F1 (std_dev badge). Defer C (threshold raise — gate unmet).
+Last commit: `36dd7c9` · Tests: **93 passing** · Quota: ~18,307 remaining
+Next session (17): NHL efficiency data OR Bet History page. Discuss at session start. C deferred (RLM gate 0/5).
