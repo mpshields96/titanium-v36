@@ -320,3 +320,46 @@ Commit: c3954ad — dead stub, _KILL_ROUTER NBA entry, deferred imports, stale d
 - Long-term migration target if going public/mobile: FastAPI + HTMX (not React, not Reflex yet)
 - Design reference: civixsolutions.com — "normal on surface, neo-brutal on hover" conceit
   Font pairing (Fraunces serif + mono data) worth adopting for future multi-page build
+
+---
+
+## FEATURE BACKLOG (assessed 2026-02-18, Session 15)
+Priority order within each group. Update as seasons change.
+
+### 🟢 READY TO BUILD NOW (in-season, no blockers)
+
+| Feature | Effort | Notes |
+|---------|--------|-------|
+| **`std_dev` steam signal** | Small | `_consensus_fair_prob()` already computes std_dev — discarded. Use as confidence flag on cards or Sharp Score sub-component. Zero API cost. |
+| **NHL efficiency data** | Medium | 32 teams. NHL is in-season Feb–June. sparse API coverage for games >3 days out is normal — h2h only, spreads/totals open closer to game day. Pattern: same as NBA NetRtg → AdjEM conversion. |
+| **Bet History page** | Medium | Stub page exists. Needs: local JSON/CSV to persist bets, record-bet button on card, outcome tracking, P&L summary. Pure UI — no math, no API. |
+| **RLM threshold raise (45→50)** | Trivial | DATA GATE: raise only after RLM fires consistently on 5+ live sessions with observed signals. Do NOT raise on theory. |
+| **P&L Tracker page** | Medium | Stub page exists. Depends on Bet History being built first (needs outcome data). |
+
+### 🟡 SEASONAL — BUILD BEFORE SEASON STARTS
+
+| Feature | Season | Window | Notes |
+|---------|--------|--------|-------|
+| **NFL efficiency data** | NFL | Aug–Sep 2026 | 32 teams, EPA/play → AdjEM equiv. Kill switch wind map already done (Session 9). Routing already wired. Build ~2 weeks before preseason. |
+| **NCAAF expansion** | NCAAF | Aug–Sep 2026 | Similar to NCAAB pattern. 130 FBS teams. Low priority until NFL confirmed working. |
+| **MLB expansion** | MLB | Mar–Apr 2026 | Season starts April. Needs: run-line + totals parsing, pitcher efficiency proxy (ERA/FIP), no spread kill switch (run-line collar applies). |
+| **MLS expansion** | MLS | Mar 2026 | MLS season starts March. Soccer pipeline already works — just needs MLS teams in efficiency feed (low-quality data available). |
+
+### 🔴 BLOCKED — EXTERNAL DATA REQUIRED
+
+| Feature | Blocker | Notes |
+|---------|---------|-------|
+| **Injury leverage** | No injury data source | Odds API doesn't provide it. Would need ESPN API or manual stub. Always 0 until resolved. |
+| **Motivation component** | Subjective / no source | Rat poison per CLAUDE.md. Do not add. |
+| **`public_on_side` upgrade** | Action Network or similar | RLM heuristic (price < -105) is Phase 1 placeholder. Upgrade when consensus % data available. |
+| **Bet History outcomes** | No results source | Odds API doesn't provide final scores. Would need a sports data API (ESPN, sportsdata.io) to auto-resolve bets. Manual outcome entry is an option. |
+
+### ⚪ DEFERRED / LOW PRIORITY
+
+| Feature | Notes |
+|---------|-------|
+| **Trinity simulation `mean` bug fix** | `bet.line` passed instead of projected margin. Tracked in R&D. Fix before relying on simulation output for sizing. |
+| **`remove_vig_shin()` cleanup** | In R&D method_b_clv.py — unused. Ask before removing. |
+| **Odds Comparison page** | Stub exists. Would show side-by-side prices across all books. Nice-to-have, not core. |
+| **NHL expansion** | Sparse API coverage makes signal quality low. Worth building if NHL is a priority sport. |
+| **Props support** | Confirmed 422 on bulk endpoint — per-event only (4 calls/game). API tier limitation. Revisit if tier upgrades. |
