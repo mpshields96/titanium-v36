@@ -98,7 +98,7 @@ footer                           { display: none !important; }
 /* ── Layout ───────────────────────────────────────────────────── */
 .block-container {
     max-width: 680px !important;
-    padding: 2rem 1.25rem 3rem !important;
+    padding: 3.5rem 1.25rem 3rem !important;
 }
 
 /* ── Typography base ──────────────────────────────────────────── */
@@ -682,8 +682,7 @@ def run_pipeline(selected_sports: list[str]):
                     expanded=False,
                 )
 
-                if sport == "NCAAB":
-                    eff_data = build_efficiency_data(raw_games)
+                eff_data.update(build_efficiency_data(raw_games))
 
             except ValueError as exc:
                 status.update(label=f"{sport} — {exc}", state="error")
@@ -784,7 +783,7 @@ def page_live_analysis():
 </div>
 """, unsafe_allow_html=True)
 
-            st.markdown(render_bet_slate(ranked, title=""), unsafe_allow_html=True)
+            st.html(render_bet_slate(ranked, title=""))
 
     else:
         st.markdown("""
