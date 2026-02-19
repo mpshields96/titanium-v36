@@ -1,5 +1,5 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-18 (Session 17)
+Generated: 2026-02-19 (Session 17 post-session)
 
 ## Quick Start
 ```bash
@@ -202,6 +202,8 @@ Pages via `st.navigation()` + `st.Page()` (Streamlit 1.36+):
 
 **Session 14:** Inline `render_bet_card()` removed from `app.py`. Now imports `render_bet_slate` from `bet_card_renderer`. Theme handled by `.streamlit/config.toml` instead of inline CSS.
 
+**Session 17 post-session:** `st.html()` replaces `st.markdown(unsafe_allow_html=True)` for card slate — Streamlit 1.54 sandboxes large HTML into a code block via `st.markdown`. Always use `st.html()` for full HTML documents/blocks. `eff_data.update()` now runs for all sports (was NCAAB-only — NHL efficiency data was built but never reaching `rank_bets()`). Header top padding 2rem → 3.5rem.
+
 ---
 
 ## Sharp Score Formula
@@ -214,7 +216,7 @@ score = edge_pts(0–40) + rlm_pts(0–25) + efficiency_pts(0–20) + situationa
 |-----------|--------|-------|
 | edge_pct | consensus books | ✅ |
 | rlm_confirmed | `_OPEN_PRICE_CACHE` (3% implied shift) | ✅ cold on 1st run |
-| efficiency_gap | efficiency_feed (110 teams) | ✅ |
+| efficiency_gap | efficiency_feed (142 teams) | ✅ |
 | rest_edge | schedule rest days | ✅ NBA only |
 | injury_leverage | kill_switch_feed stubs (Session 16) | ❌ always 0.0 — ESPN B2 endpoint not stable |
 | motivation | — | ❌ always 0 |
@@ -273,5 +275,5 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 16 | ✅ | Injury leverage stubs (kill_switch_feed), `std_dev` on BetCandidate, BOOKS badge on card |
 | 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy, aliases for NY Rangers/Islanders + Vegas |
 
-Last commit: TBD · Tests: **95 passing** · Quota: ~18,307 remaining
-Next session (18): Bet History page (session-only vs CSV vs persistent — decide storage first). C deferred (RLM gate 0/5).
+Last commit: `3157945` · Tests: **95 passing** · Quota: ~18,250 remaining
+Next session (18): Bet History page — **Supabase** backend chosen. Pre-req: add SUPABASE_URL + SUPABASE_KEY to `.streamlit/secrets.toml`, create `bet_history` table. C deferred (RLM gate 0/5).
