@@ -668,6 +668,17 @@ def run_pipeline(selected_sports: list[str]):
                 sport_key = routing.get("sport_key", "")
                 raw_games = fetch_game_lines(sport_key) if sport_key else []
 
+                # RLM 2.0: persist first-ever-seen prices to Supabase so multi-day
+                # line movement is visible across sessions, not just intra-session.
+                from data.price_history_store import (
+                    is_configured as _ph_configured,
+                    record_new_events,
+                    inject_into_cache,
+                )
+                if _ph_configured():
+                    record_new_events(raw_games)   # write first-seen prices for new event_ids
+                    inject_into_cache(raw_games)   # pre-seed _OPEN_PRICE_CACHE with historical prices
+
                 # Passive RLM: freeze open prices on first fetch; detect movement on refresh
                 cache_open_prices(raw_games)
                 sport_rlm = compute_rlm(raw_games)

@@ -357,6 +357,40 @@ _OPEN_PRICE_CACHE: dict[str, dict[str, float]] = {}
 # Structure: { event_id: { "home": american_odds, "away": american_odds } }
 
 
+def _extract_open_prices(game: dict) -> dict[str, float]:
+    """
+    Extract {"home": price, "away": price} from a raw game dict.
+
+    Tries books in PREFERRED_BOOKS order, uses the first h2h market found.
+    Returns {} if no usable h2h prices are found.
+    """
+    home_price: Optional[float] = None
+    away_price: Optional[float] = None
+
+    bookmakers = game.get("bookmakers", [])
+    book_map = {b["key"]: b for b in bookmakers if "markets" in b}
+    for book_key in PREFERRED_BOOKS:
+        if book_key in book_map:
+            for market in book_map[book_key].get("markets", []):
+                if market.get("key") == "h2h":
+                    for outcome in market.get("outcomes", []):
+                        name = outcome.get("name", "")
+                        price = outcome.get("price")
+                        if price is None:
+                            continue
+                        if name == game.get("home_team"):
+                            home_price = float(price)
+                        elif name == game.get("away_team"):
+                            away_price = float(price)
+                    break
+            if home_price is not None:
+                break
+
+    if home_price is not None and away_price is not None:
+        return {"home": home_price, "away": away_price}
+    return {}
+
+
 def cache_open_prices(games: list[dict]) -> int:
     """
     Cache opening prices for a list of games. Only stores prices that are
@@ -377,34 +411,9 @@ def cache_open_prices(games: list[dict]) -> int:
         if not event_id or event_id in _OPEN_PRICE_CACHE:
             continue  # already cached — open price frozen
 
-        bookmakers = game.get("bookmakers", [])
-        home_price: Optional[float] = None
-        away_price: Optional[float] = None
-
-        # Try preferred books in order, then fall back to first available
-        book_map = {b["key"]: b for b in bookmakers if "markets" in b}
-        for book_key in PREFERRED_BOOKS:
-            if book_key in book_map:
-                for market in book_map[book_key].get("markets", []):
-                    if market.get("key") == "h2h":
-                        for outcome in market.get("outcomes", []):
-                            name = outcome.get("name", "")
-                            price = outcome.get("price")
-                            if price is None:
-                                continue
-                            if name == game.get("home_team"):
-                                home_price = float(price)
-                            elif name == game.get("away_team"):
-                                away_price = float(price)
-                        break
-                if home_price is not None:
-                    break
-
-        if home_price is not None and away_price is not None:
-            _OPEN_PRICE_CACHE[event_id] = {
-                "home": home_price,
-                "away": away_price,
-            }
+        prices = _extract_open_prices(game)
+        if prices:
+            _OPEN_PRICE_CACHE[event_id] = prices
             new_count += 1
 
     logger.info("cache_open_prices: %d new events cached (total: %d)",
