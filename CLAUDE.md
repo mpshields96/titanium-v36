@@ -16,6 +16,7 @@
 python3 -m pytest tests/ -v          # Run all tests (must pass before any session)
 python3 ncaab_parser.py              # Live NCAAB pipeline test (1 API call)
 streamlit run app.py                 # Launch UI locally (Session 5+)
+grep -n "def calculate_edges" edge_calculator.py  # Two defs exist: dead stub ~L83, real ~L912
 ```
 
 ## Non-Negotiable Betting Rules
@@ -59,6 +60,11 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - One function at a time. Write a test before building the next function.
 - If code breaks: describe behavior ("returns empty list"), not "fix it"
 - Never push to GitHub without checking the deployment checklist
+- Module-level caches (e.g. `_OPEN_PRICE_CACHE`) need `setup_method` teardown in tests — call clear function before each test or tests bleed state
+- Pass `raw_games` into `calculate_edges(sport, raw_games=raw_games)` to avoid double API call — it skips internal fetch when provided
+- Never import `edge_calculator` from `odds_fetcher.py` — circular import (`edge_calculator` already imports `odds_fetcher`)
+- End every session: `/sc:save` → `/claude-md-management:revise-claude-md` → `git commit`
+- End responses with a "Loading screen tip" — one relevant `/sc:` command or tool reminder for the user
 
 ## Session Progress Log
 | Session | Status | What was built |
@@ -74,6 +80,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
+- **HANDOFF.md at that path is the authoritative spec** — read it directly, don't rely solely on user's chat summary
 - Only promote code that has been live-tested in R&D
 - Known R&D bugs — DO NOT promote until fixed:
   - run_trinity_simulation receives bet.line as mean instead of projected margin (unfixed)
