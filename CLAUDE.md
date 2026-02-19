@@ -119,6 +119,8 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - `st.Page(icon=...)` requires real emoji or Material shortcodes — Unicode geometric chars (◈ ◇) crash the app
 - **Streamlit 1.54+:** `st.markdown(unsafe_allow_html=True)` sandboxes large HTML into a `<code>` block. Use `st.html()` for full HTML documents/slates. `st.markdown` is safe only for small inline fragments.
 - **eff_data multi-sport:** call `eff_data.update(build_efficiency_data(raw_games))` unconditionally per sport — never gate inside `if sport == "X"` or efficiency data silently won't reach rank_bets() for other sports.
+- **Equity curve charts:** `st.line_chart(df, color="#14B8A6", height=180)` — pass pd.DataFrame with named index. Works on Streamlit Cloud, no extra deps. Used in `page_pnl_tracker()`.
+- **P&L session cache:** `"pnl_data"` key is independent of `"bet_history_data"` — bust with `st.session_state.pop("pnl_data", None)` + `st.rerun()` after any outcome write.
 
 ## If Starting a New Chat Session
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)

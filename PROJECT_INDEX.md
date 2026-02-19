@@ -1,9 +1,9 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-19 (Session 17 post-session)
+Generated: 2026-02-19 (Session 20)
 
 ## Quick Start
 ```bash
-python3 -m pytest tests/ -v          # 95 tests — must pass before each session
+python3 -m pytest tests/ -v          # 106 tests — must pass before each session
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
@@ -30,11 +30,11 @@ titanium-v36/
 ├── originator_engine.py         # Monte Carlo — DO NOT TOUCH unless asked
 ├── data/
 │   ├── __init__.py              # Empty — makes data/ a proper Python package (Session 14)
-│   ├── efficiency_feed.py       # 142 teams (30 NBA + 80 NCAAB + 32 NHL) — AdjEM static data
+│   ├── efficiency_feed.py       # 234 teams (30 NBA + 80 NCAAB + 32 NHL + 30 MLB + 30 MLS + 32 NFL) — AdjEM static data
 │   ├── kill_switch_feed.py      # Kill switch input stubs: rest, wind, 3PT%, drift, injury leverage
 │   └── team_stats_bunker.py     # Fallback static stats
 └── tests/
-    ├── test_validation.py       # 55 tests — math, collar, kelly, injury stubs, consensus badge, NHL efficiency
+    ├── test_validation.py       # 66 tests — math, collar, kelly, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards
     └── test_odds_fetcher.py     # 40 tests — API, rest days, RLM
 ```
 
@@ -154,7 +154,7 @@ No API calls. Static data + lookup only.
 | `get_team_data(team_name)` | `dict\|None` | adj_o, adj_d, adj_em, tempo |
 | `list_teams(league=None)` | `list[str]` | "NBA" / "NCAAB" / "NHL" / "MLB" / "MLS" / "NFL" / None = all 234 |
 
-Coverage: 30 NBA (NetRtg×2.2 → AdjEM equiv) + 80 NCAAB (ACC/Big 12/Big Ten/SEC/Big East/WCC/MWC/A-10 + top mid-majors) + 32 NHL (GF60-GA60 × 10 → AdjEM equiv, Session 17) + 30 MLB (run differential → AdjEM proxy, Session 19) + 30 MLS (xG differential → AdjEM proxy, Session 19) + 32 NFL (point differential → AdjEM proxy, Session 19). Hawks alias collision fixed (Session 19). Unknown teams → 8.0 default gap.
+Coverage: 30 NBA (NetRtg×2.2) + 80 NCAAB (ACC/B12/B10/SEC/Big East/WCC/MWC/A-10 + mid-majors) + 32 NHL (GF60-GA60 × 10, Session 17) + 30 MLB (ERA proxy × 8.0, Session 19) + 30 MLS (xGD/90 × 15.0, Session 19) + 32 NFL (EPA/play × 80.0, Session 19) = **234 teams**. Hawks alias collision fixed (Session 19). Unknown teams → 8.0 default gap.
 
 **Single source of truth for NCAAB tempo** — `kill_switch_feed.get_ncaab_tempo()` calls `get_team_data()`. No duplicate data.
 
@@ -194,8 +194,8 @@ No business logic, no API calls, no math.
 
 Pages via `st.navigation()` + `st.Page()` (Streamlit 1.36+):
 - `page_live_analysis()` — fully functional — runs full pipeline, renders via `render_bet_slate()`
-- `page_bet_history()` — stub
-- `page_pnl_tracker()` — stub
+- `page_bet_history()` — fully functional (Session 18) — P&L strip, Pending, History Log, MARK RESULT
+- `page_pnl_tracker()` — fully functional (Session 20) — equity curve, ROI by sport, win rate by market
 - `page_odds_comparison()` — stub
 
 `run_pipeline(selected_sports)` → pre-fetches `raw_games` per sport → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(sport, raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. One API call per sport total.
@@ -218,7 +218,7 @@ score = edge_pts(0–40) + rlm_pts(0–25) + efficiency_pts(0–20) + situationa
 |-----------|--------|-------|
 | edge_pct | consensus books | ✅ |
 | rlm_confirmed | `_OPEN_PRICE_CACHE` (3% implied shift) | ✅ cold on 1st run |
-| efficiency_gap | efficiency_feed (142 teams) | ✅ |
+| efficiency_gap | efficiency_feed (234 teams) | ✅ |
 | rest_edge | schedule rest days | ✅ NBA only |
 | injury_leverage | kill_switch_feed stubs (Session 16) | ❌ always 0.0 — ESPN B2 endpoint not stable |
 | motivation | — | ❌ always 0 |
@@ -257,9 +257,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 
 | File | Count | Covers |
 |------|-------|--------|
-| `test_validation.py` | 55 | collar, kelly, edge math, profit calc, injury stubs, consensus badge, NHL efficiency |
+| `test_validation.py` | 66 | collar, kelly, edge math, profit calc, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards |
 | `test_odds_fetcher.py` | 40 | API fetch, preferred book, rest days, RLM |
-| **Total** | **95** | all passing |
+| **Total** | **106** | all passing |
 
 ---
 
@@ -278,6 +278,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy, aliases for NY Rangers/Islanders + Vegas |
 | 18 | ✅ | `page_bet_history()` full impl, `+ TRACK BET` on Live Analysis cards, `render_slate_header/footer` helpers |
 | 19 | ✅ | `efficiency_feed.py` MLB/MLS/NFL promotion (234 teams), Hawks alias fix, 11 new tests |
+| 20 | ✅ | `docs/MASTER_ROADMAP.md` created, `page_pnl_tracker()` fully built (equity curve, ROI by sport, win rate by market), CLAUDE.md + SESSION_STATE.md + PROJECT_INDEX.md updated |
 
-Last commit: `e0e58d3` · Tests: **106 passing** · Quota: ~18,250 remaining
-Next session (20): Await further instructions.
+Last commit: `c35cfb5` · Tests: **106 passing** · Quota: ~18,250 remaining
+Next session (21): RLM 2.0 persistent open-price store (data/price_history_store.py + Supabase price_history table). B2 gate check 2026-03-04.

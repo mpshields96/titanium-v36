@@ -64,7 +64,7 @@
   → updates `situational_data` in session state → re-ranks with updated injury_leverage.
 - **Owner:** v36 builds the UI button after B2 is promoted. R&D already has the module.
 
-### CEILING 3: Sharp Money Timing — Overnight Line Movement [ ]
+### CEILING 3: Sharp Money Timing — Overnight Line Movement [R] ← Local JSON POC built R&D Session 18
 - **Problem:** RLM currently catches intra-session movement only (open price cached at session start,
   compared to current). If sharp money hits at 2am and moves the line by 20 cents before you open
   the app at 8am, our open-price cache starts from the already-moved price. Invisible.
@@ -84,7 +84,7 @@
 
 ## SECTION 3 — R&D EXPERIMENTAL BACKLOG
 
-### R&D EXP 1: CLV Tracker [R] ← R&D Session 18 task
+### R&D EXP 1: CLV Tracker [R] ← Built R&D Session 18
 - **What:** Closing Line Value — compare our bet price to the closing price at kickoff.
   Positive average CLV = empirical proof the edge detection method works.
 - **Data needed:** Already have open prices (session cache). Need closing prices (fetch same game
@@ -95,14 +95,14 @@
 - **Why now:** Zero new infrastructure. Uses existing RLM cache + Supabase bet history.
 - **Owner:** R&D builds standalone `core/clv_tracker.py`. v36 wires into Bet History page.
 
-### R&D EXP 2: Pinnacle Consensus Probe [R] ← R&D Session 18 task
+### R&D EXP 2: Pinnacle Consensus Probe [R] ← Built R&D Session 18. Needs 1 live run.
 - **What:** Check if Pinnacle appears in Odds API response on current tier. If yes, add to consensus.
 - **Simple test:** Fetch any NBA game and `print([b["key"] for b in game["bookmakers"]])`. Look for "pinnacle".
 - **If available:** Add "pinnacle" to top of `_BOOK_PREFERENCE` in `odds_fetcher.py`. Consensus auto-improves.
 - **If not available:** Document API tier cost to unlock. User decision.
 - **Owner:** R&D 10-minute probe. Report findings in HANDOFF.md.
 
-### R&D EXP 3: Sharp Score Calibration Study [ ]
+### R&D EXP 3: Sharp Score Calibration Study [R] ← Script being built R&D Session 19
 - **What:** Validate that Sharp Score weights (Edge 40 / RLM 25 / Eff 20 / Sit 15) are optimal.
   Use Supabase bet history outcomes (when 30+ bets have results) to run Pearson correlation per component.
 - **Question:** Does efficiency_gap actually predict outcome? Is RLM 25 pts too high or too low?
