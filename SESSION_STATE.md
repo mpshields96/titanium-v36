@@ -272,9 +272,15 @@ RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — incremen
 ### Session 18 pre-requisites
 - [ ] Restart Claude Desktop to activate Supabase MCP
 - [ ] Create Supabase project (free tier) at supabase.com
-- [ ] Create `bet_history` table (schema: id, created_at, sport, matchup, market_type, target, line,
-      price, edge_pct, sharp_score, signal, kelly_size, outcome, pnl_units, notes)
-- [ ] Add SUPABASE_URL + SUPABASE_KEY to .streamlit/secrets.toml
+- [ ] Create `bet_history` table via MCP in Session 18 chat (store scaffold done — run migration)
+- [ ] Add SUPABASE_URL + SUPABASE_KEY to .streamlit/secrets.toml (placeholder comments added)
+
+### Pre-built for Session 18 (pre-session work, not a numbered session)
+- ✅ `data/bet_history_store.py` scaffolded — insert_bet(), update_outcome(), fetch_bets(),
+     fetch_pending_bets(), compute_pnl_summary(), is_configured(). All I/O in one file.
+- ✅ `supabase>=2.3.0` added to requirements.txt
+- ✅ Supabase placeholder comments added to .streamlit/secrets.toml
+- ⏳ Table creation: pending — create Supabase project first, then run migration via MCP in Session 18
 
 ## SESSION 16 GOAL ✅ COMPLETE
 1. ✅ Feature B: get_nba_injury_leverage() + get_ncaab_injury_leverage() stubs in kill_switch_feed.py
