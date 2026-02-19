@@ -43,7 +43,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Kill switches operate on structural mathematical inputs only (rest days, wind, 3PT rate, drift).
 - Situational Sharp Score inputs must have a live computable source to be non-zero.
   - rest_edge: ✅ live (schedule-derived rest days, NBA only)
-  - injury_leverage: ❌ not wired — always 0
+  - injury_leverage: ❌ stubs exist (kill_switch_feed.py) — always 0.0, data_live=False. ESPN B2 endpoint not ready: position weight cap + 2-week stability gate. NCAAB: no endpoint.
   - motivation: ❌ not wired — always 0
   - matchup_score: ❌ not wired — always 0
 - Do NOT add narrative-driven inputs (home crowd, "hostile environment", "young roster") to any scoring component. These are rat poison.
@@ -80,6 +80,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 13 | ✅ Done | SHARP_THRESHOLD 40→45, compute_rlm() (passive RLM, 3% implied prob, zero API cost), wired into run_pipeline() — 85/85 tests |
 | 14 | ✅ Done | bet_card_renderer.py promoted (R&D), render_bet_slate() wired, .streamlit/config.toml, data/__init__.py fix, UI polish — 85/85 tests |
 | 15 | ✅ Done | Feature backlog saved to SESSION_STATE.md, /sc:estimate B+C+F, session transition prep |
+| 16 | ✅ Done | Injury leverage stubs (kill_switch_feed.py), std_dev field on BetCandidate, BOOKS badge on card — 93/93 tests |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -87,7 +88,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Only promote code that has been live-tested in R&D
 - **Import path diff when promoting:** R&D uses `from core.edge_calculator import` / `from core.odds_fetcher import` — v36 is root-level, use `from edge_calculator import` / `from odds_fetcher import`. Also strip `sys.path.insert(0, ...)` blocks.
 - **SHARP_THRESHOLD raise gate (45→50):** Do NOT raise until `RLM live sessions observed` counter in SESSION_STATE.md CURRENT STATE reaches ≥5. Increment manually each session RLM fires on live data.
-- **`std_dev` in `BetCandidate`:** Session 16 adds `std_dev: float = 0.0` field. Display-only badge in `bet_card_renderer.py`. F2 (Sharp Score component) goes to R&D first — validate before promoting.
+- **`std_dev` in `BetCandidate`:** ✅ Done Session 16. `std_dev: float = 0.0` field on BetCandidate. Passed from `_consensus_fair_prob()` at 3 call sites. BOOKS: TIGHT/MODERATE/WIDE badge in `bet_card_renderer.py`. Display-only, zero score impact. F2 (Sharp Score component) **permanently rejected** — R&D validated r=+0.020, no linear relationship. High std_dev = one outlier book = source of edge. Do not add to scoring.
 - Known R&D bugs — DO NOT promote until fixed:
   - run_trinity_simulation receives bet.line as mean instead of projected margin (unfixed)
   - RLM Sharp Score component: passive RLM now wired (Session 13). Activates when open-price cache
