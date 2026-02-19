@@ -14,3 +14,4 @@ __pycache__/
 .claude/
 .playwright-mcp/
 *.png
+CLAUDE.local.md
