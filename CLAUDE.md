@@ -16,7 +16,7 @@
 python3 -m pytest tests/ -v          # Run all tests (must pass before any session)
 python3 ncaab_parser.py              # Live NCAAB pipeline test (1 API call)
 streamlit run app.py                 # Launch UI locally (Session 5+)
-grep -n "def calculate_edges" edge_calculator.py  # Two defs exist: dead stub ~L83, real ~L912
+grep -n "def calculate_edges" edge_calculator.py  # One def only — dead stub removed Session 13 cleanup
 ```
 
 ## Non-Negotiable Betting Rules

@@ -194,7 +194,7 @@ This works because books occasionally misprice relative to the consensus.
      Live Analysis (working), Bet History / P&L Tracker / Odds Comparison (stubs).
      All 75 tests passing.
 
-## SESSION 13 GOAL (NEXT)
+## SESSION 14 GOAL (NEXT)
 1. 🔲 TBD — user to define
 
 ## WHAT'S BUILT AND WORKING (as of Session 12)
@@ -221,9 +221,15 @@ This works because books occasionally misprice relative to the consensus.
   (no double API call). One API call per sport, as before.
 - tests/test_odds_fetcher.py: 10 new compute_rlm() tests. 85 total, all passing.
 
+## WHAT'S BUILT AND WORKING (as of Session 13 cleanup)
+- edge_calculator.py: dead stub deleted, _KILL_ROUTER cleaned, kill_switch_feed imports promoted
+  to module level, stale docstrings fixed (run_nemesis, calculate_sharp_score, sharp_to_size)
+- bet_ranker.py: unused is_prop param removed from sharp_to_size() call sites
+- All cleanup is structural only — zero behaviour changes. 85/85 tests green.
+
 ## CURRENT STATE
-Last completed: Session 13 — threshold 40→45, passive RLM wired end-to-end
-Last git commit: 9fb28e5 (PROJECT_INDEX.md refresh — all Sessions 11–13 committed)
+Last completed: Session 13 cleanup — edge_calculator.py dead code + stale docs removed
+Last git commit: c3954ad (cleanup: remove dead code and fix stale docs in edge_calculator)
 Tests: 85 total, all passing
 Quota: ~18,307 remaining (no API calls this session)
 Streamlit Cloud: deployed, auto-deploys from main
@@ -235,8 +241,9 @@ Next: Session 14 — TBD
 3. Then read SESSION_STATE.md CHECKPOINT block for exact system state.
 4. For R&D context: read ~/Projects/titanium-experimental/HANDOFF.md (authoritative spec) and ~/Projects/titanium-experimental/SESSION_STATE.md (R&D current state + next tasks).
 
-## CHECKPOINT — Session 13 (2026-02-18)
+## CHECKPOINT — Session 13 cleanup (2026-02-18)
 State: CLEAN. All code committed. 85/85 tests green.
+Commit: c3954ad — dead stub, _KILL_ROUTER NBA entry, deferred imports, stale docstrings all cleaned.
 
 ### Sharp Score formula (as implemented — memorise this)
   score = edge_pts(0-40) + rlm_pts(0-25) + efficiency_pts(0-20) + situational_pts(0-15)
