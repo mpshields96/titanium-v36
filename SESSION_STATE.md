@@ -252,12 +252,25 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 20 — RLM 2.0 persistent open-price store + MASTER_ROADMAP + P&L Tracker
-Last git commit: 361a90e (pushed to origin/main)
+Last completed: Session 20 — full wrap-up + transition prep for Session 21 new chat
+Last git commit: 51a7929 (pushed to origin/main)
 Tests: 116 total, all passing
 Quota: ~18,250 remaining (no API calls Sessions 19–20)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
+
+### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 21)
+This is the first session for the new v36 chat. All context is fresh.
+Required reading before any code: PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
+Then: python3 -m pytest tests/ -v (confirm 116/116)
+Then: read HANDOFF.md in titanium-experimental for R&D Session 21 output before deciding what to build.
+
+Session 21 priorities (from MASTER_ROADMAP.md):
+- Wait for R&D Session 21 output: Pinnacle probe result + CLV live run result + Odds Comparison data layer
+- If CLV confirmed: build data/clv_store.py (Supabase) + Bet History UI column (UI 5)
+- If Pinnacle available on current tier: add "pinnacle" to PREFERRED_BOOKS in odds_fetcher.py
+- If B2 gate cleared (2026-03-04): promote espn_injury_fetcher.py to v36 (see HANDOFF.md B2 wire-in spec)
+- UI 2 (Odds Comparison page): build after R&D delivers build_odds_comparison() data layer
 
 ### What was built in Session 20
 1. `docs/MASTER_ROADMAP.md` — authoritative to-do list: 5 sections covering math gaps,

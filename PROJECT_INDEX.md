@@ -1,5 +1,5 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-19 (Session 20 — post-commit 361a90e)
+Generated: 2026-02-19 (Session 20 wrap-up — post-commit 51a7929 — transition to Session 21 new chat)
 
 ## Quick Start
 ```bash
@@ -343,5 +343,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 19 | ✅ | `efficiency_feed.py` MLB/MLS/NFL promotion (234 teams), Hawks alias fix, 11 new tests |
 | 20 | ✅ | `data/price_history_store.py` (RLM 2.0 persistent open-price store), `_extract_open_prices()` in odds_fetcher.py, `page_pnl_tracker()` fully built, `docs/MASTER_ROADMAP.md`, Supabase `price_history` table live |
 
-Last commit: `361a90e` · Tests: **116 passing** · Quota: ~18,250 remaining
-Next session (21): await further instructions or next backlog item from SESSION_STATE.md. B2 gate check 2026-03-04.
+Last commit: `51a7929` · Tests: **116 passing** · Quota: ~18,250 remaining
+Next session (21) — NEW CHAT: read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md → run tests.
+Session 21 priorities: read HANDOFF.md in titanium-experimental for R&D Session 21 output before building anything.
+B2 gate check: 2026-03-04. RLM gate: 0/5 live sessions (increment in SESSION_STATE.md when RLM fires).
