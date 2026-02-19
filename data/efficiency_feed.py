@@ -1,7 +1,7 @@
 """
 efficiency_feed.py — TITANIUM V36.1
 =====================================
-Mock efficiency data layer for NBA (NetRtg), NCAAB (KenPom/Barttorvik), and NHL (GF60-GA60).
+Static efficiency data layer for NBA, NCAAB, NHL, MLB, MLS, and NFL.
 No live scraping. Static snapshot calibrated to ~2024-25 season.
 
 Promoted from R&D (titanium-experimental/core/data/efficiency_feed.py) — Session 5.
@@ -9,23 +9,26 @@ Updated Session 9: all 30 NBA franchises added. league field on every entry.
 Updated Session 10: NCAAB expanded 24 → 80 teams (ACC, Big 12, Big Ten, SEC, Big East, WCC/MWC/A-10).
 Fix applied: added "Texas Southern Tigers" alias before Session 5 promotion.
 Updated Session 17: all 32 NHL franchises added (GF60-GA60 × 10 AdjEM proxy).
+Updated Session 19: MLB (30), MLS (30), NFL (32) added. Hawks alias collision fixed.
+    Total: 202 teams (NBA 30 + NCAAB 80 + NHL 32 + MLB 30 + MLS 30 + NFL 32).
 
 Provides:
     get_efficiency_gap(home_team, away_team) -> float
         Returns a 0-20 scaled score representing the strength differential
-        between two teams. Works for NBA, NCAAB, and NHL — all use the same
+        between two teams. Works for all leagues — all use the same
         adj_em field and the same scaling math.
 
     get_team_data(team_name) -> dict | None
         Returns raw efficiency data for a single team.
 
     list_teams(league=None) -> list[str]
-        Returns all canonical team names. Pass league="NBA", "NCAAB", or "NHL" to filter.
+        Returns all canonical team names. Pass league="NBA", "NCAAB", "NHL",
+        "MLB", "MLS", or "NFL" to filter.
 
     build_efficiency_data(games) -> dict[str, float]
         Maps event_id → efficiency_gap for use as rank_bets(efficiency_data=...).
 
-Scaling (identical for NBA, NCAAB, and NHL):
+Scaling (identical across all leagues):
     AdjEM differential = home_adj_em - away_adj_em
     Clamped to [-30, +30], scaled to [0, 20]:
         gap = (differential + 30) / 60 * 20
@@ -44,10 +47,34 @@ NHL data source: GF60-GA60 goal differential × 10.
     Multiplied by 10 → adj_em range ±12–15 — fits within ±30 clamp, stays comparable.
     tempo: 0.0 — not meaningful for hockey (field required by schema).
 
+MLB data source: Team ERA proxy. adj_em = (4.30 - team_era) * 8.0.
+    League avg ERA 4.30 (~2024). Multiplier 8.0 → ±12 range at ERA ±1.5 from avg.
+    tempo: 0.0 — not applicable for baseball.
+
+MLS data source: xGD/90 proxy. adj_em = xgd_per_90 * 15.0.
+    Source: americansocceranalysis.com 2024 xGD/90 tiers.
+    tempo: 0.0 — not meaningful in soccer context.
+
+NFL data source: EPA/play proxy. adj_em = epa_per_play * 80.0.
+    League avg EPA/play ≈ 0.0 (zero-sum). Multiplier 80 → ±12 range at ±0.15.
+    tempo: 0.0 — not meaningful for football.
+
 Teams included:
     NBA:   All 30 franchises (~2024-25 NetRtg calibrated)
     NCAAB: 80 programs — ACC, Big 12, Big Ten, SEC, Big East, WCC/MWC/A-10, low-major
     NHL:   All 32 franchises (~2024-25 GF60-GA60 calibrated)
+    MLB:   All 30 franchises (~2024 ERA calibrated)
+    MLS:   All 30 clubs (~2024 xGD/90 calibrated)
+    NFL:   All 32 franchises (~2024 EPA/play calibrated)
+
+Alias collision table (maintained — do NOT add bare aliases that conflict):
+    "Rangers"  → New York Rangers (NHL). MLB Texas Rangers: use "TEX" / full name.
+    "Panthers" → Florida Panthers (NHL). NFL Carolina Panthers: use full name.
+    "Jets"     → Winnipeg Jets (NHL). NFL NY Jets: use "NY Jets"/"NYJ".
+    "Cardinals"→ St. Louis Cardinals (MLB). NFL Cardinals: use "AZ Cardinals".
+    "Giants"   → San Francisco Giants (MLB). NFL Giants: use "NY Giants"/"NYG".
+    "Kings"    → Sacramento Kings (NBA). NHL Kings: use "LA Kings"/"LAK".
+    "LAC"      → Los Angeles Clippers (NBA). NFL Chargers: use "Chargers"/"LA Chargers".
 
 DO NOT add API calls, Streamlit calls, or betting math to this file.
 """
@@ -541,6 +568,341 @@ _TEAM_DATA: dict[str, dict] = {
     "Utah Hockey Club": {
         "adj_o": 24.7, "adj_d": 22.6, "adj_em": 2.1,  "tempo": 0.0, "league": "NHL",
     },
+
+    # =========================================================================
+    # MLB — ERA-based AdjEM proxy (~2024 season)
+    # Formula: adj_em = (4.30 - team_era) * 8.0
+    # League avg ERA: 4.30 (2024). Multiplier 8.0 → ±12 range at ERA ±1.5 from avg.
+    # adj_o / adj_d are ERA-derived proxies (not meaningful individually — use adj_em).
+    # tempo: 0.0 (not applicable for baseball; field required by schema).
+    # ERA rankings: directional accuracy HIGH, exact values MEDIUM (~2024 season).
+    # =========================================================================
+
+    # --- MLB Elite rotation (ERA < 4.00) ---
+    "Seattle Mariners": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.52) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Cleveland Guardians": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.54) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Los Angeles Dodgers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.63) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Milwaukee Brewers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.69) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Philadelphia Phillies": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.80) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Baltimore Orioles": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.86) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Kansas City Royals": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.89) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "New York Mets": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.93) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "San Diego Padres": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.97) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "New York Yankees": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 3.99) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+
+    # --- MLB Above-average rotation (ERA 4.00–4.29) ---
+    "Atlanta Braves": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.01) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Pittsburgh Pirates": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.04) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Houston Astros": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.12) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Minnesota Twins": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.18) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Detroit Tigers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.23) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+
+    # --- MLB Near-average rotation (ERA 4.28–4.44) ---
+    "San Francisco Giants": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.28) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Arizona Diamondbacks": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.31) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "St. Louis Cardinals": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.37) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Cincinnati Reds": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.38) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Toronto Blue Jays": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.41) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+
+    # --- MLB Below-average rotation (ERA 4.45–4.79) ---
+    "Tampa Bay Rays": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.45) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Chicago Cubs": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.51) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Boston Red Sox": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.53) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Texas Rangers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.57) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Los Angeles Angels": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.65) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Oakland Athletics": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.78) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+
+    # --- MLB Weak rotation (ERA 4.80+) ---
+    "Chicago White Sox": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.84) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Miami Marlins": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.88) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Washington Nationals": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 4.93) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+    "Colorado Rockies": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": (4.30 - 5.84) * 8.0, "tempo": 0.0, "league": "MLB",
+    },
+
+    # =========================================================================
+    # MLS — xGD/90 proxy (~2024 season)
+    # Formula: adj_em = xgd_per_90 * 15.0
+    # Multiplier 15.0 → ±12 at ±0.8 xGD/90. Source: americansocceranalysis.com
+    # xGD/90 values: directional accuracy MEDIUM (2024 season approximation).
+    # tempo: 0.0 (not meaningful for soccer context).
+    # San Diego FC: expansion team 2025 — no xGD data, adj_em=0.0 (neutral).
+    # =========================================================================
+
+    # --- MLS Elite (xGD/90 +0.5 to +0.8) ---
+    "Inter Miami CF": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.75 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "FC Cincinnati": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.70 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Columbus Crew": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.65 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Philadelphia Union": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.55 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+
+    # --- MLS Strong (xGD/90 +0.2 to +0.5) ---
+    "LAFC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.45 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Seattle Sounders": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.38 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "New England Revolution": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.32 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Atlanta United": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.25 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+
+    # --- MLS Mid-upper (xGD/90 0.0 to +0.2) ---
+    "LA Galaxy": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.18 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Minnesota United": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.14 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Colorado Rapids": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.10 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Real Salt Lake": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.08 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "DC United": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.05 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+
+    # --- MLS Mid-lower (xGD/90 -0.1 to +0.1) ---
+    "Portland Timbers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.05 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Houston Dynamo": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.02 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Nashville SC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.02 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Charlotte FC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.05 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Austin FC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.08 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "FC Dallas": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.05 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Orlando City": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.08 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+
+    # --- MLS Lower (xGD/90 -0.2 to -0.1) ---
+    "New York Red Bulls": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.12 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Toronto FC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.15 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Vancouver Whitecaps": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.15 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "Sporting KC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.18 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "CF Montreal": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.18 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "New York City FC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.10 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+
+    # --- MLS Rebuild (xGD/90 -0.3 to -0.5) ---
+    "Chicago Fire": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.35 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "San Jose Earthquakes": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.42 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+    "St. Louis City SC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.38 * 15.0, "tempo": 0.0, "league": "MLS",
+    },
+
+    # --- MLS Expansion (no data) ---
+    "San Diego FC": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.0, "tempo": 0.0, "league": "MLS",
+    },
+
+    # =========================================================================
+    # NFL — EPA/play AdjEM proxy (~2024 season)
+    # Formula: adj_em = epa_per_play * 80.0
+    # League avg EPA/play ≈ 0.0 (zero-sum). Best ~+0.15, worst ~-0.15.
+    # Multiplier 80 → ±12 range at ±0.15 EPA/play. Fits ±30 clamp cleanly.
+    # tempo: 0.0 (not meaningful — field required by schema).
+    # Data: approximate 2024 season directional rankings.
+    # =========================================================================
+
+    # --- NFL Elite (adj_em +8 to +14) ---
+    "Kansas City Chiefs": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.16 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Detroit Lions": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.15 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Baltimore Ravens": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.14 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Houston Texans": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.13 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "San Francisco 49ers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.12 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+
+    # --- NFL Strong (adj_em +4 to +8) ---
+    "Buffalo Bills": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.10 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Philadelphia Eagles": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.09 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Green Bay Packers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.08 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Miami Dolphins": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.07 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Dallas Cowboys": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.06 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Pittsburgh Steelers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.06 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Los Angeles Rams": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.05 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+
+    # --- NFL Mid (adj_em -4 to +4) ---
+    "Minnesota Vikings": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.04 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Denver Broncos": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.03 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Tampa Bay Buccaneers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.03 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Seattle Seahawks": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.02 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Indianapolis Colts": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.01 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Cincinnati Bengals": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": 0.01 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Jacksonville Jaguars": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.01 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "New Orleans Saints": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.02 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Washington Commanders": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.02 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Arizona Cardinals": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.03 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Atlanta Falcons": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.03 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Los Angeles Chargers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.04 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "New York Giants": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.05 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Cleveland Browns": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.05 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "New York Jets": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.06 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+
+    # --- NFL Weak (adj_em < -6) ---
+    "Oakland Raiders": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.10 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "New England Patriots": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.11 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Carolina Panthers": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.12 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Tennessee Titans": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.13 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
+    "Chicago Bears": {
+        "adj_o": 0.0, "adj_d": 0.0, "adj_em": -0.14 * 80.0, "tempo": 0.0, "league": "NFL",
+    },
 }
 
 # Aliases for common name variations from Odds API
@@ -734,9 +1096,205 @@ _ALIASES: dict[str, str] = {
     "Habs":                      "Montreal Canadiens",
     "Blue Jackets":              "Columbus Blue Jackets",
     "Blackhawks":                "Chicago Blackhawks",
-    "Hawks":                     "Chicago Blackhawks",
+    "Blackhawks":                "Chicago Blackhawks",
     "Sharks":                    "San Jose Sharks",
     "Utah HC":                   "Utah Hockey Club",
+
+    # --- MLB aliases (Odds API uses full city+nickname) ---
+    # New York teams — explicit to prevent partial-match collision
+    "NY Yankees":                "New York Yankees",
+    "NYY":                       "New York Yankees",
+    "Yankees":                   "New York Yankees",
+    "NY Mets":                   "New York Mets",
+    "NYM":                       "New York Mets",
+    "Mets":                      "New York Mets",
+    # Los Angeles teams — explicit to prevent collision
+    "LA Dodgers":                "Los Angeles Dodgers",
+    "LAD":                       "Los Angeles Dodgers",
+    "Dodgers":                   "Los Angeles Dodgers",
+    "LA Angels":                 "Los Angeles Angels",
+    "LAA":                       "Los Angeles Angels",
+    "Angels":                    "Los Angeles Angels",
+    "Anaheim Angels":            "Los Angeles Angels",
+    # Chicago teams — explicit to prevent collision
+    "Cubs":                      "Chicago Cubs",
+    "CHC":                       "Chicago Cubs",
+    "White Sox":                 "Chicago White Sox",
+    "CWS":                       "Chicago White Sox",
+    # Sox — always fully qualified (NEVER bare "Sox" — collides with Red Sox)
+    "Red Sox":                   "Boston Red Sox",
+    "BOS":                       "Boston Red Sox",
+    # Other MLB aliases
+    "Mariners":                  "Seattle Mariners",
+    "SEA":                       "Seattle Mariners",
+    "Guardians":                 "Cleveland Guardians",
+    "CLE":                       "Cleveland Guardians",
+    "Brewers":                   "Milwaukee Brewers",
+    "MIL":                       "Milwaukee Brewers",
+    "Phillies":                  "Philadelphia Phillies",
+    "PHI":                       "Philadelphia Phillies",
+    "Orioles":                   "Baltimore Orioles",
+    "BAL":                       "Baltimore Orioles",
+    "Royals":                    "Kansas City Royals",
+    "KC":                        "Kansas City Royals",
+    "Padres":                    "San Diego Padres",
+    "SD":                        "San Diego Padres",
+    "Braves":                    "Atlanta Braves",
+    "ATL":                       "Atlanta Braves",
+    "Pirates":                   "Pittsburgh Pirates",
+    "PIT":                       "Pittsburgh Pirates",
+    "Astros":                    "Houston Astros",
+    "HOU":                       "Houston Astros",
+    "Twins":                     "Minnesota Twins",
+    "MIN":                       "Minnesota Twins",
+    "Tigers":                    "Detroit Tigers",
+    "DET":                       "Detroit Tigers",
+    "Giants":                    "San Francisco Giants",   # MLB Cardinals/Giants/Rangers: v36 collision table
+    "SF Giants":                 "San Francisco Giants",
+    "SFG":                       "San Francisco Giants",
+    "Diamondbacks":              "Arizona Diamondbacks",
+    "D-backs":                   "Arizona Diamondbacks",
+    "ARI":                       "Arizona Diamondbacks",
+    "Cardinals":                 "St. Louis Cardinals",    # bare "Cardinals" → MLB Cardinals; NFL use "AZ Cardinals"
+    "STL Cardinals":             "St. Louis Cardinals",
+    "Reds":                      "Cincinnati Reds",
+    "CIN":                       "Cincinnati Reds",
+    "Blue Jays":                 "Toronto Blue Jays",
+    "TOR":                       "Toronto Blue Jays",
+    "Rays":                      "Tampa Bay Rays",
+    "TB":                        "Tampa Bay Rays",
+    # NOTE: bare "Rangers" → NOT aliased here — v36 has "Rangers" → New York Rangers (NHL).
+    # MLB Texas Rangers: use "TEX" or full name "Texas Rangers"
+    "TEX":                       "Texas Rangers",
+    "Marlins":                   "Miami Marlins",
+    "MIA":                       "Miami Marlins",
+    "Nationals":                 "Washington Nationals",
+    "WSH":                       "Washington Nationals",
+    "WAS":                       "Washington Nationals",
+    "Rockies":                   "Colorado Rockies",
+    "COL":                       "Colorado Rockies",
+    # Oakland/Sacramento/Las Vegas Athletics — franchise in transition
+    "Sacramento Athletics":      "Oakland Athletics",
+    "Las Vegas Athletics":       "Oakland Athletics",
+    "Athletics":                 "Oakland Athletics",
+    "A's":                       "Oakland Athletics",
+    "Oakland A's":               "Oakland Athletics",
+    "OAK":                       "Oakland Athletics",
+
+    # --- MLS aliases ---
+    # New York teams — explicit to prevent collision
+    "NYCFC":                     "New York City FC",
+    "NYC FC":                    "New York City FC",
+    "New York City":             "New York City FC",
+    "NY Red Bulls":              "New York Red Bulls",
+    "NYRB":                      "New York Red Bulls",
+    "Red Bulls":                 "New York Red Bulls",
+    # Los Angeles teams — explicit to prevent collision
+    "Galaxy":                    "LA Galaxy",
+    "LAG":                       "LA Galaxy",
+    "LA FC":                     "LAFC",
+    # Miami — explicit to avoid colliding with NCAAB "Miami FL"
+    "Inter Miami":               "Inter Miami CF",
+    "Miami CF":                  "Inter Miami CF",
+    # CF Montreal variants
+    "Club de Foot Montreal":     "CF Montreal",
+    "Montreal":                  "CF Montreal",
+    # Other MLS aliases
+    "FCC":                       "FC Cincinnati",
+    "Columbus":                  "Columbus Crew",
+    "Crew":                      "Columbus Crew",
+    "Union":                     "Philadelphia Union",
+    "PHU":                       "Philadelphia Union",
+    "Sounders":                  "Seattle Sounders",
+    "SEA Sounders":              "Seattle Sounders",
+    "NERE":                      "New England Revolution",
+    "Revolution":                "New England Revolution",
+    "New England":               "New England Revolution",
+    "ATU":                       "Atlanta United",
+    "Atlanta":                   "Atlanta United",
+    "Minnesota United FC":       "Minnesota United",
+    "MNUFC":                     "Minnesota United",
+    "Rapids":                    "Colorado Rapids",
+    "RSL":                       "Real Salt Lake",
+    "Salt Lake":                 "Real Salt Lake",
+    "DCU":                       "DC United",
+    "DC":                        "DC United",
+    "Portland":                  "Portland Timbers",
+    "Timbers":                   "Portland Timbers",
+    "Dynamo":                    "Houston Dynamo",
+    "NSC":                       "Nashville SC",
+    "Charlotte":                 "Charlotte FC",
+    "Austin":                    "Austin FC",
+    "FCD":                       "FC Dallas",
+    "Orlando":                   "Orlando City",
+    "Toronto":                   "Toronto FC",
+    "TFC":                       "Toronto FC",
+    "Whitecaps":                 "Vancouver Whitecaps",
+    "VAN":                       "Vancouver Whitecaps",
+    "SKC":                       "Sporting KC",
+    "Sporting Kansas City":      "Sporting KC",
+    "CFM":                       "CF Montreal",
+    "Chicago":                   "Chicago Fire",
+    "Fire":                      "Chicago Fire",
+    "San Jose":                  "San Jose Earthquakes",
+    "Earthquakes":               "San Jose Earthquakes",
+    "STL City":                  "St. Louis City SC",
+    "St. Louis City":            "St. Louis City SC",
+    "St. Louis":                 "St. Louis City SC",
+    "San Diego":                 "San Diego FC",
+    "SDFC":                      "San Diego FC",
+
+    # --- NFL aliases ---
+    # Jets: "NY Jets"/"NYJ" only — bare "Jets" reserved (Winnipeg Jets, NHL)
+    "NY Jets":                   "New York Jets",
+    "NYJ":                       "New York Jets",
+    # Chargers: "Chargers"/"LA Chargers" only — "LAC" collides with LA Clippers (NBA)
+    "Chargers":                  "Los Angeles Chargers",
+    "LA Chargers":               "Los Angeles Chargers",
+    # Cardinals: "AZ Cardinals" only — bare "Cardinals" → St. Louis Cardinals (MLB)
+    "AZ Cardinals":              "Arizona Cardinals",
+    # Giants: "NY Giants"/"NYG" only — bare "Giants" → San Francisco Giants (MLB)
+    "NY Giants":                 "New York Giants",
+    "NYG":                       "New York Giants",
+    # Panthers: "Carolina Panthers" only — bare "Panthers" → Florida Panthers (NHL)
+    "Carolina Panthers":         "Carolina Panthers",
+    # Raiders: Las Vegas is current home (relocated from Oakland 2020)
+    "Las Vegas Raiders":         "Oakland Raiders",
+    "Raiders":                   "Oakland Raiders",
+    "LVR":                       "Oakland Raiders",
+    # Other NFL aliases
+    "Chiefs":                    "Kansas City Chiefs",
+    "KC Chiefs":                 "Kansas City Chiefs",
+    "Lions":                     "Detroit Lions",
+    "Ravens":                    "Baltimore Ravens",
+    "Texans":                    "Houston Texans",
+    "49ers":                     "San Francisco 49ers",
+    "SF 49ers":                  "San Francisco 49ers",
+    "Bills":                     "Buffalo Bills",
+    "Eagles":                    "Philadelphia Eagles",
+    "Packers":                   "Green Bay Packers",
+    "Dolphins":                  "Miami Dolphins",
+    "Cowboys":                   "Dallas Cowboys",
+    "Steelers":                  "Pittsburgh Steelers",
+    "Rams":                      "Los Angeles Rams",
+    "LA Rams":                   "Los Angeles Rams",
+    "Vikings":                   "Minnesota Vikings",
+    "Broncos":                   "Denver Broncos",
+    "Buccaneers":                "Tampa Bay Buccaneers",
+    "Bucs":                      "Tampa Bay Buccaneers",
+    "Seahawks":                  "Seattle Seahawks",
+    "Colts":                     "Indianapolis Colts",
+    "Bengals":                   "Cincinnati Bengals",
+    "Jaguars":                   "Jacksonville Jaguars",
+    "Jags":                      "Jacksonville Jaguars",
+    "Saints":                    "New Orleans Saints",
+    "Commanders":                "Washington Commanders",
+    "WAS Commanders":            "Washington Commanders",
+    "Falcons":                   "Atlanta Falcons",
+    "Browns":                    "Cleveland Browns",
+    "Patriots":                  "New England Patriots",
+    "Titans":                    "Tennessee Titans",
+    "Bears":                     "Chicago Bears",
 }
 
 # Scaling constants

@@ -453,3 +453,74 @@ class TestNHLEfficiency:
         from data.efficiency_feed import list_teams
         nhl_teams = list_teams("NHL")
         assert len(nhl_teams) == 32
+
+
+# ============================================================================
+# 11. MLB / MLS / NFL EFFICIENCY DATA (Session 19 promotion)
+#     30 MLB franchises (ERA proxy), 30 MLS clubs (xGD/90 proxy),
+#     32 NFL franchises (EPA proxy). Team counts + gap range checks.
+#     Alias collision checks: Hawks→NBA, Rangers→NHL, Panthers→NHL.
+# ============================================================================
+
+class TestNewLeaguesEfficiency:
+    """MLB, MLS, NFL efficiency data coverage and alias collision guards."""
+
+    def test_mlb_list_teams_returns_30(self):
+        from data.efficiency_feed import list_teams
+        assert len(list_teams("MLB")) == 30
+
+    def test_mls_list_teams_returns_30(self):
+        from data.efficiency_feed import list_teams
+        assert len(list_teams("MLS")) == 30
+
+    def test_nfl_list_teams_returns_32(self):
+        from data.efficiency_feed import list_teams
+        assert len(list_teams("NFL")) == 32
+
+    def test_mlb_gap_returns_valid_float(self):
+        from data.efficiency_feed import get_efficiency_gap
+        gap = get_efficiency_gap("Los Angeles Dodgers", "Colorado Rockies")
+        assert isinstance(gap, float)
+        assert 0.0 <= gap <= 20.0
+
+    def test_mls_gap_returns_valid_float(self):
+        from data.efficiency_feed import get_efficiency_gap
+        gap = get_efficiency_gap("Inter Miami CF", "Chicago Fire")
+        assert isinstance(gap, float)
+        assert 0.0 <= gap <= 20.0
+
+    def test_nfl_gap_returns_valid_float(self):
+        from data.efficiency_feed import get_efficiency_gap
+        gap = get_efficiency_gap("Kansas City Chiefs", "Chicago Bears")
+        assert isinstance(gap, float)
+        assert 0.0 <= gap <= 20.0
+
+    def test_hawks_alias_resolves_to_nba_not_nhl(self):
+        from data.efficiency_feed import get_team_data
+        data = get_team_data("Hawks")
+        assert data is not None
+        assert data["league"] == "NBA"
+
+    def test_rangers_alias_resolves_to_nhl_not_mlb(self):
+        from data.efficiency_feed import get_team_data
+        data = get_team_data("Rangers")
+        assert data is not None
+        assert data["league"] == "NHL"
+
+    def test_panthers_alias_resolves_to_nhl_not_nfl(self):
+        from data.efficiency_feed import get_team_data
+        data = get_team_data("Panthers")
+        assert data is not None
+        assert data["league"] == "NHL"
+
+    def test_cardinals_alias_resolves_to_mlb_not_nfl(self):
+        from data.efficiency_feed import get_team_data
+        data = get_team_data("Cardinals")
+        assert data is not None
+        assert data["league"] == "MLB"
+
+    def test_nfl_jets_explicit_alias(self):
+        from data.efficiency_feed import get_team_data
+        data = get_team_data("NY Jets")
+        assert data is not None
+        assert data["league"] == "NFL"
