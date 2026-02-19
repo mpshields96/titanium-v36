@@ -1,9 +1,9 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-19 (Session 21 — post-cleanup + Odds Comparison build)
+Generated: 2026-02-19 (Session 22 — CLV Store + RLM 2.0 + Odds Comparison)
 
 ## Quick Start
 ```bash
-python3 -m pytest tests/ -v          # 116 tests — must pass before each session
+python3 -m pytest tests/ -v          # 135 tests — must pass before each session
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
@@ -37,11 +37,13 @@ titanium-v36/
 │   ├── bet_history_store.py     # Supabase bet_history persistence layer (Session 18)
 │   ├── price_history_store.py   # Supabase price_history persistence layer — RLM 2.0 (Session 20)
 │   ├── odds_comparator.py       # Odds Comparison data layer — build_odds_comparison() + to_dataframes() (Session 21)
+│   ├── clv_store.py             # Supabase clv_history persistence layer — Closing Line Value tracking (Session 22)
 │   └── team_stats_bunker.py     # Fallback static stats
 └── tests/
     ├── test_validation.py           # 66 tests — math, collar, kelly, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards
     ├── test_odds_fetcher.py         # 40 tests — API, rest days, RLM, _extract_open_prices
-    └── test_price_history_store.py  # 10 tests — is_configured, record_new_events, inject_into_cache (Session 20)
+    ├── test_price_history_store.py  # 10 tests — is_configured, record_new_events, inject_into_cache (Session 20)
+    └── test_clv_store.py            # 19 tests — record_clv_open, update_clv_close, fetch_clv_for_events, get_clv_summary (Session 22)
 ```
 
 ---
@@ -52,8 +54,9 @@ titanium-v36/
 |-------|---------|-------------|
 | `bet_history` | Track bets placed, outcomes, P&L | event_id, matchup, market_type, price, edge_pct, result, profit |
 | `price_history` | RLM 2.0 — first-ever-seen open prices per event | event_id (UNIQUE), home_price, away_price, first_seen_at |
+| `clv_history` | Closing Line Value tracking — open vs closing implied prob | event_id, target, market_type (UNIQUE composite), open_price, closing_price, clv_pct |
 
-Both tables gated behind `is_configured()` in their respective store modules. All Supabase I/O uses lazy imports to avoid breaking tests without credentials.
+All three tables gated behind `is_configured()` in their respective store modules. All Supabase I/O uses lazy imports to avoid breaking tests without credentials.
 
 ---
 
@@ -93,6 +96,7 @@ No API calls, no UI. Math + kill switch logic only.
 | `_implied_probability(american_odds)` | `float` | Vig-inclusive |
 | `no_vig_probability(odds_a, odds_b)` | `(float, float)` | Fair probs both sides |
 | `calculate_edge(titanium_prob, market_odds)` | `float` | model − implied |
+| `calculate_profit(odds, units)` | `float` | Profit in units |
 | `fractional_kelly(win_prob, odds, fraction=0.25)` | `float` | 0.25x Kelly, capped |
 | `calculate_sharp_score(edge_pct, rlm_confirmed, efficiency_gap, ...)` | `(float, dict)` | 0–100 composite |
 | `sharp_to_size(sharp_score)` | `str` | NUCLEAR/STANDARD/LEAN tier label |
@@ -105,7 +109,7 @@ Internal: `_SPORT_ROUTING` maps 12 sports → fetch key + kill family. `_apply_n
 **BetCandidate fields:**
 `sport, matchup, market_type, target, line, price, edge_pct, win_prob, market_implied, fair_implied, kelly_size, signal, event_id, commence_time, book, sharp_score, sharp_breakdown, nemesis, simulation, kill_reason, rest_days, opp_rest_days, std_dev`
 
-`std_dev: float = 0.0` — std dev of vig-free probs across books (Session 16). Passed from `_consensus_fair_prob()` at 3 call sites. Display-only via BOOKS badge. Zero score impact.
+`std_dev: float = 0.0` — std dev of vig-free probs across books (Session 16). Display-only via BOOKS badge. Zero score impact.
 
 `kill_reason=""` = clean · `"FLAG:..."` = kept with warning · `"KILL:..."` = dropped
 
@@ -125,7 +129,7 @@ No API calls, no math beyond Sharp Score. Dedup + rank + top-10 only.
 
 Constants: `MAX_TOTAL_BETS=10` · `MAX_PER_SPORT=3` · `SPORT_CONCENTRATION_CAP=0.60` · `SHARP_THRESHOLD=45.0`
 
-**Nemesis is display-only** — `run_nemesis()` populates `bet.nemesis` for card rendering. Zero effect on score or survival.
+**Nemesis is display-only** — `run_nemesis()` populates `bet.nemesis` for rendering. Zero effect on score or survival.
 
 ---
 
@@ -135,158 +139,115 @@ No API calls, no math. Pure HTML string generation for Streamlit.
 | Function | Returns | Notes |
 |----------|---------|-------|
 | `render_bet_card(bet, rank=0)` | `str` | HTML card for one BetCandidate |
-| `render_bet_slate(bets, title="Today's Slate")` | `str` | Full slate — header + all cards + total Kelly footer |
-| `render_slate_header(bets, title="")` | `str` | **Session 18** — header fragment only (for per-card Track Bet button loop) |
+| `render_bet_slate(bets, title="Today's Slate")` | `str` | Full slate — header + all cards + footer |
+| `render_slate_header(bets, title="")` | `str` | **Session 18** — header fragment only |
 | `render_slate_footer(bets)` | `str` | **Session 18** — footer fragment only (total Kelly) |
 
-Internal helpers (not public API):
+Key helpers: `_consensus_badge_html(std_dev)` — BOOKS TIGHT/MODERATE/WIDE · `_rlm_badge_html(breakdown)` — violet RLM badge · `_score_bar_html(...)` — Edge/RLM/Eff/Sit decomposition bar
 
-| Helper | Purpose |
-|--------|---------|
-| `_tier_config(signal)` | Lookup colour/label config dict for a signal string |
-| `_rlm_badge_html(breakdown)` | Violet RLM badge — shown only when `breakdown["rlm"] > 0` |
-| `_consensus_badge_html(std_dev)` | **Session 16** — BOOKS: TIGHT/MODERATE/WIDE badge. `<0.02` green · `0.02–0.04` amber · `>0.04` red · `0.0` empty |
-| `_kill_reason_banner_html(kill_reason, accent)` | FLAG → amber advisory · KILL/FORCE_UNDER → red error · `""` → empty |
-| `_nemesis_html(nemesis, text_color)` | Nemesis counter-thesis block (display-only, Session 12) |
-| `_score_bar_html(score, breakdown, accent)` | Mini decomposition bar: Edge/RLM/Eff/Sit segments |
-| `_fmt_price(price)` | American odds with explicit sign (`+115`, `-110`) |
+Tier colours: NUCLEAR amber `#F59E0B` · STANDARD blue `#3B82F6` · LEAN teal `#14B8A6`
 
-Tier colour coding:
-
-| Signal | Colour | Unit |
-|--------|--------|------|
-| `NUCLEAR_2.0U` | Amber `#F59E0B` | 2.0u |
-| `STANDARD_1.0U` | Blue `#3B82F6` | 1.0u |
-| `LEAN_0.5U` | Teal `#14B8A6` | 0.5u |
-| `PASS` | Grey `#6B7280` | — |
-
-**Design constraints:** Pure stdlib. Inline styles only (Streamlit strips `<style>` tags from markdown). Font stack: `IBM Plex Mono`, `Fira Code`, monospace.
+**Design:** Inline styles only (Streamlit strips `<style>` tags). Use `st.html()` for full slate — `st.markdown(unsafe_allow_html=True)` sandboxes large HTML in Streamlit 1.54+.
 
 ---
 
 ### data/price_history_store.py — RLM 2.0 Persistence (Session 20)
-No math, no UI. Supabase read/write for first-ever-seen open prices.
-
-**Problem solved:** In-session `_OPEN_PRICE_CACHE` only captures the price at first fetch this session. If sharp money moved the line at 2am before the app opens at 8am, RLM is blind to that move. This store persists the true multi-day first-seen price.
-
-**Wire-in pattern (app.py `run_pipeline`, before `cache_open_prices`):**
-```python
-from data.price_history_store import is_configured, record_new_events, inject_into_cache
-if is_configured():
-    record_new_events(raw_games)   # write first-seen prices for new event_ids
-    inject_into_cache(raw_games)   # pre-seed _OPEN_PRICE_CACHE with historical prices
-cache_open_prices(raw_games)       # existing call — no change
-```
-
-| Function | Returns | Notes |
-|----------|---------|-------|
-| `is_configured()` | `bool` | True if SUPABASE_URL + SUPABASE_KEY present in secrets |
-| `record_new_events(games)` | `int` | Write first-seen prices to price_history for new event_ids; uses INSERT ON CONFLICT DO NOTHING — safe to call multiple times; returns rows written |
-| `get_historical_open_price(event_id)` | `dict\|None` | `{"home": price, "away": price}` for one event_id; None if not found |
-| `fetch_all_open_prices(event_ids)` | `dict[str,dict]` | Batch fetch stored prices; returns `{event_id: {"home": p, "away": p}}` for known events only |
-| `inject_into_cache(games)` | `int` | Pre-seed `_OPEN_PRICE_CACHE` with historical prices before `cache_open_prices()` runs; skips already-cached event_ids; returns count injected |
-| `purge_old_events(days_old=14)` | `int` | Delete price_history rows older than N days; prevents unbounded growth |
-| `price_history_status()` | `str` | One-line status string with row count; used in run_pipeline() logging |
-
-All Supabase I/O gated behind `is_configured()`. Uses deferred import for `odds_fetcher._extract_open_prices` to avoid circular import.
-
----
-
-### data/odds_comparator.py — Odds Comparison Data Layer (Session 21)
-No API calls, no math, no UI. Pure transformation of raw game dicts.
-Promoted from R&D `core/odds_comparator.py`. No pandas dependency.
-
-| Function | Returns | Notes |
-|----------|---------|-------|
-| `build_odds_comparison(game)` | `dict` | Transform one raw game dict → structured comparison dict with all books, all markets, best_price per side, line_consensus, line_split flag |
-| `to_dataframes(comp)` | `(h2h_rows, spread_rows, total_rows)` | Convert comparison dict → three list-of-dicts for `st.dataframe()` or `st.table()`. No pandas dep — v36 wraps in `pd.DataFrame()` |
-
-**Output shape keys:** `event_id`, `matchup`, `home_team`, `away_team`, `books` (preference-sorted), `markets.h2h`, `markets.spreads` (with `line_consensus`, `line_split`), `markets.totals`, `best_price` (per side/market).
-
-**Wire-in (app.py):** `st.session_state["raw_games"]` populated by `run_pipeline()`. `page_odds_comparison()` reads it, calls `build_odds_comparison()` per selected game. Zero extra API calls.
-
-**`_BOOK_PREFERENCE`** mirrors `odds_fetcher.PREFERRED_BOOKS`. If Pinnacle is added to PREFERRED_BOOKS, update this list to match.
-
----
-
-### data/bet_history_store.py — Bet Tracking Persistence (Session 18)
-No math, no UI. Supabase read/write for tracked bets.
+No math, no UI. Supabase persistence for first-ever-seen open prices across sessions.
 
 | Function | Returns | Notes |
 |----------|---------|-------|
 | `is_configured()` | `bool` | True if Supabase credentials present |
-| `insert_bet(bet, notes)` | `dict\|None` | Write new tracked bet row |
+| `record_new_events(games)` | `int` | Write first-seen prices; ON CONFLICT DO NOTHING |
+| `inject_into_cache(games)` | `int` | Pre-seed `_OPEN_PRICE_CACHE` before `cache_open_prices()` runs |
+| `purge_old_events(days_old=14)` | `int` | Delete rows older than N days |
+| `price_history_status()` | `str` | One-line status with row count |
+
+Uses deferred import for `odds_fetcher._extract_open_prices` (circular import guard).
+
+---
+
+### data/odds_comparator.py — Odds Comparison Data Layer (Session 21)
+No API calls, no math, no UI. Pure transformation of raw game dicts. No pandas dependency.
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `build_odds_comparison(game)` | `dict` | All books, all markets, best_price per side, line_split flag |
+| `to_dataframes(comp)` | `(h2h_rows, spread_rows, total_rows)` | List-of-dicts for `st.dataframe()` |
+
+`_BOOK_PREFERENCE` mirrors `odds_fetcher.PREFERRED_BOOKS` — sync if Pinnacle is ever added.
+
+---
+
+### data/clv_store.py — Closing Line Value Tracking (Session 22)
+No math, no UI. Supabase persistence for empirical edge validation.
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `is_configured()` | `bool` | True if Supabase credentials present |
+| `record_clv_open(event_id, target, market_type, open_price, sport, matchup)` | `dict\|None` | Write entry price; UNIQUE constraint prevents duplicates; None on conflict |
+| `update_clv_close(event_id, target, market_type, closing_price)` | `dict\|None` | Fill closing_price + compute clv_pct (built, not yet wired — future pipeline re-check) |
+| `fetch_clv_for_events(event_ids)` | `dict[tuple,dict]` | Batch fetch keyed by (event_id, target, market_type) |
+| `get_clv_summary()` | `dict` | n, avg_clv_pct, positive_rate, verdict |
+
+Verdict thresholds: `avg >= 1.5 AND pos_rate >= 0.55` → EDGE CONFIRMED · `avg >= 0.5 AND pos_rate >= 0.50` → MARGINAL · else → NO EDGE DETECTED
+
+**Key design:** `open_price = bet.price` — NOT `get_open_price()` (team-name key collision across h2h/spreads markets).
+
+---
+
+### data/bet_history_store.py — Bet Tracking Persistence (Session 18)
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `is_configured()` | `bool` | True if Supabase credentials present |
+| `insert_bet(...)` | `dict\|None` | Write new tracked bet row |
 | `fetch_pending_bets()` | `list` | All bets without a result |
-| `fetch_all_bets()` | `list` | Full history log |
-| `update_outcome(row_id, result, profit)` | `bool` | Mark result + profit on existing row |
+| `fetch_bets(limit=500)` | `list` | Full history log |
+| `update_outcome(row_id, result, profit)` | `bool` | Mark result + profit |
+| `compute_pnl_summary(bets)` | `dict` | wins, losses, pushes, roi, equity_curve, roi_by_sport, winrate_by_market |
 
 ---
 
 ### data/efficiency_feed.py — AdjEM Static Data (234 teams)
-No API calls. Static data + lookup only.
 
 | Function | Returns | Notes |
 |----------|---------|-------|
 | `get_efficiency_gap(home_team, away_team)` | `float` | 0–20 scale, 10.0 = even |
 | `build_efficiency_data(games)` | `dict[str,float]` | event_id → gap, for rank_bets() |
 | `get_team_data(team_name)` | `dict\|None` | adj_o, adj_d, adj_em, tempo |
-| `list_teams(league=None)` | `list[str]` | "NBA" / "NCAAB" / "NHL" / "MLB" / "MLS" / "NFL" / None = all 234 |
+| `list_teams(league=None)` | `list[str]` | "NBA" / "NCAAB" / "NHL" / "MLB" / "MLS" / "NFL" / None = all |
 
-Coverage: 30 NBA (NetRtg×2.2) + 80 NCAAB (ACC/B12/B10/SEC/Big East/WCC/MWC/A-10 + mid-majors) + 32 NHL (GF60-GA60 × 10, Session 17) + 30 MLB (ERA proxy × 8.0, Session 19) + 30 MLS (xGD/90 × 15.0, Session 19) + 32 NFL (EPA/play × 80.0, Session 19) = **234 teams**. Hawks alias collision fixed (Session 19). Unknown teams → 8.0 default gap.
-
-**Single source of truth for NCAAB tempo** — `kill_switch_feed.get_ncaab_tempo()` calls `get_team_data()`. No duplicate data.
+Coverage: 30 NBA + 80 NCAAB + 32 NHL + 30 MLB + 30 MLS + 32 NFL = **234 teams**. Unknown teams → 8.0 default gap. Single source of truth for NCAAB tempo.
 
 ---
 
 ### data/kill_switch_feed.py — Kill Switch Input Layer
-No API calls, no math. Stub data keyed to kill switch signatures.
 
 | Function | Returns | Notes |
 |----------|---------|-------|
-| `get_nba_kill_inputs(bet_team, opp_team, spread, market_type, star_absent)` | `dict` | Rest days + B2B flag + pace std dev — 30 teams |
-| `get_nfl_kill_inputs(home_team, total, backup_qb, market_type)` | `dict` | Wind mph — all 32 teams + full stadium map |
-| `get_ncaab_kill_inputs(bet_team, opp_team, is_away, conf_tournament, market_type)` | `dict` | 3PT reliance (80 teams) · tempo from efficiency_feed |
-| `get_soccer_kill_inputs(open_price, current_price, dead_rubber, key_creator_out, market_type)` | `dict` | Drift computed at runtime from open-price cache |
-| `get_nba_injury_leverage(bet_team, opp_team)` | `(float, bool)` | **Session 16** stub — always `(0.0, False)`. Wire when ESPN B2 blockers cleared. |
-| `get_ncaab_injury_leverage(bet_team, opp_team)` | `(float, bool)` | **Session 16** stub — always `(0.0, False)`. ESPN endpoint has no NCAAB data. |
-
-All return dict + `data_live: bool`. When `data_live=False`, kill decision is stub — note "Data unavailable" in UI rather than trust the kill.
+| `get_nba_kill_inputs(...)` | `dict` | Rest days + B2B + pace std dev — 30 teams |
+| `get_nfl_kill_inputs(...)` | `dict` | Wind mph — 32 teams + full stadium map |
+| `get_ncaab_kill_inputs(...)` | `dict` | 3PT reliance (80 teams) · tempo from efficiency_feed |
+| `get_soccer_kill_inputs(...)` | `dict` | Drift computed at runtime from open-price cache |
+| `get_nba_injury_leverage(...)` | `(float, bool)` | Stub — always `(0.0, False)`. Gate: ESPN B2 ~2026-03-04 |
+| `get_ncaab_injury_leverage(...)` | `(float, bool)` | Stub — always `(0.0, False)`. No ESPN college data. |
 
 ---
 
 ### originator_engine.py — Monte Carlo (DO NOT TOUCH)
-Trinity-weighted simulation. Stable. Touch only if explicitly asked.
-
-| Function | Returns | Notes |
-|----------|---------|-------|
-| `run_trinity_simulation(mean, sport, line, ...)` | `SimulationResult` | 20/20/60 Trinity weighting |
-| `run_poisson_matrix(home_xg, away_xg)` | `(float, float, float)` | Soccer: home/draw/away |
-| `simulate_prop(season_avg, line, ...)` | `tuple` | Player prop over/under |
-
-Known bug: `mean` input should be projected margin, not `bet.line`. Tracked in R&D, not fixed.
+Trinity-weighted simulation. Touch only if explicitly asked.
+Known bug: `mean` input receives `bet.line` instead of projected margin. Tracked in R&D.
 
 ---
 
 ### app.py — Streamlit UI (4 pages)
 No business logic, no API calls, no math.
 
-Pages via `st.navigation()` + `st.Page()` (Streamlit 1.36+):
-- `page_live_analysis()` — fully functional — runs full pipeline, renders via per-card `render_bet_card()` loop
-- `page_bet_history()` — fully functional (Session 18) — P&L strip, Pending, History Log, MARK RESULT
-- `page_pnl_tracker()` — fully functional (Session 20) — equity curve, ROI by sport, win rate by market
-- `page_odds_comparison()` — **fully functional (Session 21)** — game selector, ML/Spread/Total tables, BEST price badges, LINE SPLIT warnings
+Pages: `page_live_analysis()` · `page_bet_history()` · `page_pnl_tracker()` · `page_odds_comparison()`
 
-`run_pipeline(selected_sports)` → pre-fetches `raw_games` per sport → accumulates `all_raw_games` (event_id → game dict, for Odds Comparison) → **RLM 2.0: `record_new_events()` + `inject_into_cache()`** (if Supabase configured) → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(sport, raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. One API call per sport total. Stores `raw_games` in `st.session_state["raw_games"]`.
+`run_pipeline()` flow: pre-fetch `raw_games` → accumulate `all_raw_games` → RLM 2.0 store → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. **One API call per sport.**
 
-**Session 14:** Inline `render_bet_card()` removed from `app.py`. Theme handled by `.streamlit/config.toml` instead of inline CSS.
-
-**Session 17 post-session:** `st.html()` replaces `st.markdown(unsafe_allow_html=True)` for card slate — Streamlit 1.54 sandboxes large HTML into a code block via `st.markdown`. Always use `st.html()` for full HTML documents/blocks. `eff_data.update()` now runs for all sports unconditionally.
-
-**Session 18:** `page_bet_history()` fully implemented. Live Analysis loops `st.html(render_bet_card(...))` per bet + `+ TRACK BET` button. `render_slate_header()` and `render_slate_footer()` added to `bet_card_renderer.py`.
-
-**Session 20:** `page_pnl_tracker()` fully implemented. `run_pipeline()` now calls `record_new_events()` + `inject_into_cache()` before `cache_open_prices()` when Supabase configured.
-
-**Session 21:** `page_odds_comparison()` fully implemented. `data/odds_comparator.py` promoted from R&D. `run_pipeline()` stores `all_raw_games` in session state for zero-API-cost Odds Comparison. App.py cleanup: removed dead imports (`format_bet_table`, `render_bet_slate`, `fetch_pending_bets`), fixed `del` → `.pop()` cache bust, removed duplicate `import streamlit as st`, cleared `tracked_*` keys at pipeline start, wrapped post-loop in `finally` block.
+Session 22: `record_clv_open(open_price=bet.price)` wired after Track Bet. Bet History History Log = 9 columns with CLV.
 
 ---
 
@@ -299,14 +260,14 @@ score = edge_pts(0–40) + rlm_pts(0–25) + efficiency_pts(0–20) + situationa
 | Component | Source | Live? |
 |-----------|--------|-------|
 | edge_pct | consensus books | ✅ |
-| rlm_confirmed | `_OPEN_PRICE_CACHE` (3% implied shift) — now seeded from Supabase `price_history` | ✅ cold on 1st run without DB; warm with RLM 2.0 |
+| rlm_confirmed | `_OPEN_PRICE_CACHE` seeded from Supabase `price_history` | ✅ |
 | efficiency_gap | efficiency_feed (234 teams) | ✅ |
 | rest_edge | schedule rest days | ✅ NBA only |
-| injury_leverage | kill_switch_feed stubs (Session 16) | ❌ always 0.0 — ESPN B2 endpoint not stable |
+| injury_leverage | stubs | ❌ always 0.0 |
 | motivation | — | ❌ always 0 |
 | matchup_score | — | ❌ always 0 |
 
-Threshold: **45 pts** (~7.8% real edge). Raise to 50–55 after RLM fires consistently on live data.
+Threshold: **45 pts**. Raise to 50–55 after RLM fires 5+ live sessions.
 Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 
 ---
@@ -341,8 +302,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 |------|-------|--------|
 | `test_validation.py` | 66 | collar, kelly, edge math, profit calc, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards |
 | `test_odds_fetcher.py` | 40 | API fetch, preferred book, rest days, RLM, _extract_open_prices |
-| `test_price_history_store.py` | 10 | is_configured, record_new_events (writes + skips), inject_into_cache (full/partial/no-overwrite) |
-| **Total** | **116** | all passing |
+| `test_price_history_store.py` | 10 | is_configured, record_new_events, inject_into_cache (Session 20) |
+| `test_clv_store.py` | 19 | record_clv_open, update_clv_close, fetch_clv_for_events, get_clv_summary (Session 22) |
+| **Total** | **135** | all passing |
 
 ---
 
@@ -356,14 +318,14 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 12 | ✅ | Nemesis demoted display-only, `rest_edge` live in Sharp Score, NCAAB 80-team kill switch |
 | 13 | ✅ | `SHARP_THRESHOLD` 40→45, `compute_rlm()` passive RLM, end-to-end pipeline wiring |
 | 14 | ✅ | `bet_card_renderer.py` promoted from R&D, `.streamlit/config.toml` dark theme, `data/__init__.py` |
-| 15 | ✅ | Feature backlog saved, /sc:estimate B+C+F completed, session transition prep |
-| 16 | ✅ | Injury leverage stubs (kill_switch_feed), `std_dev` on BetCandidate, BOOKS badge on card |
-| 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy, aliases for NY Rangers/Islanders + Vegas |
-| 18 | ✅ | `page_bet_history()` full impl, `+ TRACK BET` on Live Analysis cards, `render_slate_header/footer` helpers |
-| 19 | ✅ | `efficiency_feed.py` MLB/MLS/NFL promotion (234 teams), Hawks alias fix, 11 new tests |
-| 20 | ✅ | `data/price_history_store.py` (RLM 2.0 persistent open-price store), `_extract_open_prices()` in odds_fetcher.py, `page_pnl_tracker()` fully built, `docs/MASTER_ROADMAP.md`, Supabase `price_history` table live |
+| 15 | ✅ | Feature backlog saved, /sc:estimate B+C+F, session transition prep |
+| 16 | ✅ | Injury leverage stubs, `std_dev` on BetCandidate, BOOKS badge on card |
+| 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy |
+| 18 | ✅ | `page_bet_history()` full impl, TRACK BET on cards, `render_slate_header/footer` |
+| 19 | ✅ | `efficiency_feed.py` MLB/MLS/NFL (234 teams), Hawks alias fix, 11 new tests |
+| 20 | ✅ | `data/price_history_store.py` (RLM 2.0), `_extract_open_prices()`, `page_pnl_tracker()`, `docs/MASTER_ROADMAP.md` |
+| 21 | ✅ | `data/odds_comparator.py` (R&D promotion), `page_odds_comparison()`, app.py cleanup |
+| 22 | ✅ | `data/clv_store.py` (CLV tracking), `clv_history` Supabase table, 19 new tests, **135 total** |
 
-Last commit: `51a7929` · Tests: **116 passing** · Quota: ~18,250 remaining
-Next session (21) — NEW CHAT: read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md → run tests.
-Session 21 priorities: read HANDOFF.md in titanium-experimental for R&D Session 21 output before building anything.
-B2 gate check: 2026-03-04. RLM gate: 0/5 live sessions (increment in SESSION_STATE.md when RLM fires).
+Last commit: `ce7ac11` · Tests: **135 passing** · Quota: ~16,663 remaining
+Next session (23) — NEW CHAT: read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md → run tests.
