@@ -964,10 +964,10 @@ def main():
     )
 
     pg = st.navigation([
-        st.Page(page_live_analysis, title="Live Analysis",    icon="◈", default=True),
-        st.Page(page_bet_history,   title="Bet History",      icon="◇"),
-        st.Page(page_pnl_tracker,   title="P&L Tracker",      icon="◆"),
-        st.Page(page_odds_comparison, title="Odds Comparison", icon="◉"),
+        st.Page(page_live_analysis, title="Live Analysis",    icon="📡", default=True),
+        st.Page(page_bet_history,   title="Bet History",      icon="📋"),
+        st.Page(page_pnl_tracker,   title="P&L Tracker",      icon="📈"),
+        st.Page(page_odds_comparison, title="Odds Comparison", icon="⚖️"),
     ])
     pg.run()
 
