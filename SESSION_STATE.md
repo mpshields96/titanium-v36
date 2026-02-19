@@ -252,23 +252,43 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 21 — Odds Comparison page (UI 2) + app.py cleanup
-Last git commit: 8c3047c (pushed to origin/main)
-Tests: 116 total, all passing
-Quota: ~18,250 remaining (no API calls Sessions 19–21)
+Last completed: Session 22 — CLV Tracker wire-in (data/clv_store.py + UI 5 + Supabase clv_history table)
+Last git commit: (commit pending — run git push after this)
+Tests: 135 total, all passing
+Quota: ~16,663 remaining (R&D Session 22 ran Pinnacle probe + CLV live run)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
-### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 22)
-Session 21 complete. Read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
-Then: python3 -m pytest tests/ -v (confirm 116/116)
-Then: read HANDOFF.md in titanium-experimental for R&D Session 22 output before deciding what to build.
+### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 23)
+Session 22 complete. Read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
+Then: python3 -m pytest tests/ -v (confirm 135/135)
+Then: read HANDOFF.md in titanium-experimental for R&D Session 23 output before deciding what to build.
 
-Session 22 priorities (from MASTER_ROADMAP.md):
-- B2 gate check: on/after 2026-03-04 — run print_stability_report() in R&D, check espn_stability.log
-  If gate cleared: promote espn_injury_fetcher.py to v36 (see HANDOFF.md B2 wire-in spec)
-- CLV wire-in: once R&D live run confirmed → build data/clv_store.py + Bet History UI column (UI 5)
-- Pinnacle probe: once R&D live run confirmed → if available, add "pinnacle" to PREFERRED_BOOKS
+Session 23 priorities (from MASTER_ROADMAP.md):
+- B2 gate check: on/after 2026-03-04 — check espn_stability.log in R&D. If cleared: promote espn_injury_fetcher.py
+- Sharp Score calibration: run core/sharp_score_calibration.py when v36 has 30+ resolved bets
+- CLV close: update_clv_close() is built but not wired — future feature when closing prices are available
+- Pinnacle: NOT on current H1 tier. H2 upgrade = ~$30/mo. User decision if desired.
+
+### What was built in Session 22
+1. **R&D Session 22 findings absorbed:**
+   - Pinnacle NOT available on current H1 US retail tier. No changes to _BOOK_PREFERENCE.
+   - CLV live run confirmed working: 1 live row appended to CSV (7 total in results/clv_snapshots.csv).
+   - Critical: use bet.price as open_price — NOT get_open_price() (team-name key collision across h2h/spreads markets).
+   - B2 gate not yet met (9 log entries, all 2026-02-19 — need 14+ days of data).
+2. **`data/clv_store.py`** (NEW) — Supabase CLV persistence layer.
+   - `is_configured()`, `_implied()`, `_compute_clv_pct()`, `record_clv_open()`, `update_clv_close()`,
+     `fetch_clv_for_events()`, `get_clv_summary()`
+   - Separate `clv_history` table with UNIQUE(event_id, target, market_type). One CLV row per bet side + market.
+   - open_price = bet.price at Track Bet time (NOT get_open_price — collision risk documented in docstring).
+3. **Supabase `clv_history` table** created via MCP migration (id PK, event_id, target, market_type, sport,
+   matchup, open_price, closing_price, open_implied, closing_implied, clv_pct, recorded_at).
+   Two indexes: event_id + recorded_at DESC.
+4. **`app.py`** — Track Bet handler: `record_clv_open()` called after `insert_bet()` (lazy import, is_configured() guard).
+5. **`app.py`** — `page_bet_history()`: batch CLV fetch (`fetch_clv_for_events()`) after loading all_bets.
+   History Log expanded from 8 to 9 columns: added CLV column between Score and Result.
+   CLV displays as `+2.3pp` (green) / `-1.5pp` (red) / `—` (grey) when closing_price not yet filled.
+6. **`tests/test_clv_store.py`** (NEW) — 19 tests. All Supabase I/O mocked. 135/135 total.
 
 ### What was built in Session 21
 1. `data/odds_comparator.py` (NEW) — promoted from R&D Session 21. Pure transformation, no API calls.

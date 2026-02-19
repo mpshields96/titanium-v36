@@ -845,6 +845,22 @@ def page_live_analysis():
                                     signal=bet.signal,
                                     kelly_size=bet.kelly_size,
                                 )
+                                # Record CLV open price. Use bet.price — NOT get_open_price()
+                                # (R&D Session 22: get_open_price has team-name key collision
+                                # across h2h/spreads markets; bet.price is always correct).
+                                from data.clv_store import (
+                                    record_clv_open,
+                                    is_configured as _clv_configured,
+                                )
+                                if _clv_configured():
+                                    record_clv_open(
+                                        event_id=bet.event_id,
+                                        target=bet.target,
+                                        market_type=bet.market_type,
+                                        open_price=bet.price,
+                                        sport=bet.sport,
+                                        matchup=bet.matchup,
+                                    )
                                 st.session_state[tracked_key] = True
                                 # Bust bet history cache so the History page reflects it
                                 st.session_state.pop("bet_history_data", None)
@@ -931,6 +947,13 @@ def page_bet_history():
     pending_bets = [b for b in all_bets if b.get("outcome") is None]
     resolved_bets = [b for b in all_bets if b.get("outcome") in ("WIN", "LOSS", "PUSH")]
     summary      = compute_pnl_summary(all_bets)
+
+    # Batch-fetch CLV data for all displayed bets (one query)
+    from data.clv_store import fetch_clv_for_events, is_configured as _clv_configured
+    _clv_data: dict = {}
+    if _clv_configured() and all_bets:
+        _event_ids = list({b["event_id"] for b in all_bets if b.get("event_id")})
+        _clv_data = fetch_clv_for_events(_event_ids)
 
     # ── P&L Summary strip ────────────────────────────────────────
     net   = summary["net_units"]
@@ -1133,10 +1156,21 @@ def page_bet_history():
             matchup_short = bet.get("matchup", "")
             market_str    = bet.get("market_type", "")
 
+            # CLV lookup — keyed by (event_id, target, market_type)
+            _clv_key = (bet.get("event_id", ""), bet.get("target", ""), bet.get("market_type", ""))
+            _clv_row = _clv_data.get(_clv_key)
+            if _clv_row and _clv_row.get("clv_pct") is not None:
+                _clv_val = _clv_row["clv_pct"]
+                clv_fmt   = f"{_clv_val:+.1f}pp"
+                clv_color = "#22C55E" if _clv_val > 0 else ("#EF4444" if _clv_val < 0 else "#6E7681")
+            else:
+                clv_fmt   = "—"
+                clv_color = "#6E7681"
+
             rows_html += f"""
 <div style="
   display: grid;
-  grid-template-columns: 64px 1fr 52px 44px 40px 36px 52px 46px;
+  grid-template-columns: 64px 1fr 52px 44px 40px 36px 46px 52px 46px;
   gap: 0 6px;
   align-items: center;
   padding: 9px 12px;
@@ -1151,6 +1185,7 @@ def page_bet_history():
   <span style="color: #8B949E;">{price_fmt}</span>
   <span style="color: #14B8A6;">{edge_fmt}</span>
   <span style="color: #E8A020;">{score_fmt}</span>
+  <span style="color: {clv_color}; font-weight: 600;">{clv_fmt}</span>
   <span style="
     text-align: center;
     font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
@@ -1171,7 +1206,7 @@ def page_bet_history():
   <!-- Column headers -->
   <div style="
     display: grid;
-    grid-template-columns: 64px 1fr 52px 44px 40px 36px 52px 46px;
+    grid-template-columns: 64px 1fr 52px 44px 40px 36px 46px 52px 46px;
     gap: 0 6px;
     padding: 7px 12px;
     background: #0D1117;
@@ -1184,6 +1219,7 @@ def page_bet_history():
     <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Price</span>
     <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Edge</span>
     <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Score</span>
+    <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">CLV</span>
     <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">Result</span>
     <span style="font-size: 0.52rem; font-weight: 600; letter-spacing: 0.15em; color: #6E7681; text-transform: uppercase;">P&amp;L</span>
   </div>

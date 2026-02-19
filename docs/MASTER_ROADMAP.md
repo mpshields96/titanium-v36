@@ -79,7 +79,7 @@
 
 ## SECTION 3 — R&D EXPERIMENTAL BACKLOG
 
-### R&D EXP 1: CLV Tracker [~] ← Built + smoke-tested R&D Session 18. Live run pending.
+### R&D EXP 1: CLV Tracker [x] ← Live run confirmed R&D Session 22. v36 wire-in complete Session 22.
 - **What:** Closing Line Value — compare our bet price to the closing price at kickoff.
   Positive average CLV = empirical proof the edge detection method works.
 - **Status:** `core/clv_tracker.py` built. Needs one live NBA game day run to confirm end-to-end.
@@ -92,7 +92,7 @@
 - **v36 wire-in:** After R&D live run confirmed → v36 builds `data/clv_store.py` + UI column.
 - **Owner:** R&D live run. v36 promotes after confirmation.
 
-### R&D EXP 2: Pinnacle Consensus Probe [~] ← `core/pinnacle_probe.py` built R&D Session 18. Live run pending.
+### R&D EXP 2: Pinnacle Consensus Probe [x] ← Live run confirmed R&D Session 22. NOT on current H1 tier.
 - **What:** Check if Pinnacle appears in Odds API response on current tier. If yes, add to consensus.
 - **Status:** Script built. R&D Session 21: run `python3 core/pinnacle_probe.py` on NBA game day.
 - **If available:** Add "pinnacle" to top of `_BOOK_PREFERENCE` in `odds_fetcher.py`. Consensus auto-improves.
@@ -175,9 +175,12 @@
 - **What:** Displays valid 2-leg parlay combinations from current slate with EV calculation.
 - **Dependencies:** R&D EXP 5 must be validated first.
 
-### UI 5: CLV Column in Bet History [ ]
-- **What:** Add CLV % column to Bet History log once CLV tracker is built.
-- **Dependencies:** R&D EXP 1 (CLV Tracker) must be built first.
+### UI 5: CLV Column in Bet History [x] — COMPLETE (Session 22)
+- **Built:** `data/clv_store.py` (Supabase CLV persistence). `clv_history` table live.
+  `record_clv_open()` called at Track Bet time (uses bet.price — NOT get_open_price, key collision).
+  `fetch_clv_for_events()` batch-fetches CLV for all displayed bets. History Log has 9th CLV column.
+  CLV shows `+Xpp` / `-Xpp` / `—` depending on whether closing_price has been filled.
+  `update_clv_close()` built but not wired — future feature when closing prices are available.
 
 ---
 
@@ -213,6 +216,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| v36 S22 (2026-02-19) | UI 5 (CLV column), `data/clv_store.py` (NEW), `clv_history` Supabase table, 19 new tests (135 total) |
 | v36 S21 (2026-02-19) | UI 2 (Odds Comparison page), `data/odds_comparator.py` promoted, app.py cleanup |
 | v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |
 | v36 S20 cont. | CEILING 3 / SECTION 5 (RLM 2.0 persistent store) — `price_history_store.py` + Supabase table + tests |
