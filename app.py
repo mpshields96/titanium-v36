@@ -20,6 +20,7 @@ import streamlit as st
 
 from edge_calculator import calculate_edges, _SPORT_ROUTING
 from bet_ranker import rank_bets, format_bet_table
+from bet_card_renderer import render_bet_slate
 from data.efficiency_feed import build_efficiency_data
 from odds_fetcher import fetch_game_lines, get_quota_status, cache_open_prices, compute_rlm
 
@@ -601,31 +602,6 @@ hr {
 # Rendering helpers
 # ---------------------------------------------------------------------------
 
-def _get_tier(sharp_score: float) -> str:
-    """Return tier key from sharp score."""
-    if sharp_score >= 90:
-        return "nuclear"
-    if sharp_score >= 80:
-        return "standard"
-    return "lean"
-
-
-def _get_size_label(sharp_score: float) -> str:
-    if sharp_score >= 90:
-        return "2.0U"
-    if sharp_score >= 80:
-        return "1.0U"
-    return "0.5U"
-
-
-def _get_tier_label(sharp_score: float) -> str:
-    if sharp_score >= 90:
-        return "NUCLEAR"
-    if sharp_score >= 80:
-        return "STANDARD"
-    return "LEAN"
-
-
 def render_header():
     """Render the TITANIUM wordmark — letters as individual spans to prevent wrapping."""
     letters = list("TITANIUM")
@@ -664,91 +640,8 @@ def render_sport_selector() -> list[str]:
     return selected
 
 
-def render_bet_card(rank: int, bet) -> str:
-    """Build an HTML bet card from a BetCandidate object."""
-    tier      = _get_tier(bet.sharp_score)
-    tier_lbl  = _get_tier_label(bet.sharp_score)
-    size_lbl  = _get_size_label(bet.sharp_score)
-    edge_pct  = f"{bet.edge_pct * 100:.1f}%"
-    sharp_str = f"{bet.sharp_score:.0f}"
-    kelly_str = f"{bet.kelly_size:.2f}u"
-    winp_str  = f"{bet.win_prob * 100:.1f}%"
-
-    # Price formatting
-    try:
-        price_int = int(bet.price)
-        price_str = f"+{price_int}" if price_int > 0 else str(price_int)
-    except (TypeError, ValueError):
-        price_str = str(bet.price)
-
-    # Color assignments
-    edge_cls  = "v-gold" if bet.edge_pct >= 0.07 else ("v-teal" if bet.edge_pct >= 0.05 else "")
-    sharp_cls = "v-gold" if bet.sharp_score >= 90 else ("v-teal" if bet.sharp_score >= 80 else "")
-    kelly_cls = "v-green" if bet.kelly_size >= 1.5 else ""
-
-    book_short = bet.book.split("(")[0].strip() if bet.book else "—"
-    sport_tag  = getattr(bet, "sport", "")
-    mkt_tag    = getattr(bet, "market_type", "").upper()
-
-    # Nemesis block
-    nemesis_html = ""
-    nemesis = getattr(bet, "nemesis", None)
-    if nemesis and isinstance(nemesis, dict) and nemesis.get("counter"):
-        prob  = f"{nemesis.get('probability', 0) * 100:.0f}%"
-        adj   = nemesis.get("adjustment", 0)
-        adj_s = f"{adj:+d}pts" if adj else "—"
-        counter = nemesis.get("counter", "")
-        nemesis_html = (
-            f'<div class="bc-nemesis">'
-            f'{counter} &mdash; {prob} counter probability · {adj_s}'
-            f'</div>'
-        )
-
-    # Flag block
-    flag_html = ""
-    kill_reason = getattr(bet, "kill_reason", "")
-    if kill_reason and kill_reason.startswith("FLAG"):
-        flag_text = kill_reason.replace("FLAG: ", "").replace("FLAG:", "").strip()
-        flag_html = f'<div class="bc-flag">{flag_text}</div>'
-
-    # Build matchup string
-    matchup = getattr(bet, "matchup", f"{getattr(bet, 'team', '?')} vs {getattr(bet, 'opponent', '?')}")
-    target  = getattr(bet, "target", f"{getattr(bet, 'team', '')} {getattr(bet, 'line', '')}")
-
-    return f"""
-<div class="bet-card {tier}">
-  <div class="bc-header">
-    <span class="bc-rank-meta">#{rank} &nbsp;·&nbsp; {sport_tag} &nbsp;·&nbsp; {mkt_tag}</span>
-    <span class="bc-tier {tier}">{tier_lbl}&nbsp;&nbsp;{size_lbl}</span>
-  </div>
-  <div class="bc-matchup">{matchup}</div>
-  <div class="bc-target-line">
-    <span>{target}</span>
-    <span class="bc-price">{price_str}</span>
-    <span class="bc-book">{book_short}</span>
-  </div>
-  <div class="bc-stats">
-    <div>
-      <div class="bc-stat-label">Edge</div>
-      <div class="bc-stat-value {edge_cls}">{edge_pct}</div>
-    </div>
-    <div>
-      <div class="bc-stat-label">Sharp</div>
-      <div class="bc-stat-value {sharp_cls}">{sharp_str}</div>
-    </div>
-    <div>
-      <div class="bc-stat-label">Win&nbsp;Prob</div>
-      <div class="bc-stat-value">{winp_str}</div>
-    </div>
-    <div>
-      <div class="bc-stat-label">Kelly</div>
-      <div class="bc-stat-value {kelly_cls}">{kelly_str}</div>
-    </div>
-  </div>
-  {nemesis_html}
-  {flag_html}
-</div>
-"""
+# render_bet_card() removed — promoted to bet_card_renderer.py (Session 14).
+# Use: from bet_card_renderer import render_bet_slate
 
 
 # ---------------------------------------------------------------------------
@@ -891,8 +784,7 @@ def page_live_analysis():
 </div>
 """, unsafe_allow_html=True)
 
-            for i, bet in enumerate(ranked, 1):
-                st.markdown(render_bet_card(i, bet), unsafe_allow_html=True)
+            st.markdown(render_bet_slate(ranked, title=""), unsafe_allow_html=True)
 
     else:
         st.markdown("""
