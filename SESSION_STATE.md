@@ -223,11 +223,16 @@ This works because books occasionally misprice relative to the consensus.
 
 ## CURRENT STATE
 Last completed: Session 13 — threshold 40→45, passive RLM wired end-to-end
-Last git commit: 0b6ab9f (Sessions 11–13 committed — all changes in main)
+Last git commit: 9fb28e5 (PROJECT_INDEX.md refresh — all Sessions 11–13 committed)
 Tests: 85 total, all passing
 Quota: ~18,307 remaining (no API calls this session)
 Streamlit Cloud: deployed, auto-deploys from main
 Next: Session 14 — TBD
+
+## ORIENTATION (read this first in any new session)
+1. Read PROJECT_INDEX.md — 229 lines, covers all modules, functions, Sharp Score formula, kill switches, test counts. 94% token reduction vs reading all source files.
+2. Run: python3 -m pytest tests/ -v — confirm 85/85 before touching anything.
+3. Then read SESSION_STATE.md CHECKPOINT block for exact system state.
 
 ## CHECKPOINT — Session 13 (2026-02-18)
 State: CLEAN. All code committed. 85/85 tests green.

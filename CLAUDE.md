@@ -101,6 +101,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)
 2. Say: "Resume Session [N]. Read CLAUDE.md and SESSION_STATE.md. Run: pytest tests/ -v and confirm all tests pass before we start."
 3. Wait for test confirmation, then state what you want to build
+4. For fast orientation: read `PROJECT_INDEX.md` first — covers all modules, functions, Sharp Score formula, kill switches. 94% token reduction vs reading source files.
 
 ## Deployment Checklist
 - [ ] No API keys in code
