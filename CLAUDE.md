@@ -91,6 +91,11 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - **HANDOFF.md at that path is the authoritative spec** — read it directly, don't rely solely on user's chat summary
 - Only promote code that has been live-tested in R&D
 - **Import path diff when promoting:** R&D uses `from core.edge_calculator import` / `from core.odds_fetcher import` — v36 is root-level, use `from edge_calculator import` / `from odds_fetcher import`. Also strip `sys.path.insert(0, ...)` blocks.
+- **efficiency_feed.py new-sport promotion checklist:**
+  1. Run `/sc:analyze data/efficiency_feed.py` BEFORE starting — catch collision risks early
+  2. For every bare alias in the R&D _ALIASES block: grep v36 _ALIASES for the same key. If it exists pointing to a different sport, use a qualified form instead (e.g. "Blackhawks" not "Hawks", "NY Jets" not "Jets")
+  3. After promotion: add `test_X_alias_resolves_to_Y_not_Z()` tests for every collision-risk alias
+  4. Update the collision table in the file docstring
 - **SHARP_THRESHOLD raise gate (45→50):** Do NOT raise until `RLM live sessions observed` counter in SESSION_STATE.md CURRENT STATE reaches ≥5. Increment manually each session RLM fires on live data.
 - **`std_dev` in `BetCandidate`:** ✅ Done Session 16. `std_dev: float = 0.0` field on BetCandidate. Passed from `_consensus_fair_prob()` at 3 call sites. BOOKS: TIGHT/MODERATE/WIDE badge in `bet_card_renderer.py`. Display-only, zero score impact. F2 (Sharp Score component) **permanently rejected** — R&D validated r=+0.020, no linear relationship. High std_dev = one outlier book = source of edge. Do not add to scoring.
 - Known R&D bugs — DO NOT promote until fixed:
