@@ -1,5 +1,5 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-18 (Session 13)
+Generated: 2026-02-18 (Session 14)
 
 ## Quick Start
 ```bash
@@ -7,7 +7,7 @@ python3 -m pytest tests/ -v          # 85 tests — must pass before each sessio
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
-grep -n "def calculate_edges" edge_calculator.py  # Two defs: dead stub ~L83, real ~L912
+grep -n "def calculate_edges" edge_calculator.py  # One def only — dead stub removed Session 13 cleanup
 ```
 
 ## Project Structure
@@ -18,14 +18,18 @@ titanium-v36/
 ├── PROJECT_INDEX.md             # This file (94% token reduction)
 ├── requirements.txt             # streamlit, pytest, requests, pandas, numpy, scipy
 ├── run_pipeline.py              # End-to-end CLI test
-├── .streamlit/secrets.toml      # ODDS_API_KEY (NEVER commit)
+├── .streamlit/
+│   ├── secrets.toml             # ODDS_API_KEY (NEVER commit)
+│   └── config.toml              # Native dark theme (Session 14) — gold/teal palette, monospace
 ├── app.py                       # Streamlit UI — 4 pages via st.navigation()
+├── bet_card_renderer.py         # HTML card renderer (Session 14) — no math, no API
 ├── odds_fetcher.py              # Odds API + RLM cache
 ├── edge_calculator.py           # Betting math, kill switches, pipeline entry point
 ├── bet_ranker.py                # Diversity engine + Sharp Score ranking
 ├── ncaab_parser.py              # NCAAB-specific game parser
 ├── originator_engine.py         # Monte Carlo — DO NOT TOUCH unless asked
 ├── data/
+│   ├── __init__.py              # Empty — makes data/ a proper Python package (Session 14)
 │   ├── efficiency_feed.py       # 110 teams (30 NBA + 80 NCAAB) — AdjEM static data
 │   ├── kill_switch_feed.py      # Kill switch input stubs: rest, wind, 3PT%, drift
 │   └── team_stats_bunker.py     # Fallback static stats
@@ -66,7 +70,7 @@ No API calls, no UI. Math + kill switch logic only.
 
 | Function | Returns | Notes |
 |----------|---------|-------|
-| `calculate_edges(sport, raw_games, louisiana_mode, min_edge)` | `list[BetCandidate]` | **Real entry point ~L912** (dead stub at ~L83) |
+| `calculate_edges(sport, raw_games, louisiana_mode, min_edge)` | `list[BetCandidate]` | Single entry point (dead stub removed Session 13) |
 | `passes_collar(american_odds)` | `bool` | -180 to +150 only |
 | `_implied_probability(american_odds)` | `float` | Vig-inclusive |
 | `no_vig_probability(odds_a, odds_b)` | `(float, float)` | Fair probs both sides |
@@ -102,6 +106,38 @@ No API calls, no math beyond Sharp Score. Dedup + rank + top-10 only.
 Constants: `MAX_TOTAL_BETS=10` · `MAX_PER_SPORT=3` · `SPORT_CONCENTRATION_CAP=0.60` · `SHARP_THRESHOLD=45.0`
 
 **Nemesis is display-only** — `run_nemesis()` populates `bet.nemesis` for card rendering. Zero effect on score or survival.
+
+---
+
+### bet_card_renderer.py — HTML Card Renderer (Session 14)
+No API calls, no math. Pure HTML string generation for Streamlit.
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `render_bet_card(bet, rank=0)` | `str` | HTML card for one BetCandidate — safe for `st.markdown(..., unsafe_allow_html=True)` |
+| `render_bet_slate(bets, title="Today's Slate")` | `str` | Full slate — header + all cards + total Kelly footer |
+
+Internal helpers (not public API):
+
+| Helper | Purpose |
+|--------|---------|
+| `_tier_config(signal)` | Lookup colour/label config dict for a signal string |
+| `_rlm_badge_html(breakdown)` | Violet RLM badge — shown only when `breakdown["rlm"] > 0` |
+| `_kill_reason_banner_html(kill_reason, accent)` | FLAG → amber advisory · KILL/FORCE_UNDER → red error · `""` → empty |
+| `_nemesis_html(nemesis, text_color)` | Nemesis counter-thesis block (display-only, Session 12) |
+| `_score_bar_html(score, breakdown, accent)` | Mini decomposition bar: Edge/RLM/Eff/Sit segments |
+| `_fmt_price(price)` | American odds with explicit sign (`+115`, `-110`) |
+
+Tier colour coding:
+
+| Signal | Colour | Unit |
+|--------|--------|------|
+| `NUCLEAR_2.0U` | Amber `#F59E0B` | 2.0u |
+| `STANDARD_1.0U` | Blue `#3B82F6` | 1.0u |
+| `LEAN_0.5U` | Teal `#14B8A6` | 0.5u |
+| `PASS` | Grey `#6B7280` | — |
+
+**Design constraints:** Pure stdlib. Inline styles only (Streamlit strips `<style>` tags from markdown). Font stack: `IBM Plex Mono`, `Fira Code`, monospace.
 
 ---
 
@@ -152,12 +188,14 @@ Known bug: `mean` input should be projected margin, not `bet.line`. Tracked in R
 No business logic, no API calls, no math.
 
 Pages via `st.navigation()` + `st.Page()` (Streamlit 1.36+):
-- `page_live_analysis()` — fully functional — runs full pipeline
+- `page_live_analysis()` — fully functional — runs full pipeline, renders via `render_bet_slate()`
 - `page_bet_history()` — stub
 - `page_pnl_tracker()` — stub
 - `page_odds_comparison()` — stub
 
 `run_pipeline(selected_sports)` → pre-fetches `raw_games` per sport → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(sport, raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. One API call per sport total.
+
+**Session 14:** Inline `render_bet_card()` removed from `app.py`. Now imports `render_bet_slate` from `bet_card_renderer`. Theme handled by `.streamlit/config.toml` instead of inline CSS.
 
 ---
 
@@ -225,5 +263,6 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 11 | ✅ | `compute_rest_days_from_schedule()`, `_apply_nba_kill()` live rest, `st.navigation()` |
 | 12 | ✅ | Nemesis demoted display-only, `rest_edge` live in Sharp Score, NCAAB 80-team kill switch |
 | 13 | ✅ | `SHARP_THRESHOLD` 40→45, `compute_rlm()` passive RLM, end-to-end pipeline wiring |
+| 14 | ✅ | `bet_card_renderer.py` promoted from R&D, `.streamlit/config.toml` dark theme, `data/__init__.py` |
 
-Last commit: `d577b7a` · Tests: **85 passing** · Quota: ~18,307 remaining
+Last commit: `e8516e7` · Tests: **85 passing** · Quota: ~18,307 remaining
