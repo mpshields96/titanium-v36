@@ -83,6 +83,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 16 | ✅ Done | Injury leverage stubs (kill_switch_feed.py), std_dev field on BetCandidate, BOOKS badge on card — 93/93 tests |
 | 17 | ✅ Done | NHL efficiency data (32 teams, GF60-GA60 × 10 AdjEM proxy) — 95/95 tests |
 | 17-post | ✅ Done | eff_data all-sports fix, st.html() card rendering fix, header padding fix, Supabase MCP setup |
+| 18 | ✅ Done | page_bet_history() full impl (P&L strip, Pending, History Log + MARK RESULT), + TRACK BET on Live Analysis cards, render_slate_header/footer helpers — 95/95 tests |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental

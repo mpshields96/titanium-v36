@@ -204,6 +204,8 @@ Pages via `st.navigation()` + `st.Page()` (Streamlit 1.36+):
 
 **Session 17 post-session:** `st.html()` replaces `st.markdown(unsafe_allow_html=True)` for card slate — Streamlit 1.54 sandboxes large HTML into a code block via `st.markdown`. Always use `st.html()` for full HTML documents/blocks. `eff_data.update()` now runs for all sports (was NCAAB-only — NHL efficiency data was built but never reaching `rank_bets()`). Header top padding 2rem → 3.5rem.
 
+**Session 18:** `page_bet_history()` fully implemented (P&L strip, Pending Results + MARK RESULT flow, History Log table). Live Analysis now loops `st.html(render_bet_card(...))` per bet + `+ TRACK BET` button → `insert_bet()`. All Supabase I/O gated behind `is_configured()`. `render_slate_header()` and `render_slate_footer()` added to `bet_card_renderer.py`.
+
 ---
 
 ## Sharp Score Formula
@@ -274,6 +276,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 15 | ✅ | Feature backlog saved, /sc:estimate B+C+F completed, session transition prep |
 | 16 | ✅ | Injury leverage stubs (kill_switch_feed), `std_dev` on BetCandidate, BOOKS badge on card |
 | 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy, aliases for NY Rangers/Islanders + Vegas |
+| 18 | ✅ | `page_bet_history()` full impl, `+ TRACK BET` on Live Analysis cards, `render_slate_header/footer` helpers |
 
-Last commit: `5b413f8` · Tests: **95 passing** · Quota: ~18,250 remaining
-Next session (18): Bet History page — **Supabase** backend chosen. Pre-req: add SUPABASE_URL + SUPABASE_KEY to `.streamlit/secrets.toml`, create `bet_history` table. C deferred (RLM gate 0/5).
+Last commit: `53046b6` · Tests: **95 passing** · Quota: ~18,250 remaining
+Next session (19): Await R&D Session 17 output (MLB/MLS efficiency data). C deferred (RLM gate 0/5).

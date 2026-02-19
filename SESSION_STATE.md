@@ -252,12 +252,23 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 17 post-session wrap-up — all files committed, pushed, memory updated
-Last git commit: 5b413f8 (wrap-up: CLAUDE.md session log + architecture notes)
+Last completed: Session 18 — Bet History page + Track Bet flow
+Last git commit: 53046b6 (pushed to origin/main)
 Tests: 95 total, all passing
-Quota: ~18,250 remaining
+Quota: ~18,250 remaining (no API calls Session 18)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
+
+### What was built in Session 18
+1. `page_bet_history()` — full implementation replacing stub
+   P&L summary strip (4 stat tiles), Pending Results section with
+   WIN/LOSS/PUSH selectbox + MARK RESULT → update_outcome(), History Log
+   columnar table with alternating rows + outcome badges.
+   Supabase not-configured guard. bet_history_data session cache.
+2. `render_slate_header()` + `render_slate_footer()` added to bet_card_renderer.py
+3. Live Analysis: per-card loop replaces monolithic st.html(render_bet_slate()).
+   + TRACK BET button per card → insert_bet() → cache bust.
+   Lazy import of insert_bet inside results block (zero test impact).
 
 ### Key fixes applied this session (not a numbered session — post-17 cleanup)
 1. eff_data bug: `build_efficiency_data()` was NCAAB-only — NHL efficiency data (Session 17) was never
