@@ -1,0 +1,22 @@
+[theme]
+base                       = "dark"
+primaryColor               = "#E8A020"
+backgroundColor            = "#0D1117"
+secondaryBackgroundColor   = "#161B22"
+textColor                  = "#E6EDF3"
+font                       = "monospace"
+
+# Sharp edges throughout
+baseRadius                 = "none"
+buttonRadius               = "none"
+
+# Widget borders — visible but subtle
+showWidgetBorder           = false
+borderColor                = "#21262D"
+
+# Chart palette: gold → teal → green → muted matches card tier colours
+chartCategoricalColors     = ["#E8A020", "#14B8A6", "#22C55E", "#8B949E", "#EF4444"]
+
+[theme.sidebar]
+backgroundColor            = "#0D1117"
+secondaryBackgroundColor   = "#161B22"

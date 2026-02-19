@@ -652,11 +652,15 @@ def render_sport_selector() -> list[str]:
     selected = []
     for group_name, sports in SPORT_GROUPS.items():
         st.markdown(f'<div class="t-section-label">{group_name}</div>', unsafe_allow_html=True)
-        cols = st.columns(len(sports))
-        for i, sport in enumerate(sports):
-            default_on = sport in DEFAULT_SPORTS
-            if cols[i].checkbox(sport, value=default_on, key=f"sport_{sport}"):
-                selected.append(sport)
+        # Cap at 3 per row so soccer labels (e.g. BUNDESLIGA) never truncate
+        cols_per_row = min(3, len(sports))
+        rows = [sports[i:i + cols_per_row] for i in range(0, len(sports), cols_per_row)]
+        for row in rows:
+            cols = st.columns(cols_per_row)
+            for i, sport in enumerate(row):
+                default_on = sport in DEFAULT_SPORTS
+                if cols[i].checkbox(sport, value=default_on, key=f"sport_{sport}"):
+                    selected.append(sport)
     return selected
 
 
@@ -893,7 +897,7 @@ def page_live_analysis():
     else:
         st.markdown("""
 <div class="empty-state">
-  <div class="empty-state-icon">◈</div>
+  <div class="empty-state-icon">—</div>
   <div class="empty-state-text">Select markets above<br>and press EXECUTE SCAN</div>
 </div>
 """, unsafe_allow_html=True)
@@ -924,7 +928,7 @@ def page_bet_history():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     st.markdown("""
 <div class="empty-state" style="padding-top: 5rem;">
-  <div class="empty-state-icon">◈</div>
+  <div class="empty-state-icon">—</div>
   <div class="empty-state-text">Bet History<br><br>Track recorded bets and outcomes.<br>Coming in a future session.</div>
 </div>
 """, unsafe_allow_html=True)
@@ -935,7 +939,7 @@ def page_pnl_tracker():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     st.markdown("""
 <div class="empty-state" style="padding-top: 5rem;">
-  <div class="empty-state-icon">◈</div>
+  <div class="empty-state-icon">—</div>
   <div class="empty-state-text">P&amp;L Tracker<br><br>Running profit and loss by sport and bet type.<br>Coming in a future session.</div>
 </div>
 """, unsafe_allow_html=True)
@@ -946,7 +950,7 @@ def page_odds_comparison():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     st.markdown("""
 <div class="empty-state" style="padding-top: 5rem;">
-  <div class="empty-state-icon">◈</div>
+  <div class="empty-state-icon">—</div>
   <div class="empty-state-text">Odds Comparison<br><br>Side-by-side line shopping across all books.<br>Coming in a future session.</div>
 </div>
 """, unsafe_allow_html=True)
@@ -960,7 +964,7 @@ def main():
     st.set_page_config(
         page_title="TITANIUM",
         layout="centered",
-        initial_sidebar_state="collapsed",
+        initial_sidebar_state="expanded",
     )
 
     pg = st.navigation([
