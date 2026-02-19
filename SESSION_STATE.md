@@ -247,12 +247,33 @@ This works because books occasionally misprice relative to the consensus.
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 14 — bet_card_renderer.py promoted, UI polish committed
-Last git commit: 5a26089 (Promote bet_card_renderer.py from R&D — richer tier-coded cards)
+Last completed: Session 15 — /sc:estimate for B+C+F, feature backlog updated, transition prep
+Last git commit: 3c7f7a5 (Session 15: add FEATURE BACKLOG to SESSION_STATE.md)
 Tests: 85 total, all passing
-Quota: ~18,307 remaining (no new API calls in Sessions 13 cleanup / 14)
+Quota: ~18,307 remaining (no new API calls in Sessions 13–15)
 Streamlit Cloud: deployed, auto-deploys from main
-Next: Session 15 — Await instruction. Candidates: NFL expansion, live NBA/NCAAB night verification
+RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
+
+Next session (new chat): Build B + F1. Defer C until RLM gate met.
+  - B: Add injury_leverage manual stubs to kill_switch_feed.py + wire into rank_bets()
+  - F1: Add std_dev field to BetCandidate + consensus badge in bet_card_renderer.py
+  - C: Add RLM session counter to SESSION_STATE.md only — do NOT raise threshold yet
+
+## SESSION 15 GOAL ✅ COMPLETE
+1. ✅ Feature backlog saved permanently to SESSION_STATE.md (4 categories: Ready/Seasonal/Blocked/Deferred)
+2. ✅ /sc:estimate completed for Options B (injury leverage), C (threshold raise), F (std_dev signal)
+3. ✅ Session transition prep — new chat ready to resume at Session 16
+4. ✅ RLM gate tracker added to CURRENT STATE (increment when RLM fires on live data)
+
+## SESSION 15 ESTIMATES (reference for Session 16)
+| Feature | Approach | Estimate | Decision |
+|---------|----------|----------|----------|
+| B — Injury leverage | Manual stub in kill_switch_feed.py | ~2.5 hrs | ✅ Build in Session 16 |
+| C — Threshold raise 45→50 | One-liner + docs | ~20 min | ⚠️ Gate: RLM must fire on 5+ live sessions first |
+| F1 — std_dev badge | Display badge on bet card | ~1.5 hrs | ✅ Build in Session 16 |
+| F2 — std_dev score | Sharp Score sub-component | ~4–6 hrs | 🔬 R&D only — validate before promoting |
+
+Session 16 scope: B + F1 (~4 hrs). C deferred. F2 to R&D.
 
 ## ORIENTATION (read this first in any new session)
 1. Read PROJECT_INDEX.md — 229 lines, covers all modules, functions, Sharp Score formula, kill switches, test counts. 94% token reduction vs reading all source files.

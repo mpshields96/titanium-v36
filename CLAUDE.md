@@ -79,12 +79,15 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 12 | ✅ Done | Nemesis demoted to display-only, rest_edge wired to Sharp Score (NBA), NCAAB 3P to 80 teams, tempo sourced from efficiency_feed |
 | 13 | ✅ Done | SHARP_THRESHOLD 40→45, compute_rlm() (passive RLM, 3% implied prob, zero API cost), wired into run_pipeline() — 85/85 tests |
 | 14 | ✅ Done | bet_card_renderer.py promoted (R&D), render_bet_slate() wired, .streamlit/config.toml, data/__init__.py fix, UI polish — 85/85 tests |
+| 15 | ✅ Done | Feature backlog saved to SESSION_STATE.md, /sc:estimate B+C+F, session transition prep |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
 - **HANDOFF.md at that path is the authoritative spec** — read it directly, don't rely solely on user's chat summary
 - Only promote code that has been live-tested in R&D
 - **Import path diff when promoting:** R&D uses `from core.edge_calculator import` / `from core.odds_fetcher import` — v36 is root-level, use `from edge_calculator import` / `from odds_fetcher import`. Also strip `sys.path.insert(0, ...)` blocks.
+- **SHARP_THRESHOLD raise gate (45→50):** Do NOT raise until `RLM live sessions observed` counter in SESSION_STATE.md CURRENT STATE reaches ≥5. Increment manually each session RLM fires on live data.
+- **`std_dev` in `BetCandidate`:** Session 16 adds `std_dev: float = 0.0` field. Display-only badge in `bet_card_renderer.py`. F2 (Sharp Score component) goes to R&D first — validate before promoting.
 - Known R&D bugs — DO NOT promote until fixed:
   - run_trinity_simulation receives bet.line as mean instead of projected margin (unfixed)
   - RLM Sharp Score component: passive RLM now wired (Session 13). Activates when open-price cache

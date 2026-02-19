@@ -264,5 +264,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 12 | ✅ | Nemesis demoted display-only, `rest_edge` live in Sharp Score, NCAAB 80-team kill switch |
 | 13 | ✅ | `SHARP_THRESHOLD` 40→45, `compute_rlm()` passive RLM, end-to-end pipeline wiring |
 | 14 | ✅ | `bet_card_renderer.py` promoted from R&D, `.streamlit/config.toml` dark theme, `data/__init__.py` |
+| 15 | ✅ | Feature backlog saved, /sc:estimate B+C+F completed, session transition prep |
 
-Last commit: `e8516e7` · Tests: **85 passing** · Quota: ~18,307 remaining
+Last commit: `3c7f7a5` · Tests: **85 passing** · Quota: ~18,307 remaining
+Next session (16): Build B (injury leverage stubs) + F1 (std_dev badge). Defer C (threshold raise — gate unmet).
