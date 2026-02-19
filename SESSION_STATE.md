@@ -247,12 +247,29 @@ This works because books occasionally misprice relative to the consensus.
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 17 — NHL efficiency data (32 teams, GF60-GA60 × 10 AdjEM proxy)
-Last git commit: TBD (Session 17: NHL efficiency data)
-Tests: 95 total, all passing (+2 new: TestNHLEfficiency x2)
-Quota: ~18,307 remaining (no new API calls in Sessions 13–17)
+Last completed: Session 17 post-session — eff_data all-sports bug fix, st.html() card rendering fix, header padding fix, PROJECT_INDEX.md updated, Supabase MCP configured in Claude Desktop
+Last git commit: afc0d8d (Update PROJECT_INDEX.md — post-session 17 fixes)
+Tests: 95 total, all passing
+Quota: ~18,250 remaining (no new API calls in Sessions 13–17; ~57 used for NCAAB live scan)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
+
+### Key fixes applied this session (not a numbered session — post-17 cleanup)
+1. eff_data bug: `build_efficiency_data()` was NCAAB-only — NHL efficiency data (Session 17) was never
+   reaching rank_bets(). Fixed with `eff_data.update(build_efficiency_data(raw_games))` for all sports.
+2. Card rendering: Streamlit 1.54 sandboxes large HTML in st.markdown into a code block.
+   Fixed: `st.markdown(render_bet_slate(...), unsafe_allow_html=True)` → `st.html(render_bet_slate(...))`
+3. Header clip: TITANIUM wordmark partially hidden under Streamlit toolbar.
+   Fixed: `.block-container` top padding 2rem → 3.5rem.
+4. Supabase MCP: configured in ~/Library/Application Support/Claude/claude_desktop_config.json
+   with @supabase/mcp-server-supabase@latest. Restart Claude Desktop to activate.
+
+### Session 18 pre-requisites
+- [ ] Restart Claude Desktop to activate Supabase MCP
+- [ ] Create Supabase project (free tier) at supabase.com
+- [ ] Create `bet_history` table (schema: id, created_at, sport, matchup, market_type, target, line,
+      price, edge_pct, sharp_score, signal, kelly_size, outcome, pnl_units, notes)
+- [ ] Add SUPABASE_URL + SUPABASE_KEY to .streamlit/secrets.toml
 
 ## SESSION 16 GOAL ✅ COMPLETE
 1. ✅ Feature B: get_nba_injury_leverage() + get_ncaab_injury_leverage() stubs in kill_switch_feed.py
@@ -314,7 +331,7 @@ Commit: c3954ad — dead stub, _KILL_ROUTER NBA entry, deferred imports, stale d
   |-------------------|--------------------|-------|
   | edge_pct          | consensus books    | ✅    |
   | rlm_confirmed     | open-price cache   | ✅ (cold on first run — fires on refresh) |
-  | efficiency_gap    | efficiency_feed    | ✅ (110 teams: 30 NBA + 80 NCAAB) |
+  | efficiency_gap    | efficiency_feed    | ✅ (142 teams: 30 NBA + 80 NCAAB + 32 NHL) |
   | rest_edge         | schedule rest days | ✅ NBA only |
   | injury_leverage   | (none)             | ❌ always 0 |
   | motivation        | (none)             | ❌ always 0 |

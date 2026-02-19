@@ -144,7 +144,7 @@ Tier colour coding:
 
 ---
 
-### data/efficiency_feed.py — AdjEM Static Data (110 teams)
+### data/efficiency_feed.py — AdjEM Static Data (142 teams)
 No API calls. Static data + lookup only.
 
 | Function | Returns | Notes |
