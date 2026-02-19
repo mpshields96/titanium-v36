@@ -717,7 +717,7 @@ _ALIASES: dict[str, str] = {
     "Wild":                      "Minnesota Wild",
     "Senators":                  "Ottawa Senators",
     "Sens":                      "Ottawa Senators",
-    "Kings":                     "Los Angeles Kings",
+    "LA Kings":                  "Los Angeles Kings",
     "LAK":                       "Los Angeles Kings",
     "Penguins":                  "Pittsburgh Penguins",
     "Pens":                      "Pittsburgh Penguins",
