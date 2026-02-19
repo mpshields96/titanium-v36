@@ -63,7 +63,9 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Module-level caches (e.g. `_OPEN_PRICE_CACHE`) need `setup_method` teardown in tests — call clear function before each test or tests bleed state
 - Pass `raw_games` into `calculate_edges(sport, raw_games=raw_games)` to avoid double API call — it skips internal fetch when provided
 - Never import `edge_calculator` from `odds_fetcher.py` — circular import (`edge_calculator` already imports `odds_fetcher`)
+- `data/price_history_store.py`: `from odds_fetcher import _extract_open_prices` must stay deferred (inside function body) — same circular import reason
 - Before removing a function parameter, grep all call sites first: `grep -rn "function_name(" .` — easy to miss cross-file callers (e.g. `sharp_to_size` had callers in `bet_ranker.py`)
+- Edit tool `old_string` failures: if a file was already partially edited this session, grep for current text before editing — the previously-matched string may no longer exist exactly
 - End every session: `/sc:save` → `/claude-md-management:revise-claude-md` → `git commit`
 - **MANDATORY — Loading screen tip:** End EVERY response (not just session-end) with a one-line tip in the format `Loading screen tip: ...` — one relevant `/sc:` command or tool reminder. This is a non-negotiable UX behavior. New sessions must not wait to be reminded of this rule.
 
@@ -92,6 +94,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - **HANDOFF.md at that path is the authoritative spec** — read it directly, don't rely solely on user's chat summary
 - Only promote code that has been live-tested in R&D
 - **Import path diff when promoting:** R&D uses `from core.edge_calculator import` / `from core.odds_fetcher import` — v36 is root-level, use `from edge_calculator import` / `from odds_fetcher import`. Also strip `sys.path.insert(0, ...)` blocks.
+- **R&D promotion schema check:** R&D POC dicts may use different key formats than v36 (e.g. R&D `price_history_store.py` used `{TeamName: price}`; v36 uses `{"home": price, "away": price}`). Always read BOTH files before promoting — never assume schemas match.
 - **efficiency_feed.py new-sport promotion checklist:**
   1. Run `/sc:analyze data/efficiency_feed.py` BEFORE starting — catch collision risks early
   2. For every bare alias in the R&D _ALIASES block: grep v36 _ALIASES for the same key. If it exists pointing to a different sport, use a qualified form instead (e.g. "Blackhawks" not "Hawks", "NY Jets" not "Jets")
