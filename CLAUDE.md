@@ -81,6 +81,8 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 14 | ✅ Done | bet_card_renderer.py promoted (R&D), render_bet_slate() wired, .streamlit/config.toml, data/__init__.py fix, UI polish — 85/85 tests |
 | 15 | ✅ Done | Feature backlog saved to SESSION_STATE.md, /sc:estimate B+C+F, session transition prep |
 | 16 | ✅ Done | Injury leverage stubs (kill_switch_feed.py), std_dev field on BetCandidate, BOOKS badge on card — 93/93 tests |
+| 17 | ✅ Done | NHL efficiency data (32 teams, GF60-GA60 × 10 AdjEM proxy) — 95/95 tests |
+| 17-post | ✅ Done | eff_data all-sports fix, st.html() card rendering fix, header padding fix, Supabase MCP setup |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -107,6 +109,8 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - `data/__init__.py` must stay — Streamlit Cloud requires it for subpackage imports
 - `bet_card_renderer.py` uses inline styles only — Streamlit strips `<style>` tags from `st.markdown()` HTML
 - `st.Page(icon=...)` requires real emoji or Material shortcodes — Unicode geometric chars (◈ ◇) crash the app
+- **Streamlit 1.54+:** `st.markdown(unsafe_allow_html=True)` sandboxes large HTML into a `<code>` block. Use `st.html()` for full HTML documents/slates. `st.markdown` is safe only for small inline fragments.
+- **eff_data multi-sport:** call `eff_data.update(build_efficiency_data(raw_games))` unconditionally per sport — never gate inside `if sport == "X"` or efficiency data silently won't reach rank_bets() for other sports.
 
 ## If Starting a New Chat Session
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)
