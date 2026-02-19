@@ -124,6 +124,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 2. Say: "Resume Session [N]. Read CLAUDE.md and SESSION_STATE.md. Run: pytest tests/ -v and confirm all tests pass before we start."
 3. Wait for test confirmation, then state what you want to build
 4. For fast orientation: read `PROJECT_INDEX.md` first — covers all modules, functions, Sharp Score formula, kill switches. 94% token reduction vs reading source files.
+5. For backlog and roadmap: read `memory/MASTER_ROADMAP.md` — authoritative to-do list covering math gaps, structural ceiling fixes, R&D backlog, and UI work. Created Session 20.
 
 ## Deployment Checklist
 - [ ] No API keys in code
