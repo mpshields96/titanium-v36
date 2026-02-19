@@ -85,6 +85,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 17-post | ✅ Done | eff_data all-sports fix, st.html() card rendering fix, header padding fix, Supabase MCP setup |
 | 18 | ✅ Done | page_bet_history() full impl (P&L strip, Pending, History Log + MARK RESULT), + TRACK BET on Live Analysis cards, render_slate_header/footer helpers — 95/95 tests |
 | 19 | ✅ Done | efficiency_feed.py MLB/MLS/NFL promotion (234 teams total), Hawks alias collision fix, 11 new tests — 106/106 tests |
+| 20 | ✅ Done | docs/MASTER_ROADMAP.md created, page_pnl_tracker() fully built (equity curve, ROI by sport, win rate by market), CLAUDE.md + SESSION_STATE.md updated — 106/106 tests |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -124,7 +125,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 2. Say: "Resume Session [N]. Read CLAUDE.md and SESSION_STATE.md. Run: pytest tests/ -v and confirm all tests pass before we start."
 3. Wait for test confirmation, then state what you want to build
 4. For fast orientation: read `PROJECT_INDEX.md` first — covers all modules, functions, Sharp Score formula, kill switches. 94% token reduction vs reading source files.
-5. For backlog and roadmap: read `memory/MASTER_ROADMAP.md` — authoritative to-do list covering math gaps, structural ceiling fixes, R&D backlog, and UI work. Created Session 20.
+5. For backlog and roadmap: read `docs/MASTER_ROADMAP.md` — authoritative to-do list covering math gaps, structural ceiling fixes, R&D backlog, and UI work. In-repo file, readable by R&D chat too.
 
 ## Deployment Checklist
 - [ ] No API keys in code

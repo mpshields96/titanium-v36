@@ -252,12 +252,28 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 19 — MLB/MLS/NFL efficiency data promotion + Hawks alias fix
-Last git commit: 80292d4 (pushed to origin/main)
+Last completed: Session 20 — MASTER_ROADMAP created + P&L Tracker page built
+Last git commit: 9e0b8de (pushed to origin/main) — session 20 in progress
 Tests: 106 total, all passing
-Quota: ~18,250 remaining (no API calls Session 19)
+Quota: ~18,250 remaining (no API calls Sessions 19–20)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
+
+### What was built in Session 20
+1. `memory/MASTER_ROADMAP.md` — authoritative to-do list: 5 sections covering math gaps,
+   structural ceiling fixes (Pinnacle, late lineup, overnight RLM), R&D backlog (10 items),
+   Streamlit UI backlog, RLM 2.0 spec. Status-tracked with [ ] / [R] / [~] / [x] legend.
+2. `CLAUDE.md` — added step 5 to "If Starting a New Chat Session": points to MASTER_ROADMAP.md
+3. `data/efficiency_feed.py` — docstring typo fixed: "202 teams" → "234 teams" (linter regression, commit 497bff9)
+4. `app.py` — `page_pnl_tracker()` fully implemented (was stub):
+   - Summary strip: Net Units (green/red), Win Rate (gold), Resolved count, Total tracked
+   - W/L/P pill row
+   - Equity curve: `st.line_chart()` over cumulative net units per resolved bet (sorted by created_at)
+   - ROI by sport table: Sport / Record / Win% / Units
+   - Win rate by market type table: Market / Record / Win% / Units
+   - Refresh P&L button with session cache bust
+   All using `st.html()` for HTML blocks (Streamlit 1.54+ pattern), inline styles, IBM Plex Mono font.
+   Supabase is_configured() guard + "pnl_data" session cache (independent of bet_history_data cache).
 
 ### What was built in Session 19
 1. `data/efficiency_feed.py` — promoted MLB (30), MLS (30), NFL (32) from R&D Session 17.

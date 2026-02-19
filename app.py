@@ -1179,14 +1179,256 @@ def page_bet_history():
 
 
 def page_pnl_tracker():
-    """P&L Tracker — running profit/loss by sport and bet type. (Coming soon)"""
+    """P&L Tracker — equity curve, ROI by sport, win rate by market type."""
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-    st.markdown("""
-<div class="empty-state" style="padding-top: 5rem;">
-  <div class="empty-state-icon">—</div>
-  <div class="empty-state-text">P&amp;L Tracker<br><br>Running profit and loss by sport and bet type.<br>Coming in a future session.</div>
+
+    # ── Header ────────────────────────────────────────────────────
+    st.html("""
+<div style="margin-bottom:2rem;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;font-weight:600;
+              letter-spacing:0.18em;color:#8B949E;text-transform:uppercase;
+              margin-bottom:0.35rem;">TITANIUM V36.1</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:700;
+              color:#E6EDF3;letter-spacing:0.04em;">P&amp;L TRACKER</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#8B949E;
+              margin-top:0.25rem;">Running profit/loss — equity, sport breakdown, market type</div>
 </div>
-""", unsafe_allow_html=True)
+""")
+
+    # ── Guard ─────────────────────────────────────────────────────
+    from data.bet_history_store import is_configured, fetch_bets, compute_pnl_summary
+
+    if not is_configured():
+        st.html("""
+<div style="padding:2.5rem 1.5rem;background:#161B22;border:1px solid #21262D;
+            border-radius:8px;text-align:center;margin-top:2rem;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:#8B949E;">
+    Supabase not configured — bet tracking unavailable.
+  </div>
+</div>
+""")
+        return
+
+    # ── Fetch data ────────────────────────────────────────────────
+    if "pnl_data" not in st.session_state:
+        st.session_state["pnl_data"] = fetch_bets(limit=500)
+
+    bets = st.session_state["pnl_data"]
+    summary = compute_pnl_summary(bets)
+    resolved = [b for b in bets if b.get("outcome") in ("WIN", "LOSS", "PUSH")]
+
+    if not bets:
+        st.html("""
+<div style="padding:2.5rem 1.5rem;background:#161B22;border:1px solid #21262D;
+            border-radius:8px;text-align:center;margin-top:2rem;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:#8B949E;">
+    No bets tracked yet — use Live Analysis to track bets.
+  </div>
+</div>
+""")
+        return
+
+    # ── Net units color ───────────────────────────────────────────
+    net = summary["net_units"]
+    net_color = "#22C55E" if net >= 0 else "#F87171"
+    net_sign  = "+" if net >= 0 else ""
+    win_rate_pct = f"{summary['win_rate'] * 100:.1f}%"
+
+    # ── Summary strip ─────────────────────────────────────────────
+    st.html(f"""
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1.5rem;">
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;
+              padding:1rem 0.75rem;text-align:center;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:700;
+                color:{net_color};">{net_sign}{net:.2f}u</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                letter-spacing:0.12em;color:#8B949E;text-transform:uppercase;margin-top:0.3rem;">Net Units</div>
+  </div>
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;
+              padding:1rem 0.75rem;text-align:center;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:700;
+                color:#E8A020;">{win_rate_pct}</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                letter-spacing:0.12em;color:#8B949E;text-transform:uppercase;margin-top:0.3rem;">Win Rate</div>
+  </div>
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;
+              padding:1rem 0.75rem;text-align:center;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:700;
+                color:#E6EDF3;">{summary['resolved']}</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                letter-spacing:0.12em;color:#8B949E;text-transform:uppercase;margin-top:0.3rem;">Resolved</div>
+  </div>
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;
+              padding:1rem 0.75rem;text-align:center;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:700;
+                color:#E6EDF3;">{summary['total_tracked']}</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                letter-spacing:0.12em;color:#8B949E;text-transform:uppercase;margin-top:0.3rem;">Tracked</div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:2rem;">
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;
+              padding:0.75rem;text-align:center;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:1.1rem;font-weight:600;
+                color:#22C55E;">{summary['wins']}W</div>
+  </div>
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;
+              padding:0.75rem;text-align:center;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:1.1rem;font-weight:600;
+                color:#F87171;">{summary['losses']}L</div>
+  </div>
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;
+              padding:0.75rem;text-align:center;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:1.1rem;font-weight:600;
+                color:#8B949E;">{summary['pushes']}P</div>
+  </div>
+</div>
+""")
+
+    # ── Equity curve ──────────────────────────────────────────────
+    if resolved:
+        # Sort resolved by created_at ascending for cumulative curve
+        sorted_resolved = sorted(resolved, key=lambda b: b.get("created_at", ""))
+        running = 0.0
+        curve_data = []
+        for i, b in enumerate(sorted_resolved):
+            running += b.get("pnl_units") or 0.0
+            curve_data.append({"Bet #": i + 1, "Cumulative Units": round(running, 3)})
+
+        import pandas as pd
+        df = pd.DataFrame(curve_data).set_index("Bet #")
+
+        st.html("""
+<div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;font-weight:600;
+            letter-spacing:0.14em;color:#8B949E;text-transform:uppercase;
+            margin-bottom:0.5rem;">EQUITY CURVE</div>
+""")
+        # Use Streamlit native chart — works reliably in Streamlit Cloud
+        import streamlit as st
+        st.line_chart(df, color="#14B8A6", height=180)
+
+    # ── ROI by sport ──────────────────────────────────────────────
+    sport_stats: dict[str, dict] = {}
+    for b in resolved:
+        sport = b.get("sport", "UNKNOWN")
+        if sport not in sport_stats:
+            sport_stats[sport] = {"w": 0, "l": 0, "p": 0, "units": 0.0}
+        o = b.get("outcome")
+        if o == "WIN":
+            sport_stats[sport]["w"] += 1
+        elif o == "LOSS":
+            sport_stats[sport]["l"] += 1
+        elif o == "PUSH":
+            sport_stats[sport]["p"] += 1
+        sport_stats[sport]["units"] += b.get("pnl_units") or 0.0
+
+    if sport_stats:
+        rows_html = ""
+        for sport, s in sorted(sport_stats.items()):
+            u = s["units"]
+            u_color = "#22C55E" if u >= 0 else "#F87171"
+            u_sign  = "+" if u >= 0 else ""
+            wl = s["w"] + s["l"]
+            wr = f"{s['w']/wl*100:.0f}%" if wl > 0 else "—"
+            rows_html += f"""
+<div style="display:grid;grid-template-columns:3fr 1fr 1fr 1.5fr;
+            gap:0.5rem;padding:0.6rem 0.75rem;border-bottom:1px solid #21262D;
+            align-items:center;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+              color:#E6EDF3;font-weight:500;">{sport}</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+              color:#8B949E;">{s['w']}W-{s['l']}L</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+              color:#E8A020;">{wr}</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+              color:{u_color};font-weight:600;text-align:right;">{u_sign}{u:.2f}u</div>
+</div>"""
+
+        st.html(f"""
+<div style="margin-bottom:2rem;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;font-weight:600;
+              letter-spacing:0.14em;color:#8B949E;text-transform:uppercase;
+              margin-bottom:0.5rem;">ROI BY SPORT</div>
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;overflow:hidden;">
+    <div style="display:grid;grid-template-columns:3fr 1fr 1fr 1.5fr;gap:0.5rem;
+                padding:0.5rem 0.75rem;border-bottom:1px solid #30363D;background:#1C2433;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                  letter-spacing:0.1em;color:#6E7681;text-transform:uppercase;">Sport</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                  letter-spacing:0.1em;color:#6E7681;text-transform:uppercase;">Record</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                  letter-spacing:0.1em;color:#6E7681;text-transform:uppercase;">Win%</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                  letter-spacing:0.1em;color:#6E7681;text-transform:uppercase;text-align:right;">Units</div>
+    </div>
+    {rows_html}
+  </div>
+</div>
+""")
+
+    # ── Win rate by market type ────────────────────────────────────
+    market_stats: dict[str, dict] = {}
+    for b in resolved:
+        mkt = b.get("market_type", "UNKNOWN")
+        if mkt not in market_stats:
+            market_stats[mkt] = {"w": 0, "l": 0, "p": 0, "units": 0.0}
+        o = b.get("outcome")
+        if o == "WIN":
+            market_stats[mkt]["w"] += 1
+        elif o == "LOSS":
+            market_stats[mkt]["l"] += 1
+        elif o == "PUSH":
+            market_stats[mkt]["p"] += 1
+        market_stats[mkt]["units"] += b.get("pnl_units") or 0.0
+
+    if market_stats:
+        mkt_rows = ""
+        for mkt, s in sorted(market_stats.items()):
+            u = s["units"]
+            u_color = "#22C55E" if u >= 0 else "#F87171"
+            u_sign  = "+" if u >= 0 else ""
+            wl = s["w"] + s["l"]
+            wr = f"{s['w']/wl*100:.0f}%" if wl > 0 else "—"
+            mkt_rows += f"""
+<div style="display:grid;grid-template-columns:3fr 1fr 1fr 1.5fr;
+            gap:0.5rem;padding:0.6rem 0.75rem;border-bottom:1px solid #21262D;
+            align-items:center;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+              color:#E6EDF3;font-weight:500;">{mkt}</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+              color:#8B949E;">{s['w']}W-{s['l']}L</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+              color:#E8A020;">{wr}</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+              color:{u_color};font-weight:600;text-align:right;">{u_sign}{u:.2f}u</div>
+</div>"""
+
+        st.html(f"""
+<div style="margin-bottom:2rem;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;font-weight:600;
+              letter-spacing:0.14em;color:#8B949E;text-transform:uppercase;
+              margin-bottom:0.5rem;">WIN RATE BY MARKET</div>
+  <div style="background:#161B22;border:1px solid #21262D;border-radius:8px;overflow:hidden;">
+    <div style="display:grid;grid-template-columns:3fr 1fr 1fr 1.5fr;gap:0.5rem;
+                padding:0.5rem 0.75rem;border-bottom:1px solid #30363D;background:#1C2433;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                  letter-spacing:0.1em;color:#6E7681;text-transform:uppercase;">Market</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                  letter-spacing:0.1em;color:#6E7681;text-transform:uppercase;">Record</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                  letter-spacing:0.1em;color:#6E7681;text-transform:uppercase;">Win%</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;
+                  letter-spacing:0.1em;color:#6E7681;text-transform:uppercase;text-align:right;">Units</div>
+    </div>
+    {mkt_rows}
+  </div>
+</div>
+""")
+
+    # ── Refresh button ─────────────────────────────────────────────
+    if st.button("↻  Refresh P&L", key="pnl_refresh"):
+        st.session_state.pop("pnl_data", None)
+        st.rerun()
 
 
 def page_odds_comparison():
