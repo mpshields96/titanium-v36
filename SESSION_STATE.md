@@ -146,9 +146,14 @@ This works because books occasionally misprice relative to the consensus.
 1. Open Claude Code desktop app
 2. Navigate to: /Users/matthewshields/Projects/titanium-v36
 3. Paste this entire SESSION_STATE.md file into the chat
-4. Say: "Resume Session [N]. Read CLAUDE.md and SESSION_STATE.md.
-         Run: pytest tests/ -v and confirm all tests pass before we start."
+4. Say: "Resume Session 18. Read CLAUDE.md, CLAUDE.local.md, and SESSION_STATE.md.
+         Run: python3 -m pytest tests/ -v and confirm all 95 tests pass before we start."
 5. Wait for test confirmation, then state what you want to build
+
+Notes:
+- CLAUDE.local.md has current session scope + Session 18 pre-reqs (Supabase setup)
+- PROJECT_INDEX.md is the fast orientation file — 94% token reduction vs reading source files
+- Always use `python3 -m pytest` not bare `pytest` (avoids venv path issues on this machine)
 
 ## SESSION 4 GOAL ✅ COMPLETE
 1. ✅ Promote bet_ranker.py from R&D (MAX_PER_SPORT=3, threshold=40, Sharp Score sort)
