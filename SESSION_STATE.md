@@ -233,6 +233,7 @@ Next: Session 14 — TBD
 1. Read PROJECT_INDEX.md — 229 lines, covers all modules, functions, Sharp Score formula, kill switches, test counts. 94% token reduction vs reading all source files.
 2. Run: python3 -m pytest tests/ -v — confirm 85/85 before touching anything.
 3. Then read SESSION_STATE.md CHECKPOINT block for exact system state.
+4. For R&D context: read ~/Projects/titanium-experimental/HANDOFF.md (authoritative spec) and ~/Projects/titanium-experimental/SESSION_STATE.md (R&D current state + next tasks).
 
 ## CHECKPOINT — Session 13 (2026-02-18)
 State: CLEAN. All code committed. 85/85 tests green.
