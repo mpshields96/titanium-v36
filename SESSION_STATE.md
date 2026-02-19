@@ -252,12 +252,22 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 18 — Bet History page + Track Bet flow
-Last git commit: 53046b6 (pushed to origin/main)
-Tests: 95 total, all passing
-Quota: ~18,250 remaining (no API calls Session 18)
+Last completed: Session 19 — MLB/MLS/NFL efficiency data promotion + Hawks alias fix
+Last git commit: 80292d4 (pushed to origin/main)
+Tests: 106 total, all passing
+Quota: ~18,250 remaining (no API calls Session 19)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
+
+### What was built in Session 19
+1. `data/efficiency_feed.py` — promoted MLB (30), MLS (30), NFL (32) from R&D Session 17.
+   Total coverage now 234 teams: NBA 30 + NCAAB 80 + NHL 32 + MLB 30 + MLS 30 + NFL 32.
+   Formulas: MLB = (4.30 - era) * 8.0 | MLS = xgd_per_90 * 15.0 | NFL = epa_per_play * 80.0.
+   Hawks alias collision fixed: "Hawks"→Atlanta Hawks (NBA), "Blackhawks"→Chicago Blackhawks.
+   Alias collision table documented in file docstring.
+2. `tests/test_validation.py` — added 11 new tests (TestNewLeaguesEfficiency).
+   Team count assertions (30/30/32), gap range checks, 6 alias collision guard tests.
+3. /sc:analyze findings on efficiency_feed.py addressed — Hawks collision was the only HIGH-severity issue.
 
 ### What was built in Session 18
 1. `page_bet_history()` — full implementation replacing stub

@@ -1096,7 +1096,6 @@ _ALIASES: dict[str, str] = {
     "Habs":                      "Montreal Canadiens",
     "Blue Jackets":              "Columbus Blue Jackets",
     "Blackhawks":                "Chicago Blackhawks",
-    "Blackhawks":                "Chicago Blackhawks",
     "Sharks":                    "San Jose Sharks",
     "Utah HC":                   "Utah Hockey Club",
 
