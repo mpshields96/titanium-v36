@@ -275,5 +275,5 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 16 | ✅ | Injury leverage stubs (kill_switch_feed), `std_dev` on BetCandidate, BOOKS badge on card |
 | 17 | ✅ | NHL efficiency data — 32 teams, GF60-GA60 × 10 AdjEM proxy, aliases for NY Rangers/Islanders + Vegas |
 
-Last commit: `3157945` · Tests: **95 passing** · Quota: ~18,250 remaining
+Last commit: `5b413f8` · Tests: **95 passing** · Quota: ~18,250 remaining
 Next session (18): Bet History page — **Supabase** backend chosen. Pre-req: add SUPABASE_URL + SUPABASE_KEY to `.streamlit/secrets.toml`, create `bet_history` table. C deferred (RLM gate 0/5).

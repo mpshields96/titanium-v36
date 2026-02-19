@@ -247,10 +247,10 @@ This works because books occasionally misprice relative to the consensus.
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 17 post-session — eff_data all-sports bug fix, st.html() card rendering fix, header padding fix, PROJECT_INDEX.md updated, Supabase MCP configured in Claude Desktop
-Last git commit: afc0d8d (Update PROJECT_INDEX.md — post-session 17 fixes)
+Last completed: Session 17 post-session wrap-up — all files committed, pushed, memory updated
+Last git commit: 5b413f8 (wrap-up: CLAUDE.md session log + architecture notes)
 Tests: 95 total, all passing
-Quota: ~18,250 remaining (no new API calls in Sessions 13–17; ~57 used for NCAAB live scan)
+Quota: ~18,250 remaining
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
