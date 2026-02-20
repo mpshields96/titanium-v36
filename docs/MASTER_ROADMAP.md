@@ -32,16 +32,21 @@
 - **Fix:** Call-site only. R&D fixed in `core/titanium.py`. Same pattern applies to v36 when simulation is promoted.
 - **Do not promote until:** Simulation output is used for sizing decisions, not just display.
 
-### GAP 4: Soccer 3-Outcome Edge Inflation [~] ← R&D Session 26 investigating
+### GAP 4: Soccer 3-Outcome Edge Inflation [~] ← CONFIRMED MATERIAL — R&D Session 26
 - **Problem:** `_consensus_fair_prob()` calls `no_vig_probability(odds_a, odds_b)` — a 2-outcome vig removal.
-  Soccer h2h is a 3-outcome market (home / draw / away). The draw outcome is ignored when computing
-  fair probability. This may inflate implied edge on soccer moneylines — potential false positives on EPL, Bundesliga, etc.
-- **Correct fix:** 3-way normalization:
-  `fair_x = imp_x / (imp_home + imp_draw + imp_away)` for each of home, draw, away.
-- **Materiality gate:** R&D quantifying error on live EPL games (Session 26). If avg error > 2pp → material.
-- **If material:** R&D prototypes `_consensus_fair_prob_3way()`. v36 promotes and replaces soccer call sites.
-- **If not material (≤ 2pp):** Document as acceptable approximation. Close issue.
-- **Owner:** R&D investigates + prototypes. v36 decides promotion.
+  Soccer h2h is a 3-outcome market (home / draw / away). Draw is excluded from denominator.
+- **Measured error (live EPL, 20 games, 198 book-game pairs, 2026-02-19):**
+  Avg home inflation: **+13.46pp**. Avg away inflation: **+10.42pp**. Max: +19.77pp.
+- **Impact:** All current v36 soccer edges are inflated by ~10-19pp. A "5% edge" on EPL is likely 0% or negative.
+  **Soccer betting signals are unreliable until this fix is promoted.**
+- **Fix:** `fair_x = imp_x / (imp_home + imp_draw + imp_away)` — 3-way normalization per book, then average.
+- **Prototype:** `consensus_fair_prob_3way()` built in R&D `core/soccer_3way_probe.py` (Session 26).
+  Returns: `{fair_home, fair_draw, fair_away, std_dev, n_books}`.
+- **Next R&D step (Session 27):** Build clean `core/soccer_consensus.py` module with smoke tests.
+- **v36 integration:** Detect soccer by sport key (`sport.startswith("soccer_")`).
+  Soccer h2h → `consensus_fair_prob_3way()`. All other sports → existing 2-way method unchanged.
+  Draw outcome: `fair_draw` computed but no draw BetCandidate generated (draw betting not in scope).
+- **Owner:** R&D builds clean module. v36 integrates into `edge_calculator.py`.
 
 ---
 
@@ -239,6 +244,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 | v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |
 | v36 S20 cont. | CEILING 3 / SECTION 5 (RLM 2.0 persistent store) — `price_history_store.py` + Supabase table + tests |
 | v36 S19 (2026-02-18) | MLB/MLS/NFL efficiency data (234 teams), Hawks collision fix |
+| R&D S26 (2026-02-19) | GAP 4 soccer 3-outcome CONFIRMED MATERIAL (+13.46pp avg inflation). `core/soccer_3way_probe.py` + prototype built. |
 | R&D S25 (2026-02-19) | EXP 9 CLOSED (baseball_ncaa 2.1 avg books — below threshold). EXP 8 BLOCKED (H2 tier). |
 | R&D S24 (2026-02-19) | EXP 5 `core/parlay_builder.py` built + validated (6/6 smoke tests). B2 + calibration gated. |
 | R&D S21 (2026-02-19) | `core/odds_comparator.py` built + validated (12/12 checks). Pinnacle probe + CLV live run blocked by wifi. |
