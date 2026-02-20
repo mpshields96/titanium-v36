@@ -148,11 +148,19 @@
 - **Output:** Per-book weight multipliers for `_consensus_fair_prob()`. Better model probability.
 - **Gate:** Needs sufficient bet history data. Long-term research.
 
-### R&D EXP 7: NCAAF Efficiency Data [ ]
-- **What:** 130 FBS teams, SP+ ratings (ESPN public) as AdjEM equivalent.
-- **Deadline:** Before NCAAF season Aug 2026.
-- **Risk:** High alias collision (many NCAAF and NCAAB teams share city names). Run /sc:analyze first.
-- **Owner:** R&D builds, same pattern as NCAAB.
+### R&D EXP 7: NCAAF Efficiency Data [~] ← Phase 1 complete R&D Session 28 — 40 programs
+- **What:** FBS teams, SP+ ratings (ESPN public) as AdjEM equivalent.
+- **Status:** `_NCAAF_DATA` (40 programs) + `_NCAAF_ALIASES` added to `efficiency_feed.py`.
+  Separate dict from `_TEAM_DATA` — shared-school NCAAB/NCAAF programs (Ohio St, Alabama, etc.)
+  have different metric bases (KenPom vs SP+). Merging would corrupt NCAAB values.
+  `get_efficiency_gap(h, a, sport="americanfootball_ncaaf")` routes to SP+ data.
+  Collision guards verified: Colorado, Miami, Washington, USC all resolve correctly.
+  40/40 teams pass range check. Self-test passes.
+- **v36 wire-in:** `get_efficiency_gap(h, a, sport=sport_key)` — one-line change per call site.
+  Detect by `sport_key == "americanfootball_ncaaf"`. No changes to existing call sites.
+- **Deadline:** Aug 2026. No v36 integration needed until NCAAF season prep window.
+- **Risk resolved:** Shared-school collision solved via separate dict + sport discriminator.
+- **Owner:** v36 integrates at Aug 2026 deadline. R&D Phase 1 complete.
 
 ### R&D EXP 8: Alternate Line Parsing [BLOCKED]
 - **What:** Parse alternate spreads/totals (e.g. -3 at -140 vs standard -6.5 at -110).
@@ -245,6 +253,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 | v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |
 | v36 S20 cont. | CEILING 3 / SECTION 5 (RLM 2.0 persistent store) — `price_history_store.py` + Supabase table + tests |
 | v36 S19 (2026-02-18) | MLB/MLS/NFL efficiency data (234 teams), Hawks collision fix |
+| R&D S28 (2026-02-19) | EXP 7 NCAAF SP+ data: 40 programs, `_NCAAF_DATA` dict, sport param added to `get_efficiency_gap()`. 242 total teams. |
 | R&D S27 (2026-02-19) | GAP 4 `core/soccer_consensus.py` COMPLETE (6/6 smoke tests). Ready for v36 `edge_calculator.py` integration. |
 | R&D S26 (2026-02-19) | GAP 4 soccer 3-outcome CONFIRMED MATERIAL (+13.46pp avg inflation). `core/soccer_3way_probe.py` + prototype built. |
 | R&D S25 (2026-02-19) | EXP 9 CLOSED (baseball_ncaa 2.1 avg books — below threshold). EXP 8 BLOCKED (H2 tier). |
