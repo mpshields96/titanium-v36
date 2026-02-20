@@ -89,6 +89,9 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 18 | ✅ Done | page_bet_history() full impl (P&L strip, Pending, History Log + MARK RESULT), + TRACK BET on Live Analysis cards, render_slate_header/footer helpers — 95/95 tests |
 | 19 | ✅ Done | efficiency_feed.py MLB/MLS/NFL promotion (234 teams total), Hawks alias collision fix, 11 new tests — 106/106 tests |
 | 20 | ✅ Done | docs/MASTER_ROADMAP.md created, page_pnl_tracker() fully built, RLM 2.0: data/price_history_store.py + Supabase price_history table + _extract_open_prices() refactor — 116/116 tests |
+| 21 | ✅ Done | UI 2 Odds Comparison page, data/odds_comparator.py promoted from R&D, app.py cleanup (dead imports, del→pop fix, try/finally on pipeline) |
+| 22 | ✅ Done | UI 5 CLV column in Bet History, data/clv_store.py (NEW), clv_history Supabase table, record_clv_open() wired at Track Bet, 19 new tests — 135/135 tests |
+| 23 | ✅ Done | CLAUDE.md .not_ mock pattern, MASTER_ROADMAP session log, all MD files refreshed, PROJECT_INDEX.md updated |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -128,6 +131,10 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - **eff_data multi-sport:** call `eff_data.update(build_efficiency_data(raw_games))` unconditionally per sport — never gate inside `if sport == "X"` or efficiency data silently won't reach rank_bets() for other sports.
 - **Equity curve charts:** `st.line_chart(df, color="#14B8A6", height=180)` — pass pd.DataFrame with named index. Works on Streamlit Cloud, no extra deps. Used in `page_pnl_tracker()`.
 - **P&L session cache:** `"pnl_data"` key is independent of `"bet_history_data"` — bust with `st.session_state.pop("pnl_data", None)` + `st.rerun()` after any outcome write.
+- **CLV open_price:** Always `bet.price` (NOT `get_open_price()`). `get_open_price` uses team-name keys; `clv_history` table uses `(event_id, target, market_type)` unique key. No collision risk with `bet.price`.
+- **Odds Comparison data source:** `st.session_state["raw_games"]` — zero new API calls. Page is inert until pipeline has run at least once in the session.
+- **Supabase `.not_` mock pattern:** `.not_` is a property (not callable). `mock_table.not_.return_value = mock_table` DOES NOT WORK. Use `mock_table.not_ = mock_table` so `.not_.is_(...)` routes through the configured mock and `.execute()` returns correct test data.
+- **MEMORY.md 200-line limit:** Detailed session learnings live in `~/.claude/projects/.../memory/session-learnings.md`. MEMORY.md stays as a concise index under 150 lines. Always link, don't duplicate.
 
 ## If Starting a New Chat Session
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)

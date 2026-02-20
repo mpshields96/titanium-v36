@@ -134,16 +134,19 @@
 - **Risk:** High alias collision (many NCAAF and NCAAB teams share city names). Run /sc:analyze first.
 - **Owner:** R&D builds, same pattern as NCAAB.
 
-### R&D EXP 8: Alternate Line Parsing [ ]
+### R&D EXP 8: Alternate Line Parsing [BLOCKED]
 - **What:** Parse alternate spreads/totals (e.g. -3 at -140 vs standard -6.5 at -110).
   Higher consensus dispersion on alt lines = potentially larger real edges.
-- **Risk:** Alt lines are often traps — juice reflects true price adjustment. Needs validation first.
-- **Owner:** R&D probe only. Do not promote without CLV validation.
+- **Status:** `alternate_spreads` / `alternate_totals` market keys NOT supported on H1 tier.
+  API returns: "Markets not supported by this endpoint". Requires H2 tier (~$30/mo). Same gate as Pinnacle.
+- **Reopen when:** User upgrades to H2 tier. No R&D build until then.
 
-### R&D EXP 9: College Baseball Probe [ ]
+### R&D EXP 9: College Baseball Probe [x] ← CLOSED R&D Session 25
 - **What:** Check Odds API coverage for `baseball_ncaa`. If < 5 books on average → skip.
-  Consensus signal breaks down below 3 books. Market is thin.
-- **Owner:** R&D 10-minute probe. Report book count per game.
+- **Result (2026-02-19 live probe):** 44 games returned. Avg **2.1 books/game**. Min 1, max 6.
+  84% of games have only DraftKings + BetMGM. Consensus invalid below 3 books.
+- **Verdict:** SKIP. Do not build baseball_ncaa efficiency data or pipeline support.
+  Market too thin for consensus-based edge detection at current tier.
 
 ### R&D EXP 10: Tennis — Separate Pipeline [ ]
 - **Note:** Fundamentally different from all current sports. Moneyline only, no spread/totals,
@@ -222,5 +225,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 | v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |
 | v36 S20 cont. | CEILING 3 / SECTION 5 (RLM 2.0 persistent store) — `price_history_store.py` + Supabase table + tests |
 | v36 S19 (2026-02-18) | MLB/MLS/NFL efficiency data (234 teams), Hawks collision fix |
+| R&D S25 (2026-02-19) | EXP 9 CLOSED (baseball_ncaa 2.1 avg books — below threshold). EXP 8 BLOCKED (H2 tier). |
+| R&D S24 (2026-02-19) | EXP 5 `core/parlay_builder.py` built + validated (6/6 smoke tests). B2 + calibration gated. |
 | R&D S21 (2026-02-19) | `core/odds_comparator.py` built + validated (12/12 checks). Pinnacle probe + CLV live run blocked by wifi. |
 | R&D S20 (2026-02-19) | EXP 3 script built (`sharp_score_calibration.py`), EXP 1 + EXP 2 scripts built (need live run) |
