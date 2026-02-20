@@ -1,9 +1,9 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-19 (Session 22 — CLV Store + RLM 2.0 + Odds Comparison)
+Generated: 2026-02-19 (Session 24 — Soccer 3-way consensus + Parlay builder promotion)
 
 ## Quick Start
 ```bash
-python3 -m pytest tests/ -v          # 135 tests — must pass before each session
+python3 -m pytest tests/ -v          # 163 tests — must pass before each session
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
@@ -23,7 +23,7 @@ titanium-v36/
 ├── .streamlit/
 │   ├── secrets.toml             # ODDS_API_KEY, SUPABASE_URL, SUPABASE_KEY (NEVER commit)
 │   └── config.toml              # Native dark theme (Session 14) — gold/teal palette, monospace
-├── app.py                       # Streamlit UI — 4 pages via st.navigation()
+├── app.py                       # Streamlit UI — 5 pages via st.navigation()
 ├── bet_card_renderer.py         # HTML card renderer (Session 14) — no math, no API
 ├── odds_fetcher.py              # Odds API + RLM cache + _extract_open_prices
 ├── edge_calculator.py           # Betting math, kill switches, pipeline entry point
@@ -38,12 +38,16 @@ titanium-v36/
 │   ├── price_history_store.py   # Supabase price_history persistence layer — RLM 2.0 (Session 20)
 │   ├── odds_comparator.py       # Odds Comparison data layer — build_odds_comparison() + to_dataframes() (Session 21)
 │   ├── clv_store.py             # Supabase clv_history persistence layer — Closing Line Value tracking (Session 22)
+│   ├── soccer_consensus.py      # 3-outcome vig removal for soccer h2h markets (Session 24)
+│   ├── parlay_builder.py        # 2-leg parlay combo identification + EV ranking (Session 24)
 │   └── team_stats_bunker.py     # Fallback static stats
 └── tests/
     ├── test_validation.py           # 66 tests — math, collar, kelly, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards
     ├── test_odds_fetcher.py         # 40 tests — API, rest days, RLM, _extract_open_prices
     ├── test_price_history_store.py  # 10 tests — is_configured, record_new_events, inject_into_cache (Session 20)
-    └── test_clv_store.py            # 19 tests — record_clv_open, update_clv_close, fetch_clv_for_events, get_clv_summary (Session 22)
+    ├── test_clv_store.py            # 19 tests — record_clv_open, update_clv_close, fetch_clv_for_events, get_clv_summary (Session 22)
+    ├── test_soccer_consensus.py     # 13 tests — american_to_implied, 3-way fair probs, std_dev (Session 24)
+    └── test_parlay_builder.py       # 15 tests — _american_to_decimal, _parlay_ev, build_parlay_combos, format_parlay_table (Session 24)
 ```
 
 ---
@@ -73,7 +77,7 @@ No math, no UI. HTTP calls + session-scoped price cache.
 | `preferred_book(bookmakers)` | `dict\|None` | DraftKings > FanDuel > BetMGM > BetRivers > Caesars |
 | `all_books(bookmakers)` | `list` | All books sorted by preference |
 | `get_quota_status()` | `str` | used/remaining/last_call_cost |
-| `_extract_open_prices(game)` | `dict[str,float]` | **Session 20** — extract {"home": price, "away": price} from raw game dict; tries PREFERRED_BOOKS order, uses first h2h market found; returns {} if no usable prices |
+| `_extract_open_prices(game)` | `dict[str,float]` | **Session 20** — extract {"home": price, "away": price}; tries PREFERRED_BOOKS order; returns {} if no usable prices |
 | `cache_open_prices(games)` | `int` | Freeze open prices (first call wins, frozen after) |
 | `get_open_price(event_id, side)` | `float\|None` | Return cached open price |
 | `clear_open_price_cache()` | `None` | Reset — call in test setup_method |
@@ -94,17 +98,17 @@ No API calls, no UI. Math + kill switch logic only.
 | `calculate_edges(sport, raw_games, louisiana_mode, min_edge)` | `list[BetCandidate]` | Single entry point (dead stub removed Session 13) |
 | `passes_collar(american_odds)` | `bool` | -180 to +150 only |
 | `_implied_probability(american_odds)` | `float` | Vig-inclusive |
-| `no_vig_probability(odds_a, odds_b)` | `(float, float)` | Fair probs both sides |
+| `no_vig_probability(odds_a, odds_b)` | `(float, float)` | Fair probs both sides — 2-outcome |
 | `calculate_edge(titanium_prob, market_odds)` | `float` | model − implied |
 | `calculate_profit(odds, units)` | `float` | Profit in units |
 | `fractional_kelly(win_prob, odds, fraction=0.25)` | `float` | 0.25x Kelly, capped |
 | `calculate_sharp_score(edge_pct, rlm_confirmed, efficiency_gap, ...)` | `(float, dict)` | 0–100 composite |
 | `sharp_to_size(sharp_score)` | `str` | NUCLEAR/STANDARD/LEAN tier label |
 | `run_nemesis(bet, sport)` | `dict` | Display-only annotation — no scoring effect |
-| `parse_game_markets(game, sport)` | `list[BetCandidate]` | Consensus edge detection |
+| `parse_game_markets(game, sport)` | `list[BetCandidate]` | Consensus edge detection. **Session 24:** soccer h2h uses `consensus_fair_prob_3way()` (3-way vig removal); non-soccer h2h uses 2-outcome `_consensus_fair_prob()`. |
 | `nba/nfl/ncaab/soccer_kill_switch(...)` | `(bool, str)` | All four wired |
 
-Internal: `_SPORT_ROUTING` maps 12 sports → fetch key + kill family. `_apply_nba_kill(bet, schedule_rest)` overlays live rest days.
+Internal: `_SPORT_ROUTING` maps 12 sports → fetch key + kill family. `_apply_nba_kill(bet, schedule_rest)` overlays live rest days. `_is_soccer` flag in `parse_game_markets()` checks uppercase routing key set: `{EPL, LIGUE1, BUNDESLIGA, SERIE_A, LA_LIGA, MLS}`.
 
 **BetCandidate fields:**
 `sport, matchup, market_type, target, line, price, edge_pct, win_prob, market_implied, fair_implied, kelly_size, signal, event_id, commence_time, book, sharp_score, sharp_breakdown, nemesis, simulation, kill_reason, rest_days, opp_rest_days, std_dev`
@@ -185,13 +189,45 @@ No math, no UI. Supabase persistence for empirical edge validation.
 |----------|---------|-------|
 | `is_configured()` | `bool` | True if Supabase credentials present |
 | `record_clv_open(event_id, target, market_type, open_price, sport, matchup)` | `dict\|None` | Write entry price; UNIQUE constraint prevents duplicates; None on conflict |
-| `update_clv_close(event_id, target, market_type, closing_price)` | `dict\|None` | Fill closing_price + compute clv_pct (built, not yet wired — future pipeline re-check) |
+| `update_clv_close(event_id, target, market_type, closing_price)` | `dict\|None` | Fill closing_price + compute clv_pct (built, not yet wired — future) |
 | `fetch_clv_for_events(event_ids)` | `dict[tuple,dict]` | Batch fetch keyed by (event_id, target, market_type) |
 | `get_clv_summary()` | `dict` | n, avg_clv_pct, positive_rate, verdict |
 
 Verdict thresholds: `avg >= 1.5 AND pos_rate >= 0.55` → EDGE CONFIRMED · `avg >= 0.5 AND pos_rate >= 0.50` → MARGINAL · else → NO EDGE DETECTED
 
 **Key design:** `open_price = bet.price` — NOT `get_open_price()` (team-name key collision across h2h/spreads markets).
+
+---
+
+### data/soccer_consensus.py — 3-way Vig Removal (Session 24)
+No API calls, no UI. Math only — correct vig removal for soccer h2h markets.
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `american_to_implied(american)` | `float` | Raw implied probability (includes vig) |
+| `consensus_fair_prob_3way(home_prices, draw_prices, away_prices)` | `dict` | Consensus fair probs for 3-outcome market. Keys: fair_home, fair_draw, fair_away, std_dev, n_books |
+
+Called from `parse_game_markets()` for soccer h2h only (`_is_soccer` flag). All non-soccer h2h and all spreads/totals use existing 2-outcome `no_vig_probability()`. Draw outcome name in Odds API = `"Draw"` (verified in R&D probe).
+
+**Why this exists:** `_consensus_fair_prob()` used 2-way vig removal on 3-outcome soccer markets, inflating fair_home by avg +13.46pp and fair_away by avg +10.42pp (live EPL probe, 198 book-game pairs). Fixed Session 24.
+
+---
+
+### data/parlay_builder.py — 2-leg Parlay Combos (Session 24)
+No API calls, no UI. Math only — parlay combo identification + EV ranking.
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `_american_to_decimal(american)` | `float` | American → decimal odds (includes stake return) |
+| `_parlay_ev(prob_a, price_a, prob_b, price_b)` | `dict` | 2-leg parlay metrics: parlay_prob, parlay_payout, parlay_ev |
+| `build_parlay_combos(bets)` | `list[dict]` | All valid 2-leg combos (different event_id) with positive EV, sorted descending |
+| `format_parlay_table(combos)` | `str` | CLI-printable table. "No positive-EV..." message if empty. |
+
+Input: `list[dict]` — BetCandidate-style (keys: event_id, target, market_type, win_prob, price, edge_pct, matchup).
+
+**v36 call site shim:** `build_parlay_combos([vars(b) for b in ranked_bets])` — converts BetCandidate dataclass → dict. Do NOT change parlay_builder to accept dataclasses (no v36-specific imports in data/ modules).
+
+**Math:** `parlay_prob = prob_a × prob_b` · `parlay_payout = (payout_a+1)(payout_b+1) - 1` · `EV = parlay_prob × payout - (1-parlay_prob)`. Only positive-EV combos returned.
 
 ---
 
@@ -240,14 +276,16 @@ Known bug: `mean` input receives `bet.line` instead of projected margin. Tracked
 
 ---
 
-### app.py — Streamlit UI (4 pages)
+### app.py — Streamlit UI (5 pages)
 No business logic, no API calls, no math.
 
-Pages: `page_live_analysis()` · `page_bet_history()` · `page_pnl_tracker()` · `page_odds_comparison()`
+Pages: `page_live_analysis()` · `page_bet_history()` · `page_pnl_tracker()` · `page_odds_comparison()` · `page_parlay_builder()` (Session 24)
 
 `run_pipeline()` flow: pre-fetch `raw_games` → accumulate `all_raw_games` → RLM 2.0 store → `cache_open_prices()` → `compute_rlm()` → `calculate_edges(raw_games=raw_games)` → `rank_bets(rlm_data=rlm_data)`. **One API call per sport.**
 
 Session 22: `record_clv_open(open_price=bet.price)` wired after Track Bet. Bet History History Log = 9 columns with CLV.
+
+Session 24: `page_parlay_builder()` reads `st.session_state["results"]`, converts with `[vars(b) for b in ranked]`, calls `build_parlay_combos()`. Inert until pipeline runs.
 
 ---
 
@@ -304,7 +342,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | `test_odds_fetcher.py` | 40 | API fetch, preferred book, rest days, RLM, _extract_open_prices |
 | `test_price_history_store.py` | 10 | is_configured, record_new_events, inject_into_cache (Session 20) |
 | `test_clv_store.py` | 19 | record_clv_open, update_clv_close, fetch_clv_for_events, get_clv_summary (Session 22) |
-| **Total** | **135** | all passing |
+| `test_soccer_consensus.py` | 13 | american_to_implied, 3-way fair probs, std_dev, validation (Session 24) |
+| `test_parlay_builder.py` | 15 | _american_to_decimal, _parlay_ev, build_parlay_combos, format_parlay_table (Session 24) |
+| **Total** | **163** | all passing |
 
 ---
 
@@ -325,7 +365,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 19 | ✅ | `efficiency_feed.py` MLB/MLS/NFL (234 teams), Hawks alias fix, 11 new tests |
 | 20 | ✅ | `data/price_history_store.py` (RLM 2.0), `_extract_open_prices()`, `page_pnl_tracker()`, `docs/MASTER_ROADMAP.md` |
 | 21 | ✅ | `data/odds_comparator.py` (R&D promotion), `page_odds_comparison()`, app.py cleanup |
-| 22 | ✅ | `data/clv_store.py` (CLV tracking), `clv_history` Supabase table, 19 new tests, **135 total** |
+| 22 | ✅ | `data/clv_store.py` (CLV tracking), `clv_history` Supabase table, 19 new tests — **135 total** |
+| 23 | ✅ | CLAUDE.md `.not_` mock pattern, PROJECT_INDEX + SESSION_STATE + MASTER_ROADMAP sync, housekeeping |
+| 24 | ✅ | `data/soccer_consensus.py` (3-way vig removal), `data/parlay_builder.py` (2-leg combos), `page_parlay_builder()` — **163 total** |
 
-Last commit: `ce7ac11` · Tests: **135 passing** · Quota: ~16,663 remaining
-Next session (23) — NEW CHAT: read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md → run tests.
+Last commit: `fb3ebf8` · Tests: **163 passing** · Quota: ~16,663 remaining
+Next session (25) — NEW CHAT: read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md → confirm 163/163.

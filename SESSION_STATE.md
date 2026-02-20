@@ -253,7 +253,7 @@ Notes:
 
 ## CURRENT STATE
 Last completed: Session 24 — GAP 4 soccer 3-way fix + EXP 5 parlay builder promoted + UI 4 Parlay Builder tab live.
-Last git commit: TBD (commit pending end of session)
+Last git commit: fb3ebf8 (pushed to origin/main)
 Tests: 163 total, all passing
 Quota: ~16,663 remaining (R&D Session 22 ran Pinnacle probe + CLV live run — no live API calls this session)
 Streamlit Cloud: deployed, auto-deploys from main
