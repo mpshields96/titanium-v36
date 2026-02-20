@@ -252,23 +252,30 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 22 — CLV Tracker wire-in (data/clv_store.py + UI 5 + Supabase clv_history table)
-Last git commit: ae54a03 (pushed to origin/main)
+Last completed: Session 23 — wrap-up only. CLAUDE.md updated (sessions 21–23, CLV/.not_ mock/MEMORY limit rules). All MD files refreshed. MASTER_ROADMAP R&D S24/S25 absorbed.
+Last git commit: 07d872a (pushed to origin/main)
 Tests: 135 total, all passing
 Quota: ~16,663 remaining (R&D Session 22 ran Pinnacle probe + CLV live run)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
-### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 23)
-Session 22 complete. Read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
-Then: python3 -m pytest tests/ -v (confirm 135/135)
-Then: read HANDOFF.md in titanium-experimental for R&D Session 23 output before deciding what to build.
+### R&D status absorbed (R&D Sessions 24–25, 2026-02-19)
+- R&D S24: EXP 5 `core/parlay_builder.py` built + validated (6/6 smoke tests). B2 + calibration still gated.
+- R&D S25: EXP 9 (baseball_ncaa) CLOSED — avg 2.1 books/game, below 3-book threshold. Too thin for consensus.
+  EXP 8 (alternate lines) BLOCKED — H2 tier required. Same gate as Pinnacle (~$30/mo).
 
-Session 23 priorities (from MASTER_ROADMAP.md):
-- B2 gate check: on/after 2026-03-04 — check espn_stability.log in R&D. If cleared: promote espn_injury_fetcher.py
-- Sharp Score calibration: run core/sharp_score_calibration.py when v36 has 30+ resolved bets
-- CLV close: update_clv_close() is built but not wired — future feature when closing prices are available
-- Pinnacle: NOT on current H1 tier. H2 upgrade = ~$30/mo. User decision if desired.
+### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 24)
+Session 23 complete. Read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
+Then: python3 -m pytest tests/ -v (confirm 135/135)
+Then: read HANDOFF.md in titanium-experimental for R&D S24/S25 output.
+
+Session 24 priorities — ALL GATED, nothing unblocked to build in v36:
+- UI 4 (Parlay Builder tab): R&D EXP 5 parlay_builder.py is built. Promote to v36 if user approves.
+  Math: parlay_prob = prob_a × prob_b. parlay_payout = (payout_a+1)(payout_b+1) - 1. EV = parlay_prob × payout - (1-parlay_prob).
+- B2 injury leverage: gate 2026-03-04 (check espn_stability.log in R&D). If cleared: promote espn_injury_fetcher.py.
+- Sharp Score calibration: run core/sharp_score_calibration.py when v36 has 30+ resolved bets (currently 0).
+- CLV close: update_clv_close() built but not wired — future when closing prices available.
+- Pinnacle / alternate lines: H2 tier (~$30/mo). User decision.
 
 ### What was built in Session 22
 1. **R&D Session 22 findings absorbed:**
