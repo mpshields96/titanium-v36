@@ -253,7 +253,7 @@ Notes:
 
 ## CURRENT STATE
 Last completed: Session 22 — CLV Tracker wire-in (data/clv_store.py + UI 5 + Supabase clv_history table)
-Last git commit: (commit pending — run git push after this)
+Last git commit: ae54a03 (pushed to origin/main)
 Tests: 135 total, all passing
 Quota: ~16,663 remaining (R&D Session 22 ran Pinnacle probe + CLV live run)
 Streamlit Cloud: deployed, auto-deploys from main
