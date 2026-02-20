@@ -169,6 +169,10 @@ Rules:
 - When promoting R&D code to v36: v36 chat reads R&D files, then writes v36 files. Never the reverse.
 - HANDOFF.md in `titanium-experimental/` is the communication channel. R&D writes it; v36 reads it.
 - SESSION_STATE.md in `titanium-v36/` is v36-only. R&D reads it for context only.
+- **R&D_LOG.md** (or equivalent coordination file) in `titanium-experimental/` replaces copy-paste handoffs.
+  R&D logs its outputs there and requests instructions from v36. v36 reads it at session start and writes back
+  with responses/next-session instructions. User no longer needs to relay messages between chats manually.
+  When this file exists: read it alongside HANDOFF.md. Treat it as authoritative for R&D delivery status.
 
 ## Deployment Checklist
 - [ ] No API keys in code
