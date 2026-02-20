@@ -369,5 +369,7 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 23 | ✅ | CLAUDE.md `.not_` mock pattern, PROJECT_INDEX + SESSION_STATE + MASTER_ROADMAP sync, housekeeping |
 | 24 | ✅ | `data/soccer_consensus.py` (3-way vig removal), `data/parlay_builder.py` (2-leg combos), `page_parlay_builder()` — **163 total** |
 
-Last commit: `fb3ebf8` · Tests: **163 passing** · Quota: ~16,663 remaining
-Next session (25) — NEW CHAT: read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md → confirm 163/163.
+Last commit: `603b52c` · Tests: **163 passing** · Quota: ~16,663 remaining
+Session 25 complete — housekeeping only (API quota rule, SESSION_STATE B2 gate update). All work gated.
+Next session (26) — NEW CHAT: read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md → confirm 163/163.
+B2 gate opens 2026-03-04 — check espn_stability.log. Wire-in spec ready in HANDOFF.md.
