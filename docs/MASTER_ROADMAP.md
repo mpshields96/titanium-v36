@@ -42,11 +42,12 @@
 - **Fix:** `fair_x = imp_x / (imp_home + imp_draw + imp_away)` — 3-way normalization per book, then average.
 - **Prototype:** `consensus_fair_prob_3way()` built in R&D `core/soccer_3way_probe.py` (Session 26).
   Returns: `{fair_home, fair_draw, fair_away, std_dev, n_books}`.
-- **Next R&D step (Session 27):** Build clean `core/soccer_consensus.py` module with smoke tests.
+- **R&D Session 27:** `core/soccer_consensus.py` COMPLETE. 6/6 smoke tests pass. Ready for v36 promotion.
 - **v36 integration:** Detect soccer by sport key (`sport.startswith("soccer_")`).
   Soccer h2h → `consensus_fair_prob_3way()`. All other sports → existing 2-way method unchanged.
   Draw outcome: `fair_draw` computed but no draw BetCandidate generated (draw betting not in scope).
-- **Owner:** R&D builds clean module. v36 integrates into `edge_calculator.py`.
+- **Wire-in:** `from core.soccer_consensus import consensus_fair_prob_3way` — see HANDOFF.md R&D S27 results for full integration snippet.
+- **Owner:** v36 integrates into `edge_calculator.py`. R&D module is ready.
 
 ---
 
@@ -244,6 +245,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 | v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |
 | v36 S20 cont. | CEILING 3 / SECTION 5 (RLM 2.0 persistent store) — `price_history_store.py` + Supabase table + tests |
 | v36 S19 (2026-02-18) | MLB/MLS/NFL efficiency data (234 teams), Hawks collision fix |
+| R&D S27 (2026-02-19) | GAP 4 `core/soccer_consensus.py` COMPLETE (6/6 smoke tests). Ready for v36 `edge_calculator.py` integration. |
 | R&D S26 (2026-02-19) | GAP 4 soccer 3-outcome CONFIRMED MATERIAL (+13.46pp avg inflation). `core/soccer_3way_probe.py` + prototype built. |
 | R&D S25 (2026-02-19) | EXP 9 CLOSED (baseball_ncaa 2.1 avg books — below threshold). EXP 8 BLOCKED (H2 tier). |
 | R&D S24 (2026-02-19) | EXP 5 `core/parlay_builder.py` built + validated (6/6 smoke tests). B2 + calibration gated. |
