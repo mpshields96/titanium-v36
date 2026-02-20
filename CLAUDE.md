@@ -55,6 +55,14 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Player props (player_points, player_pass_yds etc.) NOT supported on current API tier — confirmed 422 Feb 2026
 - NHL sparse coverage (h2h only, few books) is normal for games >3 days out; spreads/totals open closer to game day
 
+## API Quota — DO NOT BURN (non-negotiable)
+- Quota is a hard finite resource. 10% → 45% burned in a single day is unacceptable.
+- **R&D live API calls require explicit user approval before every run.** No exceptions.
+- Default for ALL R&D probe/validation scripts: use saved fixture JSON, not live endpoints.
+- Before running any script that calls `fetch_game_lines()` or any `_get()`: state the call count and ask the user to confirm.
+- v36 production is fine (1 call/sport on EXECUTE SCAN only). R&D is the risk surface.
+- Never run multi-sport probes, validation loops, or iterative probes without explicit per-run approval.
+
 ## Session Workflow
 - State which file you're working on and what the last working state was
 - One function at a time. Write a test before building the next function.

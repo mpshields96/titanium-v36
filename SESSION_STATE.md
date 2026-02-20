@@ -284,12 +284,14 @@ Session 24 complete. Read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSIO
 Then: python3 -m pytest tests/ -v (confirm 163/163)
 
 Session 25 priorities — all current v36 work is gated:
-- B2 injury leverage: gate 2026-03-04 (check espn_stability.log in R&D). Not yet.
+- B2 injury leverage: gate 2026-03-04. espn_stability.log has 10 entries, all 2026-02-19 — gate not met yet.
+  R&D Session 29 pre-wire COMPLETE: `get_nba_injury_leverage_for_game()` built in R&D kill_switch_feed.py.
+  Wire-in spec in HANDOFF.md "R&D Session 29 Instructions → For v36 Session 29". Ready to promote when gate opens.
 - Sharp Score calibration: gate 30+ resolved bets in bet_history (currently 0).
 - CLV close: update_clv_close() built but not wired — future when closing prices available.
 - Pinnacle / alternate lines: H2 tier (~$30/mo). User decision.
 - NCAAF efficiency: R&D EXP 7 complete (40 programs). v36 integration Aug 2026 window.
-- PROJECT_INDEX.md: needs update for new modules (soccer_consensus, parlay_builder, new tests).
+- API quota rule added to CLAUDE.md + MEMORY.md (Session 25): R&D live calls require explicit approval.
 
 ### What was built in Session 22
 1. **R&D Session 22 findings absorbed:**
