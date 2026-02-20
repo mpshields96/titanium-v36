@@ -32,6 +32,17 @@
 - **Fix:** Call-site only. R&D fixed in `core/titanium.py`. Same pattern applies to v36 when simulation is promoted.
 - **Do not promote until:** Simulation output is used for sizing decisions, not just display.
 
+### GAP 4: Soccer 3-Outcome Edge Inflation [~] ← R&D Session 26 investigating
+- **Problem:** `_consensus_fair_prob()` calls `no_vig_probability(odds_a, odds_b)` — a 2-outcome vig removal.
+  Soccer h2h is a 3-outcome market (home / draw / away). The draw outcome is ignored when computing
+  fair probability. This may inflate implied edge on soccer moneylines — potential false positives on EPL, Bundesliga, etc.
+- **Correct fix:** 3-way normalization:
+  `fair_x = imp_x / (imp_home + imp_draw + imp_away)` for each of home, draw, away.
+- **Materiality gate:** R&D quantifying error on live EPL games (Session 26). If avg error > 2pp → material.
+- **If material:** R&D prototypes `_consensus_fair_prob_3way()`. v36 promotes and replaces soccer call sites.
+- **If not material (≤ 2pp):** Document as acceptable approximation. Close issue.
+- **Owner:** R&D investigates + prototypes. v36 decides promotion.
+
 ---
 
 ## SECTION 2 — STRUCTURAL CEILING PROBLEMS (previously called "what model will never catch")
@@ -113,14 +124,17 @@
 ### R&D EXP 4: Live Weather API for NFL Wind [ ]
 - **See SECTION 1 GAP 1 above.** R&D builds standalone module. Aug 2026 deadline.
 
-### R&D EXP 5: Multi-Game Parlay Identification [ ]
+### R&D EXP 5: Multi-Game Parlay Identification [~] ← Prototype complete R&D Session 24. Live validation pending.
 - **What:** Identify 2-leg parlay combinations from the ranked slate where:
   (a) events are independent (different games), (b) both bets pass Sharp Score threshold,
   (c) combined Kelly suggests positive parlay EV.
 - **Math:** parlay_prob = prob_a × prob_b. parlay_payout = (payout_a + 1) × (payout_b + 1) - 1.
   EV = parlay_prob × parlay_payout - (1 - parlay_prob). Only show if EV > 0.
-- **Where it lands:** New "Parlay Builder" tab in Streamlit app.
-- **Owner:** R&D prototypes. No v36 until validated.
+- **Status:** `core/parlay_builder.py` built (Session 24). 6/6 smoke tests pass.
+  `build_parlay_combos(bets)` + `format_parlay_table(combos)` implemented. Wire-in: `[vars(b) for b in ranked_bets]`.
+  Live validation pending (Session 26 Task 2 — NBA game day required).
+- **Where it lands:** New "Parlay Builder" tab in Streamlit app (UI 4).
+- **Owner:** R&D live validation → v36 promotes.
 
 ### R&D EXP 6: Market Efficiency by Sport/Book [ ]
 - **What:** Over 50+ bets, identify which books are most consistently mispriced vs. consensus.
