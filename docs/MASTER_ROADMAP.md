@@ -216,6 +216,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| v36 S23 (2026-02-19) | CLAUDE.md Session 22 learnings, PROJECT_INDEX.md updated (135 tests, 3 new modules), session handoffs prepared |
 | v36 S22 (2026-02-19) | UI 5 (CLV column), `data/clv_store.py` (NEW), `clv_history` Supabase table, 19 new tests (135 total) |
 | v36 S21 (2026-02-19) | UI 2 (Odds Comparison page), `data/odds_comparator.py` promoted, app.py cleanup |
 | v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |

@@ -61,6 +61,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - If code breaks: describe behavior ("returns empty list"), not "fix it"
 - Never push to GitHub without checking the deployment checklist
 - Module-level caches (e.g. `_OPEN_PRICE_CACHE`) need `setup_method` teardown in tests — call clear function before each test or tests bleed state
+- Supabase mock `.not_` chain: `mock_table.not_` is a property (not callable), so `mock_table.not_.return_value = mock_table` does NOT work. Use `mock_table.not_ = mock_table` so `.not_.is_(...)` resolves back through the configured mock and `.execute()` returns correct test data
 - Pass `raw_games` into `calculate_edges(sport, raw_games=raw_games)` to avoid double API call — it skips internal fetch when provided
 - Never import `edge_calculator` from `odds_fetcher.py` — circular import (`edge_calculator` already imports `odds_fetcher`)
 - `data/price_history_store.py`: `from odds_fetcher import _extract_open_prices` must stay deferred (inside function body) — same circular import reason
