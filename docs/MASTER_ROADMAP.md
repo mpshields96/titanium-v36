@@ -17,13 +17,16 @@
 - **Deadline:** Before NFL season Aug 2026. Low urgency until then.
 - **Owner:** R&D builds standalone module. v36 promotes when tested.
 
-### GAP 2: Injury Leverage — ESPN B2 Wire-In [ ]
-- **Status:** Stub in `kill_switch_feed.py` — always returns 0.0. R&D module built + usage%-scored.
+### GAP 2: Injury Leverage — ESPN B2 Wire-In [~] ← R&D pre-wire complete (Session 29)
+- **Status:** `get_nba_injury_leverage_for_game(bet_team, opp_team)` built in R&D `kill_switch_feed.py`.
+  4/4 synthetic tests pass. Zero live API calls needed for validation.
+  Convention: opp injured = positive Sharp Score signal. Bet team injured = 0.0 (kill switch path).
 - **Gate:** Check `results/espn_stability.log` on or after **2026-03-04**.
   - Error rate < 5% AND avg NBA record count > 50 consistently → promote.
   - If Olympic break suppressed counts → extend 3 weeks post-resumption.
-- **Where it lands in v36:** `get_injury_leverage()` → `calculate_edges()` situational_data → `rank_bets()`.
-- **Impact:** Up to +5 pts on Sharp Score for games with significant injuries.
+- **Where it lands in v36:** `run_pipeline()` builds `sit_data` dict → `rank_bets(situational_data=sit_data)`.
+  Full wire-in spec in HANDOFF.md "R&D Session 29 Instructions → For v36 Session 29".
+- **Impact:** Up to +5 pts on Sharp Score for games with significant opp injuries.
 - **NCAAB:** Permanently stub — ESPN endpoint returns 0 college records.
 
 ### GAP 3: Trinity Simulation Mean Bug [ ]
@@ -257,6 +260,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 | v36 S20 (2026-02-19) | UI 1 (P&L Tracker), MASTER_ROADMAP created |
 | v36 S20 cont. | CEILING 3 / SECTION 5 (RLM 2.0 persistent store) — `price_history_store.py` + Supabase table + tests |
 | v36 S19 (2026-02-18) | MLB/MLS/NFL efficiency data (234 teams), Hawks collision fix |
+| R&D S29 (2026-02-20) | GAP 2 pre-wire: `get_nba_injury_leverage_for_game()` in `kill_switch_feed.py`. 4/4 synthetic tests. Wire-in spec in HANDOFF.md. Gate: 2026-03-04. |
 | R&D S28 (2026-02-19) | EXP 7 NCAAF SP+ data: 40 programs, `_NCAAF_DATA` dict, sport param added to `get_efficiency_gap()`. 242 total teams. |
 | R&D S27 (2026-02-19) | GAP 4 `core/soccer_consensus.py` COMPLETE (6/6 smoke tests). Ready for v36 `edge_calculator.py` integration. |
 | R&D S26 (2026-02-19) | GAP 4 soccer 3-outcome CONFIRMED MATERIAL (+13.46pp avg inflation). `core/soccer_3way_probe.py` + prototype built. |
