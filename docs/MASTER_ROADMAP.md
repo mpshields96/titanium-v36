@@ -32,7 +32,7 @@
 - **Fix:** Call-site only. R&D fixed in `core/titanium.py`. Same pattern applies to v36 when simulation is promoted.
 - **Do not promote until:** Simulation output is used for sizing decisions, not just display.
 
-### GAP 4: Soccer 3-Outcome Edge Inflation [~] ← CONFIRMED MATERIAL — R&D Session 26
+### GAP 4: Soccer 3-Outcome Edge Inflation [x] ← COMPLETE — v36 Session 24
 - **Problem:** `_consensus_fair_prob()` calls `no_vig_probability(odds_a, odds_b)` — a 2-outcome vig removal.
   Soccer h2h is a 3-outcome market (home / draw / away). Draw is excluded from denominator.
 - **Measured error (live EPL, 20 games, 198 book-game pairs, 2026-02-19):**
@@ -130,7 +130,7 @@
 ### R&D EXP 4: Live Weather API for NFL Wind [ ]
 - **See SECTION 1 GAP 1 above.** R&D builds standalone module. Aug 2026 deadline.
 
-### R&D EXP 5: Multi-Game Parlay Identification [~] ← Prototype complete R&D Session 24. Live validation pending.
+### R&D EXP 5: Multi-Game Parlay Identification [x] ← Complete v36 Session 24. data/parlay_builder.py promoted. UI 4 live.
 - **What:** Identify 2-leg parlay combinations from the ranked slate where:
   (a) events are independent (different games), (b) both bets pass Sharp Score threshold,
   (c) combined Kelly suggests positive parlay EV.
@@ -202,9 +202,12 @@
   Updates injury_leverage in session state, re-ranks bets without full pipeline re-run.
 - **Dependencies:** B2 injury leverage must be promoted first (Gate: 2026-03-04).
 
-### UI 4: Parlay Builder Tab (post-R&D EXP 5) [ ]
-- **What:** Displays valid 2-leg parlay combinations from current slate with EV calculation.
-- **Dependencies:** R&D EXP 5 must be validated first.
+### UI 4: Parlay Builder Tab [x] — COMPLETE (Session 24)
+- **Built:** `data/parlay_builder.py` promoted from R&D. `page_parlay_builder()` in `app.py`.
+  5th nav page (🔗 Parlay Builder). Inert until pipeline runs. Shows combo cards with EV/prob/payout.
+  Independence gate: same event_id pairs excluded. Positive-EV filter enforced.
+  Call site shim: `[vars(b) for b in ranked_bets]` (BetCandidate → dict).
+  15 new tests in `tests/test_parlay_builder.py`. 163/163 total passing.
 
 ### UI 5: CLV Column in Bet History [x] — COMPLETE (Session 22)
 - **Built:** `data/clv_store.py` (Supabase CLV persistence). `clv_history` table live.
@@ -247,6 +250,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| v36 S24 (2026-02-19) | GAP 4 soccer 3-way fix: `data/soccer_consensus.py` promoted, `edge_calculator.py` moneyline section branched on `_is_soccer`. EXP 5: `data/parlay_builder.py` promoted, `page_parlay_builder()` + 🔗 nav entry. 28 new tests (163 total). |
 | v36 S23 (2026-02-19) | CLAUDE.md Session 22 learnings, PROJECT_INDEX.md updated (135 tests, 3 new modules), session handoffs prepared |
 | v36 S22 (2026-02-19) | UI 5 (CLV column), `data/clv_store.py` (NEW), `clv_history` Supabase table, 19 new tests (135 total) |
 | v36 S21 (2026-02-19) | UI 2 (Odds Comparison page), `data/odds_comparator.py` promoted, app.py cleanup |

@@ -29,6 +29,7 @@ from data.kill_switch_feed import (
     get_ncaab_kill_inputs,
     get_soccer_kill_inputs,
 )
+from data.soccer_consensus import consensus_fair_prob_3way
 
 
 # ---------------------------------------------------------------------------
@@ -628,6 +629,12 @@ def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
       Step 3: Find the best available price at any single book.
       Step 4: Edge = consensus_prob - implied_probability(best_price).
 
+    Soccer h2h uses 3-way vig removal (GAP 4 fix — Session 24):
+      _consensus_fair_prob() assumes 2 outcomes. Soccer h2h has 3 (home/draw/away).
+      Draw probability was excluded from denominator, inflating edges by +10 to +19pp.
+      Soccer h2h now routed through consensus_fair_prob_3way() from data/soccer_consensus.py.
+      Spreads and totals are 2-outcome markets — unchanged for all sports.
+
     Minimum edge threshold: 3.5% (V36.1 non-negotiable rule).
     Minimum books required: 2 (single-book consensus is not reliable).
 
@@ -640,6 +647,10 @@ def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
         Empty list if insufficient data or no edges found.
     """
     from odds_fetcher import all_books as _all_books
+
+    _is_soccer = sport.upper() in {
+        "EPL", "LIGUE1", "BUNDESLIGA", "SERIE_A", "LA_LIGA", "MLS"
+    }
 
     candidates = []
     home = game.get("home_team", "")
@@ -704,49 +715,111 @@ def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
             ))
 
     # --- Moneylines ---
-    for team_name in [home, away]:
-        consensus_prob, std_dev, n_books = _consensus_fair_prob(
-            team_name, "h2h", "team", bookmakers
-        )
-        if n_books < 2:
-            continue
-
-        best_price = None
-        best_book_name = ""
+    if _is_soccer:
+        # Soccer h2h is a 3-outcome market (home / draw / away).
+        # 2-outcome vig removal inflates fair probs by +10 to +19pp (GAP 4, Session 24).
+        # Collect all 3 outcome prices per book, then apply 3-way normalization.
+        home_prices, draw_prices, away_prices = [], [], []
         for book in all_bks:
             mmap = {m["key"]: m for m in book.get("markets", [])}
             if "h2h" not in mmap:
                 continue
-            for o in mmap["h2h"].get("outcomes", []):
-                if o.get("name") == team_name:
-                    price = o.get("price", 0)
-                    if best_price is None or price > best_price:
-                        best_price = price
-                        best_book_name = book.get("title", book.get("key", ""))
+            outcomes = mmap["h2h"].get("outcomes", [])
+            h_p = next((o["price"] for o in outcomes if o.get("name") == home), None)
+            d_p = next((o["price"] for o in outcomes if o.get("name") == "Draw"), None)
+            a_p = next((o["price"] for o in outcomes if o.get("name") == away), None)
+            if h_p is not None and d_p is not None and a_p is not None:
+                home_prices.append(h_p)
+                draw_prices.append(d_p)
+                away_prices.append(a_p)
 
-        if best_price is None or not passes_collar(best_price):
-            continue
+        if len(home_prices) >= 2:
+            result = consensus_fair_prob_3way(home_prices, draw_prices, away_prices)
+            n_books = result["n_books"]
+            std_dev = result["std_dev"]
 
-        edge = consensus_prob - _implied_probability(best_price)
-        if edge >= 0.035:
-            kelly = fractional_kelly(consensus_prob, best_price)
-            candidates.append(BetCandidate(
-                sport=sport,
-                matchup=matchup,
-                market_type="moneyline",
-                target=f"{team_name} ML",
-                line=0.0,
-                price=best_price,
-                edge_pct=edge,
-                win_prob=consensus_prob,
-                market_implied=_implied_probability(best_price),
-                fair_implied=consensus_prob,
-                kelly_size=kelly,
-                event_id=event_id,
-                commence_time=commence_time,
-                book=f"Best: {best_book_name} ({n_books} books)",
-                std_dev=std_dev,
-            ))
+            for team_name, consensus_prob in [(home, result["fair_home"]), (away, result["fair_away"])]:
+                best_price = None
+                best_book_name = ""
+                for book in all_bks:
+                    mmap = {m["key"]: m for m in book.get("markets", [])}
+                    if "h2h" not in mmap:
+                        continue
+                    for o in mmap["h2h"].get("outcomes", []):
+                        if o.get("name") == team_name:
+                            price = o.get("price", 0)
+                            if best_price is None or price > best_price:
+                                best_price = price
+                                best_book_name = book.get("title", book.get("key", ""))
+
+                if best_price is None or not passes_collar(best_price):
+                    continue
+
+                edge = consensus_prob - _implied_probability(best_price)
+                if edge >= 0.035:
+                    kelly = fractional_kelly(consensus_prob, best_price)
+                    candidates.append(BetCandidate(
+                        sport=sport,
+                        matchup=matchup,
+                        market_type="moneyline",
+                        target=f"{team_name} ML",
+                        line=0.0,
+                        price=best_price,
+                        edge_pct=edge,
+                        win_prob=consensus_prob,
+                        market_implied=_implied_probability(best_price),
+                        fair_implied=consensus_prob,
+                        kelly_size=kelly,
+                        event_id=event_id,
+                        commence_time=commence_time,
+                        book=f"Best: {best_book_name} ({n_books} books)",
+                        std_dev=std_dev,
+                    ))
+    else:
+        # Non-soccer: 2-outcome h2h (correct as-is)
+        for team_name in [home, away]:
+            consensus_prob, std_dev, n_books = _consensus_fair_prob(
+                team_name, "h2h", "team", bookmakers
+            )
+            if n_books < 2:
+                continue
+
+            best_price = None
+            best_book_name = ""
+            for book in all_bks:
+                mmap = {m["key"]: m for m in book.get("markets", [])}
+                if "h2h" not in mmap:
+                    continue
+                for o in mmap["h2h"].get("outcomes", []):
+                    if o.get("name") == team_name:
+                        price = o.get("price", 0)
+                        if best_price is None or price > best_price:
+                            best_price = price
+                            best_book_name = book.get("title", book.get("key", ""))
+
+            if best_price is None or not passes_collar(best_price):
+                continue
+
+            edge = consensus_prob - _implied_probability(best_price)
+            if edge >= 0.035:
+                kelly = fractional_kelly(consensus_prob, best_price)
+                candidates.append(BetCandidate(
+                    sport=sport,
+                    matchup=matchup,
+                    market_type="moneyline",
+                    target=f"{team_name} ML",
+                    line=0.0,
+                    price=best_price,
+                    edge_pct=edge,
+                    win_prob=consensus_prob,
+                    market_implied=_implied_probability(best_price),
+                    fair_implied=consensus_prob,
+                    kelly_size=kelly,
+                    event_id=event_id,
+                    commence_time=commence_time,
+                    book=f"Best: {best_book_name} ({n_books} books)",
+                    std_dev=std_dev,
+                ))
 
     # --- Totals ---
     for side in ["Over", "Under"]:

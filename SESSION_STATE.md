@@ -252,30 +252,44 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 23 — wrap-up only. CLAUDE.md updated (sessions 21–23, CLV/.not_ mock/MEMORY limit rules). All MD files refreshed. MASTER_ROADMAP R&D S24/S25 absorbed.
-Last git commit: 07d872a (pushed to origin/main)
-Tests: 135 total, all passing
-Quota: ~16,663 remaining (R&D Session 22 ran Pinnacle probe + CLV live run)
+Last completed: Session 24 — GAP 4 soccer 3-way fix + EXP 5 parlay builder promoted + UI 4 Parlay Builder tab live.
+Last git commit: TBD (commit pending end of session)
+Tests: 163 total, all passing
+Quota: ~16,663 remaining (R&D Session 22 ran Pinnacle probe + CLV live run — no live API calls this session)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
-### R&D status absorbed (R&D Sessions 24–25, 2026-02-19)
-- R&D S24: EXP 5 `core/parlay_builder.py` built + validated (6/6 smoke tests). B2 + calibration still gated.
-- R&D S25: EXP 9 (baseball_ncaa) CLOSED — avg 2.1 books/game, below 3-book threshold. Too thin for consensus.
-  EXP 8 (alternate lines) BLOCKED — H2 tier required. Same gate as Pinnacle (~$30/mo).
+### What was built in Session 24
+1. **GAP 4 — Soccer 3-outcome fix (CRITICAL)**
+   - `data/soccer_consensus.py` — promoted from R&D `core/soccer_consensus.py` (6/6 R&D smoke tests pass).
+     `american_to_implied()`, `_fair_3way()`, `_std_dev()`, `consensus_fair_prob_3way()`.
+   - `edge_calculator.py` — `from data.soccer_consensus import consensus_fair_prob_3way` added at top.
+     `parse_game_markets()` moneyline section now branches on `_is_soccer` flag:
+     - Soccer: collects `home_prices / draw_prices / away_prices` per book (Draw = API outcome name).
+       Calls `consensus_fair_prob_3way()` → correct 3-way vig removal (was inflating +10–19pp).
+     - Non-soccer: unchanged 2-outcome `_consensus_fair_prob()` path.
+   - 13 new tests: `tests/test_soccer_consensus.py` — all pass.
 
-### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 24)
-Session 23 complete. Read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
-Then: python3 -m pytest tests/ -v (confirm 135/135)
-Then: read HANDOFF.md in titanium-experimental for R&D S24/S25 output.
+2. **EXP 5 — Parlay Builder promoted**
+   - `data/parlay_builder.py` — promoted from R&D. `build_parlay_combos(bets: list[dict])` + `format_parlay_table()`.
+     Call site shim: `[vars(b) for b in ranked_bets]` to convert BetCandidate dataclass → dict.
+   - `app.py` — `page_parlay_builder()` added. Reads `st.session_state["results"]`. Inert until pipeline runs.
+     Shows combo cards: EV badge, leg A/B targets+prices, P(win)/payout/matchup strip.
+     Independence gate: same event_id pairs excluded. Positive-EV filter enforced.
+   - `st.navigation()` — 🔗 Parlay Builder added as 5th page.
+   - 15 new tests: `tests/test_parlay_builder.py` — all pass.
 
-Session 24 priorities — ALL GATED, nothing unblocked to build in v36:
-- UI 4 (Parlay Builder tab): R&D EXP 5 parlay_builder.py is built. Promote to v36 if user approves.
-  Math: parlay_prob = prob_a × prob_b. parlay_payout = (payout_a+1)(payout_b+1) - 1. EV = parlay_prob × payout - (1-parlay_prob).
-- B2 injury leverage: gate 2026-03-04 (check espn_stability.log in R&D). If cleared: promote espn_injury_fetcher.py.
-- Sharp Score calibration: run core/sharp_score_calibration.py when v36 has 30+ resolved bets (currently 0).
+### ⚠️ NEW CHAT TRANSITION NOTE (v36 Session 25)
+Session 24 complete. Read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md
+Then: python3 -m pytest tests/ -v (confirm 163/163)
+
+Session 25 priorities — all current v36 work is gated:
+- B2 injury leverage: gate 2026-03-04 (check espn_stability.log in R&D). Not yet.
+- Sharp Score calibration: gate 30+ resolved bets in bet_history (currently 0).
 - CLV close: update_clv_close() built but not wired — future when closing prices available.
 - Pinnacle / alternate lines: H2 tier (~$30/mo). User decision.
+- NCAAF efficiency: R&D EXP 7 complete (40 programs). v36 integration Aug 2026 window.
+- PROJECT_INDEX.md: needs update for new modules (soccer_consensus, parlay_builder, new tests).
 
 ### What was built in Session 22
 1. **R&D Session 22 findings absorbed:**

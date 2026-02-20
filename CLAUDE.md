@@ -92,6 +92,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 21 | ✅ Done | UI 2 Odds Comparison page, data/odds_comparator.py promoted from R&D, app.py cleanup (dead imports, del→pop fix, try/finally on pipeline) |
 | 22 | ✅ Done | UI 5 CLV column in Bet History, data/clv_store.py (NEW), clv_history Supabase table, record_clv_open() wired at Track Bet, 19 new tests — 135/135 tests |
 | 23 | ✅ Done | CLAUDE.md .not_ mock pattern, MASTER_ROADMAP session log, all MD files refreshed, PROJECT_INDEX.md updated |
+| 24 | ✅ Done | GAP 4 soccer 3-way fix: data/soccer_consensus.py promoted, edge_calculator.py moneyline branched on _is_soccer. EXP 5: data/parlay_builder.py + page_parlay_builder() + 🔗 nav. 28 new tests — 163/163 |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -135,6 +136,9 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - **Odds Comparison data source:** `st.session_state["raw_games"]` — zero new API calls. Page is inert until pipeline has run at least once in the session.
 - **Supabase `.not_` mock pattern:** `.not_` is a property (not callable). `mock_table.not_.return_value = mock_table` DOES NOT WORK. Use `mock_table.not_ = mock_table` so `.not_.is_(...)` routes through the configured mock and `.execute()` returns correct test data.
 - **MEMORY.md 200-line limit:** Detailed session learnings live in `~/.claude/projects/.../memory/session-learnings.md`. MEMORY.md stays as a concise index under 150 lines. Always link, don't duplicate.
+- **Soccer 3-way vig:** `_is_soccer` check in `parse_game_markets()` uses the uppercase routing key set (`EPL`, `MLS`, etc.) — NOT `sport_key.startswith("soccer_")` (that's the API format, not available inside parse_game_markets). Draw outcome name in Odds API is exactly `"Draw"` (confirmed in soccer_3way_probe.py line 154).
+- **Parlay builder call site:** `build_parlay_combos()` takes `list[dict]`, not `list[BetCandidate]`. Always convert: `[vars(b) for b in ranked_bets]`. Do NOT change parlay_builder.py to accept dataclasses — one file = one job, no v36-specific imports in data/ modules.
+- **Parlay Builder data source:** `st.session_state["results"]` (the ranked BetCandidate list). Page is inert until pipeline runs. Same pattern as Odds Comparison using `st.session_state["raw_games"]`.
 
 ## If Starting a New Chat Session
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)

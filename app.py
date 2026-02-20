@@ -1615,6 +1615,108 @@ def page_odds_comparison():
 
 
 # ---------------------------------------------------------------------------
+# Page: Parlay Builder (UI 4 — EXP 5 promoted Session 24)
+# ---------------------------------------------------------------------------
+
+def page_parlay_builder():
+    """Parlay Builder — find positive-EV 2-leg parlay combos from current slate."""
+    from data.parlay_builder import build_parlay_combos, format_parlay_table
+
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+    # ── Header ────────────────────────────────────────────────────
+    render_header()
+    st.markdown("---")
+    st.markdown('<div class="t-section-label">Parlay Builder</div>', unsafe_allow_html=True)
+
+    # ── No data state ─────────────────────────────────────────────
+    ranked: list = st.session_state.get("results", [])
+    if not ranked:
+        st.html("""
+<div class="empty-state" style="padding-top: 3rem;">
+  <div class="empty-state-icon">🔗</div>
+  <div class="empty-state-text">No slate loaded.<br><br>Run a scan on the Live Analysis page first,<br>then return here to find positive-EV parlay combos.</div>
+</div>
+""")
+        return
+
+    # Convert BetCandidate dataclasses → dicts for parlay_builder
+    bets_as_dicts = [vars(b) for b in ranked]
+    combos = build_parlay_combos(bets_as_dicts)
+
+    # ── Summary strip ─────────────────────────────────────────────
+    st.html(
+        f'<div style="font-size:0.7rem;color:#8B949E;letter-spacing:0.12em;'
+        f'text-transform:uppercase;margin-bottom:1rem;">'
+        f'{len(ranked)} ranked bet{"s" if len(ranked) != 1 else ""} → '
+        f'{len(combos)} positive-EV combo{"s" if len(combos) != 1 else ""} found'
+        f'</div>'
+    )
+
+    if not combos:
+        st.html("""
+<div class="empty-state" style="padding-top: 1rem;">
+  <div class="empty-state-text">No positive-EV 2-leg parlays on current slate.<br>
+  Parlay EV requires both legs to have sufficient edge to overcome the parlay's compounded vig.</div>
+</div>
+""")
+        return
+
+    # ── Combo table ───────────────────────────────────────────────
+    for i, combo in enumerate(combos, start=1):
+        a = combo["leg_a"]
+        b = combo["leg_b"]
+        ev_color = "#22C55E" if combo["parlay_ev"] > 0 else "#EF4444"
+
+        st.html(
+            f'<div style="background:#161B22;border:1px solid #21262D;border-radius:4px;'
+            f'padding:1rem 1.2rem;margin-bottom:0.75rem;font-family:\'IBM Plex Mono\',monospace;">'
+
+            # Row 1: combo number + EV
+            f'<div style="display:flex;justify-content:space-between;align-items:center;'
+            f'margin-bottom:0.6rem;">'
+            f'<span style="font-size:0.65rem;color:#8B949E;letter-spacing:0.12em;">#{i} PARLAY</span>'
+            f'<span style="font-size:0.85rem;font-weight:700;color:{ev_color};">'
+            f'EV {combo["parlay_ev"]:+.4f}</span>'
+            f'</div>'
+
+            # Row 2: Leg A
+            f'<div style="font-size:0.75rem;color:#E6EDF3;margin-bottom:0.3rem;">'
+            f'<span style="color:#8B949E;">LEG A &nbsp;</span>'
+            f'{a["target"]} &nbsp;'
+            f'<span style="color:#8B949E;">{a["market_type"].upper()} @ </span>'
+            f'<span style="color:#F5A623;">{a["price"]:+d}</span>'
+            f'</div>'
+
+            # Row 3: Leg B
+            f'<div style="font-size:0.75rem;color:#E6EDF3;margin-bottom:0.6rem;">'
+            f'<span style="color:#8B949E;">LEG B &nbsp;</span>'
+            f'{b["target"]} &nbsp;'
+            f'<span style="color:#8B949E;">{b["market_type"].upper()} @ </span>'
+            f'<span style="color:#F5A623;">{b["price"]:+d}</span>'
+            f'</div>'
+
+            # Row 4: metrics
+            f'<div style="display:flex;gap:1.5rem;font-size:0.65rem;color:#8B949E;">'
+            f'<span>P(WIN) {combo["parlay_prob"]:.1%}</span>'
+            f'<span>PAYOUT {combo["parlay_payout"]:.3f}u</span>'
+            f'<span>{a["matchup"]}</span>'
+            f'</div>'
+
+            f'</div>'
+        )
+
+    # ── Disclosure ────────────────────────────────────────────────
+    st.html(
+        '<div style="font-size:0.6rem;color:#6B7280;margin-top:1.5rem;line-height:1.6;">'
+        'Parlay EV = P(both win) × parlay payout − P(at least one loses). '
+        'Only positive-EV combos shown. Assumes leg independence (different games only). '
+        'Not a recommendation to bet parlays.'
+        '</div>'
+    )
+
+
+# ---------------------------------------------------------------------------
 # Entry point — st.navigation() multi-page scaffold (Streamlit 1.36+)
 # ---------------------------------------------------------------------------
 
@@ -1626,10 +1728,11 @@ def main():
     )
 
     pg = st.navigation([
-        st.Page(page_live_analysis, title="Live Analysis",    icon="📡", default=True),
-        st.Page(page_bet_history,   title="Bet History",      icon="📋"),
-        st.Page(page_pnl_tracker,   title="P&L Tracker",      icon="📈"),
-        st.Page(page_odds_comparison, title="Odds Comparison", icon="⚖️"),
+        st.Page(page_live_analysis,   title="Live Analysis",    icon="📡", default=True),
+        st.Page(page_bet_history,     title="Bet History",      icon="📋"),
+        st.Page(page_pnl_tracker,     title="P&L Tracker",      icon="📈"),
+        st.Page(page_odds_comparison, title="Odds Comparison",  icon="⚖️"),
+        st.Page(page_parlay_builder,  title="Parlay Builder",   icon="🔗"),
     ])
     pg.run()
 
