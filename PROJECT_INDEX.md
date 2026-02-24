@@ -1,5 +1,5 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-19 (Session 24 — Soccer 3-way consensus + Parlay builder promotion)
+Generated: 2026-02-24 (V37 Reviewer Session 1 — Two-AI coordination system live)
 
 ## Quick Start
 ```bash
@@ -14,8 +14,10 @@ grep -n "def calculate_edges" edge_calculator.py  # One def only — dead stub r
 ```
 titanium-v36/
 ├── CLAUDE.md                    # Architecture rules + session workflow
+├── CLAUDE.local.md              # Private local context (not committed) — reviewer role, autonomous startup ritual
 ├── SESSION_STATE.md             # Session memory & resume instructions
 ├── PROJECT_INDEX.md             # This file (94% token reduction)
+├── REVIEWER_PROMPT.md           # V37 Reviewer chat startup prompt — paste into new chat to resume seamlessly (NEW V37 S1)
 ├── requirements.txt             # streamlit, pytest, requests, pandas, numpy, scipy, supabase
 ├── run_pipeline.py              # End-to-end CLI test
 ├── docs/
@@ -368,8 +370,10 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 22 | ✅ | `data/clv_store.py` (CLV tracking), `clv_history` Supabase table, 19 new tests — **135 total** |
 | 23 | ✅ | CLAUDE.md `.not_` mock pattern, PROJECT_INDEX + SESSION_STATE + MASTER_ROADMAP sync, housekeeping |
 | 24 | ✅ | `data/soccer_consensus.py` (3-way vig removal), `data/parlay_builder.py` (2-leg combos), `page_parlay_builder()` — **163 total** |
+| 25 | ✅ | Architecture transition: v36 chat → Reviewer/Auditor role. R&D chat RETIRED. Agentic sandbox is primary builder. |
+| V37 S1 | ✅ | Reviewer role activated. Two-AI coordination via REVIEW_LOG.md confirmed live. Sandbox Sessions 23+24 APPROVED. Schema review for Advanced Analytics written. REVIEWER_PROMPT.md created. v36 compatibility rule established. |
 
-Last commit: `603b52c` · Tests: **163 passing** · Quota: ~16,663 remaining
-Session 25 complete — housekeeping only (API quota rule, SESSION_STATE B2 gate update). All work gated.
-Next session (26) — NEW CHAT: read PROJECT_INDEX.md → docs/MASTER_ROADMAP.md → SESSION_STATE.md → CLAUDE.md → confirm 163/163.
-B2 gate opens 2026-03-04 — check espn_stability.log. Wire-in spec ready in HANDOFF.md.
+Last commit: `a2a9b45` · Tests: **163 passing** · Quota: ~16,663 remaining
+V37 Reviewer Session 1 complete (2026-02-24). Sandbox Session 25 in progress (Advanced Analytics build).
+**NEW REVIEWER CHAT:** Paste REVIEWER_PROMPT.md contents as opening message. No other context needed.
+B2 gate opens 2026-03-04 — check espn_stability.log on that date. SHARP_THRESHOLD raise gated at 5 live RLM fires (0/5).
