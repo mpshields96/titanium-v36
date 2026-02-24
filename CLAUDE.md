@@ -101,6 +101,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 22 | ✅ Done | UI 5 CLV column in Bet History, data/clv_store.py (NEW), clv_history Supabase table, record_clv_open() wired at Track Bet, 19 new tests — 135/135 tests |
 | 23 | ✅ Done | CLAUDE.md .not_ mock pattern, MASTER_ROADMAP session log, all MD files refreshed, PROJECT_INDEX.md updated |
 | 24 | ✅ Done | GAP 4 soccer 3-way fix: data/soccer_consensus.py promoted, edge_calculator.py moneyline branched on _is_soccer. EXP 5: data/parlay_builder.py + page_parlay_builder() + 🔗 nav. 28 new tests — 163/163 |
+| 25 | ✅ Done | Architecture: agentic sandbox (~/ClaudeCode/agentic-rd-sandbox/) promoted to primary builder. v36 chat transitions to Reviewer/Auditor role. R&D chat RETIRED. SYNC.md INBOX updated. API quota rule locked. No code changes. |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental

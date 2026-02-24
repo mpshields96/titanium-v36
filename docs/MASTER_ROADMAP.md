@@ -253,6 +253,7 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| v36 S25 (2026-02-24) | **Architecture decision:** Agentic sandbox (`~/ClaudeCode/agentic-rd-sandbox/`) promoted to primary builder — 933 tests, 18 sessions, Trinity fixed, 12 live kill switches, active RLM, SQLite (no Supabase cost). v36 chat → Reviewer/Auditor role. R&D chat (titanium-experimental) RETIRED. No code changes this session. |
 | v36 S24 (2026-02-19) | GAP 4 soccer 3-way fix: `data/soccer_consensus.py` promoted, `edge_calculator.py` moneyline section branched on `_is_soccer`. EXP 5: `data/parlay_builder.py` promoted, `page_parlay_builder()` + 🔗 nav entry. 28 new tests (163 total). |
 | v36 S23 (2026-02-19) | CLAUDE.md Session 22 learnings, PROJECT_INDEX.md updated (135 tests, 3 new modules), session handoffs prepared |
 | v36 S22 (2026-02-19) | UI 5 (CLV column), `data/clv_store.py` (NEW), `clv_history` Supabase table, 19 new tests (135 total) |

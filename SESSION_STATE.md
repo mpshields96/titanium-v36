@@ -252,12 +252,28 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 24 — GAP 4 soccer 3-way fix + EXP 5 parlay builder promoted + UI 4 Parlay Builder tab live.
-Last git commit: fb3ebf8 (pushed to origin/main)
+Last completed: Session 25 — Architecture transition. v36 chat → Reviewer/Auditor role. R&D chat RETIRED. Agentic sandbox (~/ClaudeCode/agentic-rd-sandbox/) is now primary builder.
+Last git commit: a1b6daf (pushed to origin/main)
 Tests: 163 total, all passing
-Quota: ~16,663 remaining (R&D Session 22 ran Pinnacle probe + CLV live run — no live API calls this session)
-Streamlit Cloud: deployed, auto-deploys from main
+Quota: ~16,663 remaining
+Streamlit Cloud: deployed, auto-deploys from main (v36 remains the live production app)
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
+
+### Architecture as of Session 25
+- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (933 tests, 18 sessions, ahead in every dimension)
+- **Reviewer/Auditor:** v36 chat (this chat) — reviews sandbox sessions, flags architectural issues, decides promotions
+- **R&D chat:** RETIRED. titanium-experimental/ is archived.
+- **Live product:** v36 on Streamlit Cloud (until sandbox is deployed as replacement)
+- **Coordination:** SYNC.md still live. sandbox chat can read INBOX for context.
+
+### What was done in Session 25
+1. API quota rule locked in CLAUDE.md + MEMORY.md (user explicit request — burn rate was unacceptable)
+2. SYNC.md coordination file documented — OUTBOX/INBOX workflow confirmed working
+3. SESSION_STATE.md + PROJECT_INDEX.md updated (S25 footer)
+4. SYNC.md INBOX written: R&D S30 EXP 6 confirmed, win_prob status confirmed, sandbox audit assigned
+5. Strategic analysis: agentic sandbox wins every measurable dimension. Decision: promote sandbox to primary builder.
+6. CLAUDE.local.md rewritten for reviewer role. R&D chat officially retired.
+7. New v37 startup prompt written for next chat.
 
 ### What was built in Session 24
 1. **GAP 4 — Soccer 3-outcome fix (CRITICAL)**
