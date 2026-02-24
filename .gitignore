@@ -10,6 +10,11 @@ __pycache__/
 # macOS
 .DS_Store
 
+# SQLite databases (v36 uses Supabase — no local .db files should be committed)
+*.db
+*.db-wal
+*.db-shm
+
 # Claude Code internals — never commit these
 .claude/
 .playwright-mcp/
