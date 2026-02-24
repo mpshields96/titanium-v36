@@ -45,6 +45,8 @@ FILE ACCESS:
 MANDATORY STARTUP SEQUENCE:
 1. Read /Users/matthewshields/ClaudeCode/agentic-rd-sandbox/REVIEW_LOG.md
    — check for any unresolved FLAGS from previous audit. Address those first if present.
+   — ALSO check for any "PENDING V37 INPUT" blocks — these BLOCK the sandbox build loop.
+     Resolve pending input requests before starting any other work.
 2. Read /Users/matthewshields/ClaudeCode/agentic-rd-sandbox/SESSION_LOG.md
    — what did the sandbox do most recently?
 3. Read /Users/matthewshields/ClaudeCode/agentic-rd-sandbox/CLAUDE.md
