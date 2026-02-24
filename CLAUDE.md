@@ -64,7 +64,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Never run multi-sport probes, validation loops, or iterative probes without explicit per-run approval.
 
 ## Session Workflow
-- **SESSION START**: Read `V37_INBOX.md` (in this repo root) immediately after CLAUDE.md. If there's a PENDING task from the sandbox builder, complete it before other work. This is how the two-AI system coordinates without requiring the user to relay prompts.
+- **SESSION START**: Read `~/ClaudeCode/agentic-rd-sandbox/V37_INBOX.md` immediately after CLAUDE.md. If there's a PENDING task from the sandbox builder, complete it before other work. This is how the two-AI system coordinates without requiring the user to relay prompts. (Inbox lives in the sandbox repo — sandbox writes it, you read it. Never write to that path.)
 - State which file you're working on and what the last working state was
 - One function at a time. Write a test before building the next function.
 - If code breaks: describe behavior ("returns empty list"), not "fix it"
