@@ -133,7 +133,7 @@ API QUOTA — NON-NEGOTIABLE:
 - Sandbox: same rule. APScheduler is the correct mechanism for polling. Manual loops are not.
 
 END EVERY SESSION:
-1. python3 -m pytest tests/ -v (v36) — confirm 163/163 still passing
+1. python3 -m pytest tests/ -v (v36) — confirm 185/185 still passing
 2. Update SESSION_STATE.md if anything changed in v36
 3. /claude-md-management:revise-claude-md if new patterns learned
 4. /wrap-up
@@ -184,7 +184,7 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 
 ### v36 current state (deployed production)
 - Tests: **185/185** passing ✅
-- Last commit: [this session — pending git push]
+- Last commit: `2ebddf1` — V37 R2: quota guards + XSS fix (2026-02-24). Pushed. Streamlit Cloud deploying.
 - New/modified this session:
   - `app.py` — HTML injection (XSS) fix for all st.html() f-strings
   - `bet_card_renderer.py` — HTML injection (XSS) fix for all HTML f-strings
