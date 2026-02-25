@@ -32,21 +32,22 @@ BASE_URL = "https://api.the-odds-api.com/v4/sports"
 # ---------------------------------------------------------------------------
 # Quota budget constants
 #
-# PERMANENT USER DIRECTIVE (2026-02-24): NEVER exceed 1,000 API credits per day.
+# PERMANENT USER DIRECTIVE (2026-02-25): NEVER exceed 100 API credits per day.
 # Applies to ALL usage — live fetches, testing, experiments. No exceptions.
+# Reduced from 1,000 → 100 (2026-02-25) after quota exhaustion incident.
 #
 # Subscription: 20,000 credits/month ($30/month plan)
-# Monthly target: ≤ 10,000 credits/month (50% = always safe)
+# Monthly target: ≤ 3,000 credits/month with 100/day cap
 #
-#   DAILY_CREDIT_CAP           — HARD limit: ≤1,000 credits per calendar day (UTC)
-#   SESSION_CREDIT_SOFT_LIMIT  — warn in logs when session usage hits this
-#   SESSION_CREDIT_HARD_STOP   — stop ALL fetches for the session when hit
+#   DAILY_CREDIT_CAP           — HARD limit: ≤100 credits per calendar day (UTC)
+#   SESSION_CREDIT_SOFT_LIMIT  — warn in logs when session usage hits this (30% of daily cap)
+#   SESSION_CREDIT_HARD_STOP   — stop ALL fetches for the session when hit (80% of daily cap)
 #   BILLING_RESERVE            — global floor: never let remaining drop below this
 # ---------------------------------------------------------------------------
-DAILY_CREDIT_CAP: int = 1_000          # PERMANENT: never exceed per calendar day
-SESSION_CREDIT_SOFT_LIMIT: int = 300   # Warn when session uses this many credits
-SESSION_CREDIT_HARD_STOP: int = 500    # Stop fetching for the session at this count
-BILLING_RESERVE: int = 1_000          # Never let remaining drop below this
+DAILY_CREDIT_CAP: int = 100            # PERMANENT user rule 2026-02-25: 100 credits/day ceiling
+SESSION_CREDIT_SOFT_LIMIT: int = 30    # Warn when session uses this many credits
+SESSION_CREDIT_HARD_STOP: int = 80     # Stop fetching for the session at this count
+BILLING_RESERVE: int = 50             # TEMP until 2026-03-01: test key ~485 remaining; restore to 1000 on quota reset
 
 # ---------------------------------------------------------------------------
 # Daily credit log — persisted across restarts

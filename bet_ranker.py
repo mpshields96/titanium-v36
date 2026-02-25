@@ -41,6 +41,7 @@ def rank_bets(
     rlm_data: Optional[dict] = None,
     efficiency_data: Optional[dict] = None,
     situational_data: Optional[dict] = None,
+    calibration_threshold: Optional[float] = 40.0,
 ) -> list[BetCandidate]:
     """
     Full ranking pipeline per V36.1.
@@ -55,17 +56,23 @@ def rank_bets(
     7. Return top 10
 
     Args:
-        candidates:       All BetCandidates passing collar + 3.5% edge.
-        rlm_data:         Dict mapping event_id → bool (RLM confirmed).
-                          Pass None when no line movement data available.
-        efficiency_data:  Dict mapping event_id → float (efficiency gap 0-20).
-                          Defaults to 8.0 per game (moderate) when None.
-        situational_data: Dict mapping event_id → dict with rest/injury/etc.
-                          Defaults to zeros when None.
+        candidates:            All BetCandidates passing collar + 3.5% edge.
+        rlm_data:              Dict mapping event_id → bool (RLM confirmed).
+                               Pass None when no line movement data available.
+        efficiency_data:       Dict mapping event_id → float (efficiency gap 0-20).
+                               Defaults to 8.0 per game (moderate) when None.
+        situational_data:      Dict mapping event_id → dict with rest/injury/etc.
+                               Defaults to zeros when None.
+        calibration_threshold: If not None, and zero bets pass SHARP_THRESHOLD, re-run
+                               collection at this lower threshold and mark bets calibration=True.
+                               Default 40.0 = prior production floor (Session 13).
+                               Pass None to disable calibration mode entirely.
 
     Returns:
         Ranked list of up to 10 BetCandidates with sharp_score,
         sharp_breakdown, nemesis, and signal fields populated.
+        If all returned bets have calibration=True, they are sub-threshold
+        and should be logged for model calibration only — not actionable.
     """
     if not candidates:
         return []
@@ -115,6 +122,23 @@ def rank_bets(
             continue
 
         scored.append(bet)
+
+    # --- Speculative retry: zero bets above threshold → surface sub-threshold candidates ---
+    # Math > Narrative: calibration_threshold=40.0 is the prior production floor (Session 13).
+    # Scores already computed on all candidates — no re-calculation needed.
+    # These bets are SPECULATIVE: real mathematical signal (≥40 pts, ~6–7.8% edge) but below
+    # the 45-pt production gate. Kelly hard-capped at 0.25u. Act small or use for data only.
+    if (
+        not scored
+        and calibration_threshold is not None
+        and calibration_threshold < SHARP_THRESHOLD
+    ):
+        for bet in candidates:
+            if bet.sharp_score >= calibration_threshold:
+                bet.calibration = True
+                # Hard cap kelly for speculative tier — 0.25u maximum regardless of math
+                bet.kelly_size = min(0.25, bet.kelly_size)
+                scored.append(bet)
 
     # --- Step 2: Nemesis — annotation only, no score adjustment ---
     # Nemesis counter-theses are narrative-driven and not mathematically grounded.

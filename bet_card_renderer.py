@@ -17,10 +17,11 @@ Design decisions:
     - Pure stdlib. No CSS framework dependencies.
     - Inline styles only — Streamlit strips <style> tags from markdown.
     - Tier colour coding:
-        NUCLEAR_2.0U  → amber   (#F59E0B)
-        STANDARD_1.0U → blue    (#3B82F6)
-        LEAN_0.5U     → teal    (#14B8A6)
-        PASS          → grey    (#6B7280)  [below threshold — not normally rendered]
+        NUCLEAR_2.0U      → amber   (#F59E0B)
+        STANDARD_1.0U     → blue    (#3B82F6)
+        LEAN_0.5U         → teal    (#14B8A6)
+        SPECULATIVE_0.25U → orange  (#F97316)  [sub-threshold, 0.25u cap, shown when calibration retry fires]
+        PASS              → grey    (#6B7280)  [below threshold — not normally rendered]
     - RLM badge: only shown when sharp_breakdown["rlm"] > 0.
     - FLAG warnings: always shown (amber banner).
     - Nemesis: always shown when nemesis dict is non-empty (display-only per Session 12).
@@ -72,6 +73,16 @@ _TIER_CONFIG = {
         "border":      "#14B8A6",
         "badge_bg":    "#14B8A6",
         "badge_text":  "#0F1F1E",
+    },
+    "SPECULATIVE_0.25U": {
+        "label":       "⚠ SPEC",
+        "size_label":  "0.25u MAX",
+        "bg":          "#1A0F00",       # very dark orange
+        "accent":      "#F97316",       # orange-500
+        "text":        "#FFEDD5",       # orange-100
+        "border":      "#F97316",
+        "badge_bg":    "#F97316",
+        "badge_text":  "#1A0F00",
     },
     "PASS": {
         "label":       "— PASS",

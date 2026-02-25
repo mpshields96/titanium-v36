@@ -66,6 +66,9 @@ class BetCandidate:
     opp_rest_days: Optional[int] = None   # Opponent's rest days.
     # Set by parse_game_markets() — Session 16. Display-only consensus width badge.
     std_dev: float = 0.0   # Std dev of vig-free probs across books. 0 = unknown.
+    # Set by rank_bets() calibration retry — V37 R4.
+    # True = sub-threshold bet (≥40 but <45 pts). Log for model calibration only. NOT actionable.
+    calibration: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -378,6 +381,38 @@ def soccer_kill_switch(
     return False, ""
 
 
+def nhl_kill_switch(
+    backup_goalie: bool,
+    b2b: bool = False,
+    goalie_confirmed: bool = True,
+) -> tuple[bool, str]:
+    """
+    NHL kill switch — goalie-based gate (V37 R4).
+
+    Primary signal: confirmed backup goalie start is the strongest kill signal in NHL.
+    Data source: data/nhl_data.py (free api-web.nhle.com, zero Odds API quota cost).
+    Starter field populates ~T-60min before puck drop; until then goalie_confirmed=False.
+
+    Args:
+        backup_goalie:    True if the opponent's starter is a known backup.
+        b2b:              True if bet team is on second game of back-to-back.
+        goalie_confirmed: False when NHL API has not yet confirmed the starter (FUT state).
+
+    Returns:
+        (killed, reason) — killed=True means abort.
+    """
+    if backup_goalie:
+        return True, "KILL: Backup goalie confirmed — require 12%+ edge to override"
+
+    if b2b:
+        return False, "FLAG: B2B — reduce Kelly 50%"
+
+    if not goalie_confirmed:
+        return False, "FLAG: Goalie not yet confirmed — require 8%+ edge"
+
+    return False, ""
+
+
 # ---------------------------------------------------------------------------
 # Sharp Score (Session 4 — ported from R&D)
 # ---------------------------------------------------------------------------
@@ -431,19 +466,23 @@ def sharp_to_size(sharp_score: float) -> str:
     """
     Map Sharp Score to bet tier label.
 
-    Thresholds (V36.1 — efficiency + situational components live):
-      >= 90 → NUCLEAR_2.0U
-      >= 80 → STANDARD_1.0U
-      else  → LEAN_0.5U   (all bets that survived pipeline get at least LEAN)
+    Thresholds (V36.1 + V37 R4 SPECULATIVE tier):
+      >= 90 → NUCLEAR_2.0U      — 2.0u max
+      >= 80 → STANDARD_1.0U     — 1.0u max
+      >= 45 → LEAN_0.5U         — 0.5u max (production floor)
+      >= 40 → SPECULATIVE_0.25U — 0.25u HARD CAP (sub-threshold, act small or skip)
 
-    NOTE: PASS is never returned here — bets that didn't survive are simply
-    not in the list. This function only labels surviving bets.
+    NOTE: PASS is never returned here — bets that didn't survive production threshold
+    are not in the list unless the calibration retry fired (score 40–44).
+    SPECULATIVE bets are surfaced with orange card border and explicit size cap in UI.
     """
     if sharp_score >= 90:
         return "NUCLEAR_2.0U"
     if sharp_score >= 80:
         return "STANDARD_1.0U"
-    return "LEAN_0.5U"
+    if sharp_score >= 45:
+        return "LEAN_0.5U"
+    return "SPECULATIVE_0.25U"
 
 
 def run_nemesis(bet: BetCandidate, sport: str) -> dict:
@@ -619,7 +658,11 @@ def _consensus_fair_prob(
     return mean, std, n
 
 
-def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
+def parse_game_markets(
+    game: dict,
+    sport: str = "NCAAB",
+    nhl_goalie_status: Optional[dict] = None,
+) -> list[BetCandidate]:
     """
     Parse a raw game dict from odds_fetcher into BetCandidate objects.
 
@@ -868,6 +911,43 @@ def parse_game_markets(game: dict, sport: str = "NCAAB") -> list[BetCandidate]:
                 book=f"Best: {best_book_name} ({n_books} books)",
                 std_dev=std_dev,
             ))
+
+    # --- NHL goalie kill switch — V37 R4 ---
+    # Applied after all candidates are built; goalie_status is per-game (event_id keyed).
+    # Safe default when goalie data is unavailable: FLAG all NHL bets (require 8%+ edge).
+    if sport.upper() == "NHL":
+        from data.nhl_data import get_cached_goalie_status
+        goalie_info = None
+        if nhl_goalie_status is not None:
+            goalie_info = nhl_goalie_status.get(event_id)
+        else:
+            goalie_info = get_cached_goalie_status(event_id)
+
+        filtered = []
+        for bet in candidates:
+            parts = bet.matchup.split(" @ ", 1)
+            if len(parts) == 2:
+                away_t, home_t = parts[0].strip(), parts[1].strip()
+                bet_team = home_t if bet.target.startswith(home_t) else away_t
+                opp_side = "away" if bet_team == home_t else "home"
+            else:
+                opp_side = None
+
+            if goalie_info is not None and opp_side is not None:
+                opp_goalie = goalie_info.get(opp_side, {})
+                backup_goalie = not opp_goalie.get("starter_confirmed", True)
+                killed, reason = nhl_kill_switch(backup_goalie=backup_goalie, goalie_confirmed=True)
+            else:
+                # FUT state: no goalie data yet — FLAG, don't kill
+                killed, reason = nhl_kill_switch(backup_goalie=False, goalie_confirmed=False)
+
+            if killed:
+                bet.kill_reason = reason
+                continue
+            elif reason:
+                bet.kill_reason = reason
+            filtered.append(bet)
+        candidates = filtered
 
     return candidates
 

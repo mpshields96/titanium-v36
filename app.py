@@ -718,6 +718,25 @@ def run_pipeline(selected_sports: list[str]):
                 sport_rlm = compute_rlm(raw_games)
                 rlm_data.update(sport_rlm)
 
+                # NHL: poll free NHL API for confirmed starters (zero Odds API quota cost)
+                # Populates data/nhl_data._goalie_cache — read inside parse_game_markets()
+                if sport == "NHL" and raw_games:
+                    from data.nhl_data import get_starters_for_odds_game, cache_goalie_status
+                    from datetime import datetime as _datetime
+                    for _g in raw_games:
+                        try:
+                            _ct = _g.get("commence_time", "")
+                            _utc = _datetime.fromisoformat(_ct.replace("Z", "+00:00")) if _ct else None
+                        except (ValueError, AttributeError):
+                            _utc = None
+                        _result = get_starters_for_odds_game(
+                            away_team_name=_g.get("away_team", ""),
+                            home_team_name=_g.get("home_team", ""),
+                            game_start_utc=_utc,
+                        )
+                        if _result:
+                            cache_goalie_status(_g["id"], _result)
+
                 # Pass pre-fetched games so calculate_edges doesn't call the API again
                 candidates = calculate_edges(sport, raw_games=raw_games)
                 all_candidates.extend(candidates)
@@ -744,7 +763,12 @@ def run_pipeline(selected_sports: list[str]):
 
     try:
         progress.progress(100, text="Ranking...")
-        ranked = rank_bets(all_candidates, efficiency_data=eff_data, rlm_data=rlm_data)
+        ranked = rank_bets(
+            all_candidates,
+            efficiency_data=eff_data,
+            rlm_data=rlm_data,
+            calibration_threshold=40.0,  # Sub-threshold retry for model calibration data
+        )
 
         st.session_state["results"]     = ranked
         st.session_state["last_run"]    = datetime.now()
@@ -826,9 +850,26 @@ def page_live_analysis():
         else:
             from data.bet_history_store import insert_bet, is_configured as _is_configured
 
+            # Detect speculative mode: all returned bets are sub-threshold (calibration=True)
+            is_speculative = all(getattr(b, "calibration", False) for b in ranked)
+
+            if is_speculative:
+                st.markdown(
+                    '<div style="background:#1a0f00;border:1px solid #f97316;border-radius:6px;'
+                    'padding:12px 16px;margin-bottom:12px;">'
+                    '<strong style="color:#f97316;">⚠ SPECULATIVE MODE</strong>'
+                    ' <span style="color:#fed7aa;font-size:0.9em;">'
+                    "No bets cleared the 45-pt production threshold today. "
+                    "Results below scored ≥40 pts (prior production floor, ~6–7.8% edge). "
+                    "<strong>Maximum position: 0.25u. Verify line movement before placing.</strong>"
+                    "</span></div>",
+                    unsafe_allow_html=True,
+                )
+
+            label = "speculative signal" if is_speculative else "bet"
             st.markdown(f"""
 <div class="results-meta">
-  <span class="results-count">{result_count} bet{"s" if result_count != 1 else ""} found</span>
+  <span class="results-count">{result_count} {label}{"s" if result_count != 1 else ""} found</span>
   <span class="results-info">{sport_str} &nbsp;·&nbsp; {run_time}</span>
 </div>
 """, unsafe_allow_html=True)

@@ -133,7 +133,7 @@ API QUOTA — NON-NEGOTIABLE:
 - Sandbox: same rule. APScheduler is the correct mechanism for polling. Manual loops are not.
 
 END EVERY SESSION:
-1. python3 -m pytest tests/ -v (v36) — confirm 190/190 still passing
+1. python3 -m pytest tests/ -v (v36) — confirm 251/251 (or latest count) still passing
 2. Update SESSION_STATE.md if anything changed in v36
 3. /claude-md-management:revise-claude-md if new patterns learned
 4. /wrap-up
@@ -151,10 +151,10 @@ Loading screen tip: /sc:load at session start pulls PROJECT_INDEX.md + SESSION_S
 ## SECTION 2 — CURRENT STATE EXPANSION
 # This section is MUTABLE. Update at the end of every session that uses this file.
 # It layers on top of Section 1. Where Section 2 contradicts Section 1, Section 2 wins.
-# Last updated: 2026-02-24 (V37 Reviewer Session 2 — WRAP-UP)
+# Last updated: 2026-02-25 (V37 Reviewer Session 4 continued)
 
 ### STARTUP SEQUENCE UPDATE (test count changed)
-Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 190/190 still passing**
+Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 251/251 still passing**
 
 ### WHEN TO OPEN A NEW TITANIUM V36 REVIEWER CHAT
 Open a new chat when ANY of the following are true:
@@ -171,50 +171,46 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 2** (2026-02-24): XSS fix in v36 + quota guards + inactivity auto-stop spec.
   Session 25 UI Extension audited (APPROVED WITH FLAGS). Critical quota incident documented.
   v36 tests: 163 → 185 (+22 DailyCreditLog/QuotaTracker/fetch guard tests).
-  New REVIEW_LOG.md sections: Quota Guard ✅, Inactivity Auto-Stop spec (sandbox P0).
-  REVIEW_LOG.md supplemental audit: Session 25 UI Extension (NFL backup QB stub flag + STANDARD tier threshold flag).
 - **V37 Session 3** (2026-02-25): `_touch_activity()` added to v36 app.py. `test_app_utils.py` created (5 tests).
-  Sandbox Session 25 cont. audited (APPROVED — inactivity auto-stop, 1067 tests).
-  All V37_INBOX tasks resolved: inactivity ✅, HTML escape ✅, originator_engine N/A ✅, nhl_data ⏳ NEXT.
-  v36 tests: 185 → 190 (+5 activity tracking tests).
+  Sandbox Session 25 cont. audited (APPROVED). v36 tests: 185 → 190 (+5 activity tracking tests).
+- **V37 Session 4** (2026-02-25): nhl_data.py promoted to v36 (data/nhl_data.py, nhl_kill_switch(), goalie poll in app.py, 35+7 tests).
+  DAILY_CREDIT_CAP 1000→100, BILLING_RESERVE 1000→50 (temp drought). Speculative tier added (sharp_to_size SPECULATIVE_0.25U, orange card, orange banner, kelly cap 0.25u, +7 tests). Sandbox Grade Tier System (Session 27) APPROVED. Sandbox directive written.
+  v36 tests: 190 → 251 (+61 total across all session 4 work).
 
 ### Sandbox current state (last confirmed)
-- Sessions complete: **25** (Session 26 not yet started)
-- Tests: **1062/1062** passing
+- Sessions complete: **27** (Session 27 built Grade Tier System)
+- Tests: **1099/1099** passing ✅
 - Architecture: `core/` subpackage, SQLite, APScheduler, 8 Streamlit pages
 - Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
-- New in Session 25: `core/analytics.py`, `pages/07_analytics.py`, schema migration (+7 analytics cols),
-  `pages/00_guide.py` (onboarding), `SYSTEM_GUIDE.md`, nav fix, HTML injection fix
+- New in Session 26: DC fallback mode (min_edge=2.0% when no Grade A bets), DAILY_CREDIT_CAP=100, test isolation fix
+- New in Session 27: Grade Tier System (A/B/C/NEAR_MISS), `assign_grade()` in math_engine, grade-aware UI + Log Bet
 
 ### v36 current state (deployed production)
-- Tests: **190/190** passing ✅
-- Last commit: `c106da1` — V37 R3: inactivity tracking + 190/190 tests (2026-02-25). Pushed. Streamlit Cloud deploying.
-- New in V37 R3:
-  - `app.py` — `_touch_activity()` added (writes `data/last_activity.json` on every page load)
-  - `tests/test_app_utils.py` — 5 new tests for `_touch_activity()`
-  - `CLAUDE.md` — V37 R3 session row added
-  - `.gitignore` — `data/last_activity.json` added
-- Previously in V37 R2 (also committed):
-  - `app.py` + `bet_card_renderer.py` — HTML injection (XSS) fix
-  - `odds_fetcher.py` — DailyCreditLog + full quota guard enforcement
-- Streamlit Cloud: auto-deploys from main branch. Still live.
-- ⚠️ ODDS_API quota: ~1 credit remaining (exhausted — billing cycle reset pending)
+- Tests: **251/251** passing ✅
+- Last commit: pending (V37 Session 4 changes not yet committed — commit before closing)
+- New in V37 Session 4:
+  - `data/nhl_data.py` — NHL goalie starter detection (free nhle API)
+  - `edge_calculator.py` — `nhl_kill_switch()`, `BetCandidate.calibration`, `sharp_to_size()` SPECULATIVE_0.25U
+  - `bet_card_renderer.py` — SPECULATIVE_0.25U tier config (orange)
+  - `bet_ranker.py` — calibration_threshold=40.0 retry, kelly cap 0.25u for speculative bets
+  - `app.py` — NHL goalie poll, SPECULATIVE MODE banner, BILLING_RESERVE lowered to 50 (temp)
+  - `odds_fetcher.py` — DAILY_CREDIT_CAP=100, SOFT_LIMIT=30, HARD_STOP=80, BILLING_RESERVE=50 (TEMP until 2026-03-01)
+  - `tests/test_nhl_data.py` — 35 tests
+  - `tests/test_validation.py` — +7 nhl_kill_switch + +6 calibration + +7 speculative (20 new)
+- ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
+- ⚠️ ODDS_API: ~1 credit on main key, ~485 on test key. Resets 2026-03-01.
 
 ### Active flags in REVIEW_LOG.md
-- **FLAG: NFL Backup QB listed as LIVE in SYSTEM_GUIDE.md + 00_guide.py** — sandbox must fix
-  (`backup_qb` param always False — no NFL roster/injury feed. Mark as STUB.)
-- **FLAG: STANDARD tier threshold wrong in guide** — sandbox must fix
-  (Guide says ≥60, actual code is ≥80. Fix in both SYSTEM_GUIDE.md and 00_guide.py.)
-- **New spec for sandbox Session 26:** 24-hour inactivity auto-stop for scheduler.
-  Full spec in REVIEW_LOG.md (→ INACTIVITY AUTO-STOP section). P0 alongside daily cap.
+- No active flags. All previous flags (NFL backup QB stub, STANDARD tier threshold) cleared in Session 26.
+- Sandbox directive written: Grade Tier + speculative tier spec for sandbox to implement in Session 28+.
 
 ### Quota incident (2026-02-24 — permanent awareness)
 - Monthly quota (20,000) burned to ~1 credit remaining in 6 days
 - Root cause: APScheduler polling 5min × 11 sports = 26 credits/cycle × 288/day = 7,488/day
-- session_used resets on every restart → 500-credit session guard was ineffective
-- Fix: DailyCreditLog persists to `daily_quota.json`. Survives restarts. Resets midnight UTC.
-- v36 fix: DONE (185/185 tests). Sandbox fix: Session 24 already had guards, but no daily cap yet.
-- Inactivity auto-stop: sandbox P0 for Session 26. Spec in REVIEW_LOG.md.
+- Fix: DailyCreditLog persists. DAILY_CREDIT_CAP=100. Inactivity auto-stop. All live.
+- ⚠️ BILLING_RESERVE: v36 temporarily at 50 (from 1000) due to drought (~485 test key credits). Restore after 2026-03-01.
+- Sandbox: same 100/day cap confirmed. BILLING_RESERVE=50 (sandbox also).
+- After 2026-03-01 reset: restore BILLING_RESERVE to 1_000 in both v36 and sandbox.
 
 ### Schema review decisions (V37 Session 1 — authoritative)
 `bet_log` additions APPROVED WITH MODIFICATIONS:
@@ -265,10 +261,11 @@ Migration: `ALTER TABLE ... ADD COLUMN` (not recreate). Source-agnostic analytic
 ### Promotion candidates (sandbox → v36, when user directs)
 | Module | Sandbox status | V36 status | Blocker |
 |--------|---------------|------------|---------|
-| `core/weather_feed.py` | Live | Static stubs | Needs v36 promotion spec (pending audit) |
-| `core/originator_engine.py` | Trinity bug fixed | Has known bug (bet.line as mean) | Promotion spec pending |
-| `core/nhl_data.py` | Live | None | Promotion spec pending |
+| Grade Tier System (A/B/C) | Session 27 ✅ APPROVED | SPECULATIVE tier (score-based) | Reviewer to build when user confirms direction |
+| `core/weather_feed.py` | Live | Static stubs | Deferred to Aug 2026 (NFL off-season) |
+| `core/originator_engine.py` | Trinity bug fixed | Has known bug (bet.line as mean) | Not wired in v36 — defer until simulation used |
+| `core/nhl_data.py` | Live | ✅ PROMOTED V37 R4 | Done |
 | `core/nba_pdo.py` | Live | None | nba_api package adds dep; scheduler integration required |
 | `core/injury_data.py` | Live (static table) | Stubs (return 0.0) | B2 gate: 2026-03-04 |
 | `core/king_of_the_court.py` | Live | None | Low priority (DK promo tool) |
-| `pages/07_analytics.py` | Approved for build (Session 25) | None | Build in progress |
+| `core/analytics.py` | Live (Session 25) | None | Needs v36 Supabase bet_history 7-col migration first |

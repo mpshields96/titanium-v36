@@ -524,3 +524,207 @@ class TestNewLeaguesEfficiency:
         data = get_team_data("NY Jets")
         assert data is not None
         assert data["league"] == "NFL"
+
+
+# ============================================================================
+# Calibration mode — rank_bets() sub-threshold retry (V37 R4)
+#
+# Formula reference (no RLM, no situational, default efficiency_gap=8.0):
+#   score = (edge_pct / 0.10) × 40 + 8.0
+#   edge_pct=9.5% → score=46 (above SHARP_THRESHOLD=45, production)
+#   edge_pct=8.5% → score=42 (below 45 but above calibration_threshold=40)
+#   edge_pct=7.0% → score=36 (below even calibration_threshold=40)
+# ============================================================================
+
+class TestCalibrationMode:
+    """Tests for rank_bets() calibration retry when zero bets pass threshold."""
+
+    def _make_bet(self, edge_pct: float, event_id: str = "evt1") -> "BetCandidate":
+        from edge_calculator import BetCandidate
+        return BetCandidate(
+            sport="NBA",
+            matchup="Team A @ Team B",
+            market_type="spread",
+            target="Team A -4.5",
+            line=-4.5,
+            price=-110,
+            edge_pct=edge_pct,
+            win_prob=0.55,
+            market_implied=0.524,
+            fair_implied=0.55,
+            kelly_size=0.5,
+            event_id=event_id,
+        )
+
+    def test_calibration_flag_set_on_sub_threshold_bets(self):
+        """Bets in [40, 45) range returned with calibration=True when no bets pass threshold."""
+        from bet_ranker import rank_bets
+        # edge_pct=8.5% → score=42, which is below SHARP_THRESHOLD=45 but above calibration_threshold=40
+        bet = self._make_bet(edge_pct=0.085)
+        results = rank_bets([bet], calibration_threshold=40.0)
+        assert len(results) == 1
+        assert results[0].calibration is True
+
+    def test_calibration_not_triggered_when_production_bets_pass(self):
+        """When a bet scores >= SHARP_THRESHOLD, no calibration retry occurs."""
+        from bet_ranker import rank_bets
+        # edge_pct=9.5% → score=46, passes SHARP_THRESHOLD=45
+        bet = self._make_bet(edge_pct=0.095)
+        results = rank_bets([bet], calibration_threshold=40.0)
+        assert len(results) == 1
+        assert results[0].calibration is False
+
+    def test_calibration_disabled_when_threshold_none(self):
+        """calibration_threshold=None → empty list when no production bets pass."""
+        from bet_ranker import rank_bets
+        bet = self._make_bet(edge_pct=0.085)  # score=42, below threshold
+        results = rank_bets([bet], calibration_threshold=None)
+        assert results == []
+
+    def test_calibration_empty_when_below_calibration_floor(self):
+        """No bets returned if all candidates score below calibration_threshold too."""
+        from bet_ranker import rank_bets
+        # edge_pct=7.0% → score=36, below calibration_threshold=40
+        bet = self._make_bet(edge_pct=0.070)
+        results = rank_bets([bet], calibration_threshold=40.0)
+        assert results == []
+
+    def test_calibration_false_on_default_betcandidate(self):
+        """BetCandidate.calibration defaults to False."""
+        from edge_calculator import BetCandidate
+        bet = self._make_bet(edge_pct=0.10)
+        assert bet.calibration is False
+
+    def test_mixed_bets_production_wins_no_calibration_retry(self):
+        """When one bet passes threshold and one doesn't, no calibration retry runs."""
+        from bet_ranker import rank_bets
+        passing = self._make_bet(edge_pct=0.095, event_id="evt1")  # score=46
+        failing = self._make_bet(edge_pct=0.085, event_id="evt2")  # score=42
+        results = rank_bets([passing, failing], calibration_threshold=40.0)
+        # Only the passing bet should appear, with calibration=False
+        assert len(results) == 1
+        assert results[0].event_id == "evt1"
+        assert results[0].calibration is False
+
+
+# ============================================================================
+# NHL kill switch — nhl_kill_switch() (V37 R4)
+# ============================================================================
+
+class TestNHLKillSwitch:
+    """Tests for nhl_kill_switch() in edge_calculator.py."""
+
+    def test_backup_goalie_kills(self):
+        from edge_calculator import nhl_kill_switch
+        killed, reason = nhl_kill_switch(backup_goalie=True)
+        assert killed is True
+        assert "KILL" in reason
+
+    def test_confirmed_starter_passes(self):
+        from edge_calculator import nhl_kill_switch
+        killed, reason = nhl_kill_switch(backup_goalie=False, goalie_confirmed=True)
+        assert killed is False
+        assert reason == ""
+
+    def test_b2b_flags_not_kills(self):
+        from edge_calculator import nhl_kill_switch
+        killed, reason = nhl_kill_switch(backup_goalie=False, b2b=True)
+        assert killed is False
+        assert "FLAG" in reason
+
+    def test_goalie_unconfirmed_flags_not_kills(self):
+        from edge_calculator import nhl_kill_switch
+        killed, reason = nhl_kill_switch(backup_goalie=False, goalie_confirmed=False)
+        assert killed is False
+        assert "FLAG" in reason
+
+    def test_backup_beats_b2b_priority(self):
+        """backup_goalie=True kills even when b2b=True (backup is stronger signal)."""
+        from edge_calculator import nhl_kill_switch
+        killed, reason = nhl_kill_switch(backup_goalie=True, b2b=True)
+        assert killed is True
+
+    def test_all_false_returns_clean(self):
+        from edge_calculator import nhl_kill_switch
+        killed, reason = nhl_kill_switch(backup_goalie=False, b2b=False, goalie_confirmed=True)
+        assert killed is False
+        assert reason == ""
+
+    def test_return_is_tuple(self):
+        from edge_calculator import nhl_kill_switch
+        result = nhl_kill_switch(backup_goalie=False)
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+
+# ============================================================================
+# SPECULATIVE tier — sharp_to_size() + kelly cap (V37 R4)
+# ============================================================================
+
+class TestSpeculativeTier:
+    """Tests for SPECULATIVE_0.25U tier: sharp_to_size() and kelly hard cap."""
+
+    def _make_bet(self, edge_pct: float, event_id: str = "evt1") -> "BetCandidate":
+        from edge_calculator import BetCandidate
+        return BetCandidate(
+            sport="NBA",
+            matchup="Team A @ Team B",
+            market_type="spread",
+            target="Team A -4.5",
+            line=-4.5,
+            price=-110,
+            edge_pct=edge_pct,
+            win_prob=0.55,
+            market_implied=0.524,
+            fair_implied=0.55,
+            kelly_size=0.5,
+            event_id=event_id,
+        )
+
+    def test_sharp_to_size_returns_speculative_for_score_40(self):
+        """Score exactly at calibration floor returns SPECULATIVE_0.25U."""
+        from edge_calculator import sharp_to_size
+        assert sharp_to_size(40.0) == "SPECULATIVE_0.25U"
+
+    def test_sharp_to_size_returns_speculative_for_score_42(self):
+        """Score in [40, 45) range returns SPECULATIVE_0.25U."""
+        from edge_calculator import sharp_to_size
+        assert sharp_to_size(42.5) == "SPECULATIVE_0.25U"
+
+    def test_sharp_to_size_returns_lean_at_threshold(self):
+        """Score exactly at SHARP_THRESHOLD=45 returns LEAN_0.5U (not SPECULATIVE)."""
+        from edge_calculator import sharp_to_size
+        assert sharp_to_size(45.0) == "LEAN_0.5U"
+
+    def test_sharp_to_size_speculative_boundary_just_below_threshold(self):
+        """Score at 44.9 is still SPECULATIVE_0.25U."""
+        from edge_calculator import sharp_to_size
+        assert sharp_to_size(44.9) == "SPECULATIVE_0.25U"
+
+    def test_speculative_bets_kelly_capped_at_025(self):
+        """rank_bets() hard caps kelly_size at 0.25 for speculative bets."""
+        from bet_ranker import rank_bets
+        # edge_pct=8.5% → score=42, calibration retry. Original kelly_size=0.5 must be capped.
+        bet = self._make_bet(edge_pct=0.085)
+        results = rank_bets([bet], calibration_threshold=40.0)
+        assert len(results) == 1
+        assert results[0].kelly_size <= 0.25
+
+    def test_speculative_bets_signal_label_is_speculative(self):
+        """Speculative bets get SPECULATIVE_0.25U signal label from sharp_to_size."""
+        from bet_ranker import rank_bets
+        from edge_calculator import sharp_to_size
+        bet = self._make_bet(edge_pct=0.085)
+        results = rank_bets([bet], calibration_threshold=40.0)
+        assert len(results) == 1
+        assert sharp_to_size(results[0].sharp_score) == "SPECULATIVE_0.25U"
+
+    def test_production_bets_kelly_not_capped(self):
+        """Production bets (score ≥45) keep their original kelly_size — not capped to 0.25."""
+        from bet_ranker import rank_bets
+        # edge_pct=9.5% → score=46, passes SHARP_THRESHOLD=45
+        bet = self._make_bet(edge_pct=0.095)
+        results = rank_bets([bet], calibration_threshold=40.0)
+        assert len(results) == 1
+        # kelly_size should NOT be capped — original value (0.5) or re-computed full size
+        assert results[0].kelly_size > 0.25

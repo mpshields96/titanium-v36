@@ -613,7 +613,7 @@ class TestDailyCreditLog:
 
     def test_report_no_warning_when_under_cap(self):
         self.log.record(18000)
-        self.log.record(17500)
+        self.log.record(17950)  # 50 credits used — under 100/day cap
         assert "DAILY_CAP" not in self.log.report()
 
     def test_persists_and_reloads(self):

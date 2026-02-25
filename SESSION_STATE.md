@@ -252,28 +252,36 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: Session 25 — Architecture transition. v36 chat → Reviewer/Auditor role. R&D chat RETIRED. Agentic sandbox (~/ClaudeCode/agentic-rd-sandbox/) is now primary builder.
-Last git commit: a1b6daf (pushed to origin/main)
-Tests: 163 total, all passing
-Quota: ~16,663 remaining
-Streamlit Cloud: deployed, auto-deploys from main (v36 remains the live production app)
+Last completed: V37 Reviewer Session 4 (continued) — 2026-02-25
+Last git commit: pending (V37 R4 changes staged, not yet committed)
+Tests: **251/251 passing** (+61 from Session 4 work)
+Quota: ⚠️ EXHAUSTED (~1 credit on main key). Test key (~485 remaining). Resets 2026-03-01.
+BILLING_RESERVE: **50** (temporarily lowered from 1000 — restore after 2026-03-01 reset)
+Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
-### Architecture as of Session 25
-- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (933 tests, 18 sessions, ahead in every dimension)
-- **Reviewer/Auditor:** v36 chat (this chat) — reviews sandbox sessions, flags architectural issues, decides promotions
-- **R&D chat:** RETIRED. titanium-experimental/ is archived.
-- **Live product:** v36 on Streamlit Cloud (until sandbox is deployed as replacement)
-- **Coordination:** SYNC.md still live. sandbox chat can read INBOX for context.
+### Architecture (V37 — two-AI system)
+- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (1072+ tests)
+- **Reviewer/Auditor:** This chat — reviews sandbox sessions, flags issues, decides promotions to v36
+- **R&D chat:** RETIRED. titanium-experimental/ archived.
+- **Live product:** v36 on Streamlit Cloud
+- **Coordination:** REVIEW_LOG.md + V37_INBOX.md in agentic-rd-sandbox/ (sandbox writes → reviewer reads)
+- **Startup document:** REVIEWER_PROMPT.md at /Users/matthewshields/Projects/titanium-v36/REVIEWER_PROMPT.md
 
-### What was done in Session 25
-1. API quota rule locked in CLAUDE.md + MEMORY.md (user explicit request — burn rate was unacceptable)
-2. SYNC.md coordination file documented — OUTBOX/INBOX workflow confirmed working
-3. SESSION_STATE.md + PROJECT_INDEX.md updated (S25 footer)
-4. SYNC.md INBOX written: R&D S30 EXP 6 confirmed, win_prob status confirmed, sandbox audit assigned
-5. Strategic analysis: agentic sandbox wins every measurable dimension. Decision: promote sandbox to primary builder.
-6. CLAUDE.local.md rewritten for reviewer role. R&D chat officially retired.
-7. New v37 startup prompt written for next chat.
+### What was done in V37 Reviewer Session 4 (2026-02-25)
+1. **DAILY_CREDIT_CAP 1000 → 100** in odds_fetcher.py (user directive: permanent ceiling on 20K plan)
+2. **BILLING_RESERVE 1000 → 50** (temp for quota drought — restores 2026-03-01)
+3. **Zero-bets speculative protocol**: rank_bets() calibration_threshold=40.0 retry; bets scoring 40–44 returned with calibration=True and kelly capped at 0.25u
+4. **Three-tier SPECULATIVE UI**: sharp_to_size() returns SPECULATIVE_0.25U for scores < 45; orange bet card config added; SPECULATIVE MODE banner in app.py
+5. **nhl_data.py promoted to v36**: data/nhl_data.py, nhl_kill_switch() in edge_calculator.py, parse_game_markets() updated, inline NHL goalie poll in run_pipeline()
+6. **Sandbox directive written** to REVIEW_LOG.md: full spec for sandbox to implement same three-tier system
+7. **Test count: 190 → 251** (+61 total across all work this session)
+
+### Pending for next session
+- Restore BILLING_RESERVE from 50 → 1_000 after 2026-03-01 quota reset
+- B2 gate check: 2026-03-04 — check /Users/matthewshields/Projects/titanium-experimental/results/espn_stability.log
+- Stress test (3/1/26): run full pipeline scan to generate real bets for model calibration
+- Sandbox: implement speculative tier per REVIEW_LOG.md directive
 
 ### What was built in Session 24
 1. **GAP 4 — Soccer 3-outcome fix (CRITICAL)**
