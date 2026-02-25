@@ -1,9 +1,9 @@
 # TITANIUM V36.1 — Project Index
-Generated: 2026-02-24 (V37 Reviewer Session 1 — Two-AI coordination system live)
+Generated: 2026-02-24 (V37 Reviewer Session 2 — quota guards + XSS fix)
 
 ## Quick Start
 ```bash
-python3 -m pytest tests/ -v          # 163 tests — must pass before each session
+python3 -m pytest tests/ -v          # 185 tests — must pass before each session
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
@@ -68,17 +68,19 @@ All three tables gated behind `is_configured()` in their respective store module
 
 ## Core Modules
 
-### odds_fetcher.py — API + RLM Cache
-No math, no UI. HTTP calls + session-scoped price cache.
+### odds_fetcher.py — API + RLM Cache + Quota Guards (V37 R2)
+No math, no UI. HTTP calls + session-scoped price cache + persistent daily credit enforcement.
+
+**Quota constants:** `DAILY_CREDIT_CAP=1000` · `SESSION_CREDIT_SOFT_LIMIT=300` · `SESSION_CREDIT_HARD_STOP=500` · `BILLING_RESERVE=1000`
 
 | Function | Returns | Notes |
 |----------|---------|-------|
-| `fetch_game_lines(sport_key)` | `list` | 1 API call per sport |
+| `fetch_game_lines(sport_key)` | `list` | 1 API call per sport — **blocked** if any quota guard fires |
 | `fetch_sport(sport)` | `list` | Friendly name wrapper ("NCAAB" → basketball_ncaab) |
 | `fetch_batch_odds(sport_key, api_key)` | `list` | Legacy wrapper |
 | `preferred_book(bookmakers)` | `dict\|None` | DraftKings > FanDuel > BetMGM > BetRivers > Caesars |
 | `all_books(bookmakers)` | `list` | All books sorted by preference |
-| `get_quota_status()` | `str` | used/remaining/last_call_cost |
+| `get_quota_status()` | `str` | used/remaining/last_call_cost + daily cap status |
 | `_extract_open_prices(game)` | `dict[str,float]` | **Session 20** — extract {"home": price, "away": price}; tries PREFERRED_BOOKS order; returns {} if no usable prices |
 | `cache_open_prices(games)` | `int` | Freeze open prices (first call wins, frozen after) |
 | `get_open_price(event_id, side)` | `float\|None` | Return cached open price |
@@ -86,7 +88,11 @@ No math, no UI. HTTP calls + session-scoped price cache.
 | `compute_rlm(games)` | `dict[str,bool]` | **Session 13** — passive RLM, 3% implied prob threshold |
 | `compute_rest_days_from_schedule(raw_games)` | `dict[str,int\|None]` | **Session 11** — B2B detection from commence_time diffs |
 
-Classes: `QuotaTracker` — tracks API usage per session.
+**Classes:**
+- `DailyCreditLog` **(V37 R2)** — persistent JSON log (`daily_quota.json`). Survives process restarts. `is_daily_cap_hit()` → blocks when `used_today >= DAILY_CREDIT_CAP`.
+- `QuotaTracker` **(V37 R2 — now enforcing)** — tracks session_used + calls `daily_log.record()` per update. `is_session_hard_stop()` checks: (1) daily cap, (2) session >= 500, (3) remaining < BILLING_RESERVE. `is_session_soft_limit()` warns at 300 session credits.
+
+**Test isolation:** `quota` is a module-level singleton. Any test class calling fetch functions needs `setup_method` resetting `quota.remaining=18000`, `quota.session_used=0`, `quota.daily_log._data["used_today"]=0`. Without this, BILLING_RESERVE guard fires and `_get()` returns `[]`.
 
 **Circular import warning:** `edge_calculator` imports `odds_fetcher`. Never import `edge_calculator` from `odds_fetcher`. `_extract_open_prices` is imported by `price_history_store` via deferred import for the same reason.
 
@@ -154,6 +160,8 @@ Key helpers: `_consensus_badge_html(std_dev)` — BOOKS TIGHT/MODERATE/WIDE · `
 Tier colours: NUCLEAR amber `#F59E0B` · STANDARD blue `#3B82F6` · LEAN teal `#14B8A6`
 
 **Design:** Inline styles only (Streamlit strips `<style>` tags). Use `st.html()` for full slate — `st.markdown(unsafe_allow_html=True)` sandboxes large HTML in Streamlit 1.54+.
+
+**XSS (V37 R2):** All user/API strings in `st.html()` f-strings wrapped with `_html.escape()`. `import html as _html` alias required — `html` is a local variable in both app.py and bet_card_renderer.py.
 
 ---
 
@@ -341,12 +349,12 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | File | Count | Covers |
 |------|-------|--------|
 | `test_validation.py` | 66 | collar, kelly, edge math, profit calc, injury stubs, consensus badge, NHL/MLB/MLS/NFL efficiency, alias collision guards |
-| `test_odds_fetcher.py` | 40 | API fetch, preferred book, rest days, RLM, _extract_open_prices |
+| `test_odds_fetcher.py` | 62 | API fetch, preferred book, rest days, RLM, _extract_open_prices, **DailyCreditLog (9), QuotaTracker guards (9), fetch_game_lines guards (4)** (V37 R2) |
 | `test_price_history_store.py` | 10 | is_configured, record_new_events, inject_into_cache (Session 20) |
 | `test_clv_store.py` | 19 | record_clv_open, update_clv_close, fetch_clv_for_events, get_clv_summary (Session 22) |
 | `test_soccer_consensus.py` | 13 | american_to_implied, 3-way fair probs, std_dev, validation (Session 24) |
 | `test_parlay_builder.py` | 15 | _american_to_decimal, _parlay_ev, build_parlay_combos, format_parlay_table (Session 24) |
-| **Total** | **163** | all passing |
+| **Total** | **185** | all passing |
 
 ---
 
@@ -372,8 +380,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 24 | ✅ | `data/soccer_consensus.py` (3-way vig removal), `data/parlay_builder.py` (2-leg combos), `page_parlay_builder()` — **163 total** |
 | 25 | ✅ | Architecture transition: v36 chat → Reviewer/Auditor role. R&D chat RETIRED. Agentic sandbox is primary builder. |
 | V37 S1 | ✅ | Reviewer role activated. Two-AI coordination via REVIEW_LOG.md confirmed live. Sandbox Sessions 23+24 APPROVED. Schema review for Advanced Analytics written. REVIEWER_PROMPT.md created. v36 compatibility rule established. |
+| V37 R2 | ✅ | XSS fix (app.py + bet_card_renderer.py, `_html.escape()`). `DailyCreditLog` + enforcing `QuotaTracker` in `odds_fetcher.py` (DAILY_CREDIT_CAP=1000 persistent across restarts). Quota incident root-caused + documented. Inactivity auto-stop spec → REVIEW_LOG.md + V37_INBOX.md. 22 new tests → **185 total**. |
 
-Last commit: `a2a9b45` · Tests: **163 passing** · Quota: ~16,663 remaining
-V37 Reviewer Session 1 complete (2026-02-24). Sandbox Session 25 in progress (Advanced Analytics build).
+Last commit: this session (XSS fix + quota guards) · Tests: **185 passing** · Quota: ⚠️ ~1 remaining (exhausted — resets next billing cycle)
+V37 Reviewer Session 2 complete (2026-02-24). Sandbox Session 26 pending (inactivity auto-stop + DAILY_CREDIT_CAP in sandbox).
 **NEW REVIEWER CHAT:** Paste REVIEWER_PROMPT.md contents as opening message. No other context needed.
 B2 gate opens 2026-03-04 — check espn_stability.log on that date. SHARP_THRESHOLD raise gated at 5 live RLM fires (0/5).

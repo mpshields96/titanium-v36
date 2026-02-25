@@ -151,7 +151,10 @@ Loading screen tip: /sc:load at session start pulls PROJECT_INDEX.md + SESSION_S
 ## SECTION 2 — CURRENT STATE EXPANSION
 # This section is MUTABLE. Update at the end of every session that uses this file.
 # It layers on top of Section 1. Where Section 2 contradicts Section 1, Section 2 wins.
-# Last updated: 2026-02-24 (V37 Reviewer Session 1 — WRAP-UP)
+# Last updated: 2026-02-24 (V37 Reviewer Session 2 — WRAP-UP)
+
+### STARTUP SEQUENCE UPDATE (test count changed)
+Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 185/185 still passing**
 
 ### WHEN TO OPEN A NEW TITANIUM V36 REVIEWER CHAT
 Open a new chat when ANY of the following are true:
@@ -164,38 +167,50 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 
 ### Reviewer sessions completed
 - **V37 Session 1** (2026-02-24): Reviewer role activated. Two-AI coordination system live.
-  Audited Sandbox Sessions 23 + 24. Both APPROVED.
-  Schema review written for Advanced Analytics + bet_log expansion. Sandbox cleared to build.
-  REVIEWER_PROMPT.md created. v36 compatibility rule established.
+  Audited Sandbox Sessions 23 + 24. Both APPROVED. REVIEWER_PROMPT.md created.
+- **V37 Session 2** (2026-02-24): XSS fix in v36 + quota guards + inactivity auto-stop spec.
+  Session 25 UI Extension audited (APPROVED WITH FLAGS). Critical quota incident documented.
+  v36 tests: 163 → 185 (+22 DailyCreditLog/QuotaTracker/fetch guard tests).
+  New REVIEW_LOG.md sections: Quota Guard ✅, Inactivity Auto-Stop spec (sandbox P0).
+  REVIEW_LOG.md supplemental audit: Session 25 UI Extension (NFL backup QB stub flag + STANDARD tier threshold flag).
 
 ### Sandbox current state (last confirmed)
-- Sessions complete: **24**
-- Tests: **1011/1011** passing
-- Last commit: pushed via PAT token (all 8 pending commits in Session 23)
-- Architecture: `core/` subpackage, SQLite, APScheduler, 6+ Streamlit pages
-- Kill switches LIVE (12): NBA B2B, NFL wind (Open-Meteo), NCAAB 3PT, Soccer drift + 3-way,
-  NHL goalie, Tennis surface, PDO (Session 23), KOTC Tuesday (Session 23)
-- New in Session 23: `core/king_of_the_court.py`, `core/injury_data.py`, `core/nba_pdo.py`
-- New in Session 24: `scripts/backup.sh`, quota guards in `core/odds_fetcher.py`,
-  major `CLAUDE.md` governance update
-- **Session 25 in progress**: Advanced Analytics + bet_log schema migration cleared to build.
-  Sandbox has REVIEW_LOG.md schema review with all specifications.
+- Sessions complete: **25** (Session 26 not yet started)
+- Tests: **1062/1062** passing
+- Architecture: `core/` subpackage, SQLite, APScheduler, 8 Streamlit pages
+- Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
+- New in Session 25: `core/analytics.py`, `pages/07_analytics.py`, schema migration (+7 analytics cols),
+  `pages/00_guide.py` (onboarding), `SYSTEM_GUIDE.md`, nav fix, HTML injection fix
 
 ### v36 current state (deployed production)
-- Tests: **163/163** passing ✅ (confirmed at end of V37 Session 1)
-- Last commit: `a2a9b45` (pushed to origin/main, Session 25 governance)
-- **This session's new files (not yet committed — commit after wrap-up):**
-  - `REVIEWER_PROMPT.md` (NEW — this file)
-  - `REVIEW_LOG.md` changes in agentic-rd-sandbox (V37 SCHEMA REVIEW + flag clearances)
+- Tests: **185/185** passing ✅
+- Last commit: [this session — pending git push]
+- New/modified this session:
+  - `app.py` — HTML injection (XSS) fix for all st.html() f-strings
+  - `bet_card_renderer.py` — HTML injection (XSS) fix for all HTML f-strings
+  - `odds_fetcher.py` — DailyCreditLog class + full quota guard enforcement (22 new tests)
+  - `tests/test_odds_fetcher.py` — 22 new tests + setup_method quota isolation pattern
+  - `CLAUDE.md` — DAILY_CREDIT_CAP=1000 rule added to API Quota section + scheduler warning
+  - `CLAUDE.local.md` — KNOWN STATE updated: 185 tests, quota exhausted, incident documented
+  - `.gitignore` — `daily_quota.json` added
 - Streamlit Cloud: auto-deploys from main branch. Still live.
-- Supabase tables: `bet_history`, `price_history`, `clv_history` — all live
-- ODDS_API quota: ~16,663 remaining (as of Session 25). Each sport scan = 1 call.
+- ⚠️ ODDS_API quota: ~1 credit remaining (exhausted — billing cycle reset pending)
 
 ### Active flags in REVIEW_LOG.md
-- **None.** All flags cleared as of V37 Reviewer Session 1.
-  - Session 24 CLAUDE.md stale state → CLEARED (sandbox fixed autonomously)
-  - Session 23 injury leverage → CLEARED (core/injury_data.py is static, zero external API)
-- **Sandbox cleared to build Session 25** (Advanced Analytics + bet_log schema).
+- **FLAG: NFL Backup QB listed as LIVE in SYSTEM_GUIDE.md + 00_guide.py** — sandbox must fix
+  (`backup_qb` param always False — no NFL roster/injury feed. Mark as STUB.)
+- **FLAG: STANDARD tier threshold wrong in guide** — sandbox must fix
+  (Guide says ≥60, actual code is ≥80. Fix in both SYSTEM_GUIDE.md and 00_guide.py.)
+- **New spec for sandbox Session 26:** 24-hour inactivity auto-stop for scheduler.
+  Full spec in REVIEW_LOG.md (→ INACTIVITY AUTO-STOP section). P0 alongside daily cap.
+
+### Quota incident (2026-02-24 — permanent awareness)
+- Monthly quota (20,000) burned to ~1 credit remaining in 6 days
+- Root cause: APScheduler polling 5min × 11 sports = 26 credits/cycle × 288/day = 7,488/day
+- session_used resets on every restart → 500-credit session guard was ineffective
+- Fix: DailyCreditLog persists to `daily_quota.json`. Survives restarts. Resets midnight UTC.
+- v36 fix: DONE (185/185 tests). Sandbox fix: Session 24 already had guards, but no daily cap yet.
+- Inactivity auto-stop: sandbox P0 for Session 26. Spec in REVIEW_LOG.md.
 
 ### Schema review decisions (V37 Session 1 — authoritative)
 `bet_log` additions APPROVED WITH MODIFICATIONS:

@@ -14,6 +14,7 @@ DO NOT add API calls, math, or betting logic to this file.
 """
 
 import os
+import html as _html
 from datetime import datetime
 
 import streamlit as st
@@ -1062,7 +1063,7 @@ def page_bet_history():
   height: 100%;
 ">
   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-    <span style="font-size: 0.62rem; font-weight: 500; letter-spacing: 0.08em; color: #8B949E;">{bet.get('sport','')}</span>
+    <span style="font-size: 0.62rem; font-weight: 500; letter-spacing: 0.08em; color: #8B949E;">{_html.escape(bet.get('sport',''))}</span>
     <span style="
       font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em;
       color: {sig_color}; background: {sig_bg}; border: 1px solid {sig_bd};
@@ -1070,10 +1071,10 @@ def page_bet_history():
     ">{sig}</span>
   </div>
   <div style="font-size: 0.9rem; font-weight: 600; color: #E6EDF3; margin-bottom: 4px; line-height: 1.3;">
-    {bet.get('matchup','')}
+    {_html.escape(bet.get('matchup',''))}
   </div>
   <div style="font-size: 0.72rem; color: #8B949E; margin-bottom: 8px;">
-    {bet.get('market_type','')} &nbsp;·&nbsp; {bet.get('target','')}
+    {_html.escape(bet.get('market_type',''))} &nbsp;·&nbsp; {_html.escape(bet.get('target',''))}
   </div>
   <div style="display: flex; gap: 14px;">
     <span style="font-size: 0.68rem; color: #6E7681;">Price &nbsp;<span style="color: #E6EDF3; font-weight: 600;">{price_fmt}</span></span>
@@ -1153,8 +1154,8 @@ def page_bet_history():
             except Exception:
                 date_fmt = raw_dt[:10] if raw_dt else "—"
 
-            matchup_short = bet.get("matchup", "")
-            market_str    = bet.get("market_type", "")
+            matchup_short = _html.escape(bet.get("matchup", ""))
+            market_str    = _html.escape(bet.get("market_type", ""))
 
             # CLV lookup — keyed by (event_id, target, market_type)
             _clv_key = (bet.get("event_id", ""), bet.get("target", ""), bet.get("market_type", ""))

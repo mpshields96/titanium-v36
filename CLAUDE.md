@@ -56,12 +56,14 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - NHL sparse coverage (h2h only, few books) is normal for games >3 days out; spreads/totals open closer to game day
 
 ## API Quota — DO NOT BURN (non-negotiable)
+- **DAILY HARD CAP: 1,000 credits/day — permanent user rule, no exceptions, ever. Includes testing and experimentation.**
 - Quota is a hard finite resource. 10% → 45% burned in a single day is unacceptable.
 - **R&D live API calls require explicit user approval before every run.** No exceptions.
 - Default for ALL R&D probe/validation scripts: use saved fixture JSON, not live endpoints.
 - Before running any script that calls `fetch_game_lines()` or any `_get()`: state the call count and ask the user to confirm.
 - v36 production is fine (1 call/sport on EXECUTE SCAN only). R&D is the risk surface.
 - Never run multi-sport probes, validation loops, or iterative probes without explicit per-run approval.
+- **Scheduler is NOT safe to leave running** — it polls every 5 min × 11 sports = ~26 credits/cycle × 288 cycles/day = 7,488 credits/day if left unattended. Never start the scheduler without daily cap enforcement in place.
 
 ## Session Workflow
 - **SESSION START**: Read `~/ClaudeCode/agentic-rd-sandbox/V37_INBOX.md` immediately after CLAUDE.md. If there's a PENDING task from the sandbox builder, complete it before other work. This is how the two-AI system coordinates without requiring the user to relay prompts. (Inbox lives in the sandbox repo — sandbox writes it, you read it. Never write to that path.)
@@ -70,6 +72,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - If code breaks: describe behavior ("returns empty list"), not "fix it"
 - Never push to GitHub without checking the deployment checklist
 - Module-level caches (e.g. `_OPEN_PRICE_CACHE`) need `setup_method` teardown in tests — call clear function before each test or tests bleed state
+- `QuotaTracker` test isolation: module-level `quota` singleton bleeds state. Any test class exercising `fetch_game_lines()` or `fetch_batch_odds()` needs `setup_method` resetting `quota.remaining=18000`, `quota.session_used=0`, `quota.daily_log._data["used_today"]=0`. Without this, BILLING_RESERVE guard fires and all `_get()` calls return `[]`.
 - Supabase mock `.not_` chain: `mock_table.not_` is a property (not callable), so `mock_table.not_.return_value = mock_table` does NOT work. Use `mock_table.not_ = mock_table` so `.not_.is_(...)` resolves back through the configured mock and `.execute()` returns correct test data
 - Pass `raw_games` into `calculate_edges(sport, raw_games=raw_games)` to avoid double API call — it skips internal fetch when provided
 - Never import `edge_calculator` from `odds_fetcher.py` — circular import (`edge_calculator` already imports `odds_fetcher`)
@@ -103,6 +106,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 23 | ✅ Done | CLAUDE.md .not_ mock pattern, MASTER_ROADMAP session log, all MD files refreshed, PROJECT_INDEX.md updated |
 | 24 | ✅ Done | GAP 4 soccer 3-way fix: data/soccer_consensus.py promoted, edge_calculator.py moneyline branched on _is_soccer. EXP 5: data/parlay_builder.py + page_parlay_builder() + 🔗 nav. 28 new tests — 163/163 |
 | 25 | ✅ Done | Architecture: agentic sandbox (~/ClaudeCode/agentic-rd-sandbox/) promoted to primary builder. v36 chat transitions to Reviewer/Auditor role. R&D chat RETIRED. SYNC.md INBOX updated. API quota rule locked. No code changes. |
+| V37 R2 | ✅ Done | XSS fix (app.py + bet_card_renderer.py _html.escape), DailyCreditLog + enforcing QuotaTracker in odds_fetcher.py (DAILY_CREDIT_CAP=1000), 22 new tests — 185/185. Quota incident root cause documented. Inactivity auto-stop spec written to REVIEW_LOG.md + V37_INBOX.md. |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -139,6 +143,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - `bet_card_renderer.py` uses inline styles only — Streamlit strips `<style>` tags from `st.markdown()` HTML
 - `st.Page(icon=...)` requires real emoji or Material shortcodes — Unicode geometric chars (◈ ◇) crash the app
 - **Streamlit 1.54+:** `st.markdown(unsafe_allow_html=True)` sandboxes large HTML into a `<code>` block. Use `st.html()` for full HTML documents/slates. `st.markdown` is safe only for small inline fragments.
+- **`st.html()` XSS escaping:** Wrap all user/API strings in `_html.escape()` before f-string interpolation. Use `import html as _html` (alias required — `html` is a local variable name in app.py and bet_card_renderer.py). Streamlit 1.54+ `st.html()` runs in an allow-scripts iframe — stored XSS is live, not theoretical.
 - **eff_data multi-sport:** call `eff_data.update(build_efficiency_data(raw_games))` unconditionally per sport — never gate inside `if sport == "X"` or efficiency data silently won't reach rank_bets() for other sports.
 - **Equity curve charts:** `st.line_chart(df, color="#14B8A6", height=180)` — pass pd.DataFrame with named index. Works on Streamlit Cloud, no extra deps. Used in `page_pnl_tracker()`.
 - **P&L session cache:** `"pnl_data"` key is independent of `"bet_history_data"` — bust with `st.session_state.pop("pnl_data", None)` + `st.rerun()` after any outcome write.
@@ -159,22 +164,25 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 
 ## Chat Roles & File Access (non-negotiable)
 Two Claude Code chats exist for this project. File permissions are STRICTLY enforced:
+**R&D chat (titanium-experimental) RETIRED as of Session 25. Replaced by agentic sandbox.**
 
-| Chat | titanium-v36/ | titanium-experimental/ |
-|------|--------------|------------------------|
-| **v36 chat (this chat)** | Full read + write | Full read + write |
-| **R&D chat** | READ ONLY — never modifies | Full read + write |
+| Chat | titanium-v36/ | agentic-rd-sandbox/ |
+|------|--------------|---------------------|
+| **v36 reviewer (this chat)** | Full read + write | READ ONLY — never writes |
+| **Agentic sandbox** | READ ONLY — never writes | Full read + write |
 
 Rules:
-- **v36 chat is the promotion gate.** Nothing lands in v36 unless explicitly written here.
-- **R&D chat CANNOT modify any v36 files.** Not CLAUDE.md, not SESSION_STATE.md, not any .py files.
-- When promoting R&D code to v36: v36 chat reads R&D files, then writes v36 files. Never the reverse.
-- HANDOFF.md in `titanium-experimental/` is the communication channel. R&D writes it; v36 reads it.
-- SESSION_STATE.md in `titanium-v36/` is v36-only. R&D reads it for context only.
-- **`titanium-experimental/SYNC.md`** replaces copy-paste handoffs between chats.
-  OUTBOX = R&D completed work + requests. INBOX = v36 instructions back to R&D.
-  At v36 session start: read SYNC.md OUTBOX first, then HANDOFF.md. Write v36 response to INBOX.
-  User no longer needs to relay messages between chats manually.
+- **v36 reviewer is the promotion gate.** Nothing lands in v36 unless explicitly written by this chat.
+- **Agentic sandbox CANNOT modify any v36 files.** Not CLAUDE.md, not SESSION_STATE.md, not any .py files.
+- When promoting sandbox code to v36: reviewer reads sandbox files, then writes v36 files. Never the reverse.
+- **Coordination files all live in the sandbox:** V37_INBOX.md, REVIEW_LOG.md, SESSION_LOG.md.
+  - V37_INBOX.md: sandbox writes pending tasks → reviewer reads and marks DONE
+  - REVIEW_LOG.md: sandbox writes session summaries → reviewer appends audit blocks
+  - Both chats read these files at session start. Reviewer ONLY writes audit blocks / flag notes here.
+- **`titanium-experimental/` is ARCHIVED** — SYNC.md, HANDOFF.md are no longer active. Ignore.
+- SESSION_STATE.md in `titanium-v36/` is reviewer-only. Sandbox reads it for context only.
+- **REVIEWER_PROMPT.md** in `titanium-v36/` is the session startup document for new reviewer chats.
+  Update Section 2 at every session end and commit.
 
 ## Deployment Checklist
 - [ ] No API keys in code

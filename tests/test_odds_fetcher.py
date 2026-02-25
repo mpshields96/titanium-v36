@@ -28,6 +28,11 @@ from odds_fetcher import (
     cache_open_prices,
     compute_rlm,
     clear_open_price_cache,
+    DailyCreditLog,
+    QuotaTracker,
+    DAILY_CREDIT_CAP,
+    SESSION_CREDIT_HARD_STOP,
+    BILLING_RESERVE,
 )
 
 # ---------------------------------------------------------------------------
@@ -94,8 +99,9 @@ def _make_mock_response(status_code: int, json_body=None, headers=None):
     mock_resp = MagicMock()
     mock_resp.status_code = status_code
     mock_resp.headers = headers or {
-        "x-requests-remaining": "499",
-        "x-requests-used": "1",
+        "x-requests-remaining": "5000",  # above BILLING_RESERVE — don't trigger guard
+        "x-requests-used": "15000",
+        "x-requests-last": "3",
     }
     if json_body is not None:
         mock_resp.json.return_value = json_body
@@ -115,6 +121,14 @@ def _make_mock_response(status_code: int, json_body=None, headers=None):
 # ============================================================================
 
 class TestFetchBatchOddsSuccess:
+
+    def setup_method(self):
+        """Reset module-level quota before each test to prevent state bleed."""
+        import odds_fetcher as _of
+        _of.quota.remaining = 18000
+        _of.quota.session_used = 0
+        _of.quota.daily_log._data["used_today"] = 0
+        _of.quota.daily_log._data["start_remaining"] = None
 
     def test_returns_list_of_games_on_200(self):
         """Happy path: API returns 200 with one NHL game."""
@@ -182,6 +196,14 @@ class TestFetchBatchOddsSuccess:
 # ============================================================================
 
 class TestFetchBatchOddsErrors:
+
+    def setup_method(self):
+        """Reset module-level quota before each test to prevent state bleed."""
+        import odds_fetcher as _of
+        _of.quota.remaining = 18000
+        _of.quota.session_used = 0
+        _of.quota.daily_log._data["used_today"] = 0
+        _of.quota.daily_log._data["start_remaining"] = None
 
     def test_invalid_api_key_returns_empty_list(self):
         """401 from the API (bad key) must return [] without raising."""
@@ -536,3 +558,192 @@ class TestComputeRlm:
         }
         result = compute_rlm([empty_game])
         assert result["g8"] is False
+
+
+# ---------------------------------------------------------------------------
+# DailyCreditLog — persistent daily cap
+# ---------------------------------------------------------------------------
+
+class TestDailyCreditLog:
+    """Tests for the persistent daily credit cap (1,000 credits/day rule)."""
+
+    def setup_method(self):
+        import tempfile
+        self._tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+        self._tmp.close()
+        self.log = DailyCreditLog(log_path=self._tmp.name)
+
+    def teardown_method(self):
+        import os as _os
+        try:
+            _os.unlink(self._tmp.name)
+        except OSError:
+            pass
+
+    def test_fresh_log_used_today_is_zero(self):
+        assert self.log.used_today() == 0
+
+    def test_fresh_log_is_daily_cap_not_hit(self):
+        assert self.log.is_daily_cap_hit() is False
+
+    def test_record_sets_start_remaining_on_first_call(self):
+        self.log.record(18000)
+        assert self.log._data["start_remaining"] == 18000
+        assert self.log._data["used_today"] == 0
+
+    def test_record_calculates_used_on_second_call(self):
+        self.log.record(18000)
+        self.log.record(17994)
+        assert self.log.used_today() == 6
+
+    def test_is_daily_cap_hit_when_used_exceeds_cap(self):
+        self.log.record(18000)
+        self.log.record(18000 - DAILY_CREDIT_CAP)  # exactly at cap
+        assert self.log.is_daily_cap_hit() is True
+
+    def test_used_today_never_goes_negative(self):
+        self.log.record(18000)
+        self.log.record(18001)  # remaining went UP (shouldn't happen but must be safe)
+        assert self.log.used_today() == 0
+
+    def test_report_includes_cap_warning_when_hit(self):
+        self.log.record(18000)
+        self.log.record(18000 - DAILY_CREDIT_CAP)
+        assert "DAILY_CAP" in self.log.report()
+
+    def test_report_no_warning_when_under_cap(self):
+        self.log.record(18000)
+        self.log.record(17500)
+        assert "DAILY_CAP" not in self.log.report()
+
+    def test_persists_and_reloads(self):
+        self.log.record(18000)
+        self.log.record(17990)
+        reloaded = DailyCreditLog(log_path=self._tmp.name)
+        assert reloaded.used_today() == 10
+
+
+# ---------------------------------------------------------------------------
+# QuotaTracker — session + daily guards
+# ---------------------------------------------------------------------------
+
+class TestQuotaTrackerGuards:
+    """Tests for QuotaTracker credit enforcement guards."""
+
+    def setup_method(self):
+        import tempfile
+        self._tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+        self._tmp.close()
+        self.qt = QuotaTracker()
+        # Replace daily_log with isolated temp-file version
+        self.qt.daily_log = DailyCreditLog(log_path=self._tmp.name)
+
+    def teardown_method(self):
+        import os as _os
+        try:
+            _os.unlink(self._tmp.name)
+        except OSError:
+            pass
+
+    def _headers(self, remaining: int, used: int = 0, last: int = 3) -> dict:
+        return {
+            "x-requests-remaining": str(remaining),
+            "x-requests-used": str(used),
+            "x-requests-last": str(last),
+        }
+
+    def test_no_hard_stop_initially(self):
+        assert self.qt.is_session_hard_stop() is False
+
+    def test_session_hard_stop_when_session_used_at_cap(self):
+        self.qt.session_used = SESSION_CREDIT_HARD_STOP
+        assert self.qt.is_session_hard_stop() is True
+
+    def test_billing_reserve_triggers_hard_stop(self):
+        self.qt.update(self._headers(remaining=BILLING_RESERVE - 1))
+        assert self.qt.is_session_hard_stop() is True
+
+    def test_billing_reserve_exact_boundary(self):
+        self.qt.update(self._headers(remaining=BILLING_RESERVE))
+        # Exactly at reserve floor = not yet triggered
+        assert self.qt.is_session_hard_stop() is False
+
+    def test_daily_cap_triggers_hard_stop(self):
+        self.qt.daily_log.record(18000)
+        self.qt.daily_log.record(18000 - DAILY_CREDIT_CAP)
+        assert self.qt.is_session_hard_stop() is True
+
+    def test_session_used_increments_from_remaining_delta(self):
+        # First call: prev_remaining=None → falls back to last_cost=3 → session_used=3
+        self.qt.update(self._headers(remaining=18000, last=3))
+        # Second call: prev=18000, new=17997 → delta=3 → session_used=6
+        self.qt.update(self._headers(remaining=17997, last=3))
+        assert self.qt.session_used == 6
+
+    def test_session_soft_limit_fires_at_threshold(self):
+        self.qt.session_used = 300
+        assert self.qt.is_session_soft_limit() is True
+
+    def test_report_includes_daily_info(self):
+        report = self.qt.report()
+        assert "daily=" in report
+
+    def test_report_shows_hard_stop_when_session_maxed(self):
+        self.qt.session_used = SESSION_CREDIT_HARD_STOP
+        assert "HARD_STOP" in self.qt.report()
+
+
+# ---------------------------------------------------------------------------
+# fetch_game_lines — guard enforcement
+# ---------------------------------------------------------------------------
+
+class TestFetchGameLinesGuards:
+    """fetch_game_lines must return [] without calling the API when any guard is hit."""
+
+    def setup_method(self):
+        import tempfile
+        self._tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+        self._tmp.close()
+        import odds_fetcher as _of
+        # Replace module-level quota with isolated version
+        self._orig_quota = _of.quota
+        _of.quota = QuotaTracker()
+        _of.quota.daily_log = DailyCreditLog(log_path=self._tmp.name)
+        self._module = _of
+
+    def teardown_method(self):
+        import os as _os
+        self._module.quota = self._orig_quota
+        try:
+            _os.unlink(self._tmp.name)
+        except OSError:
+            pass
+
+    def test_fetch_blocked_when_session_hard_stop(self):
+        self._module.quota.session_used = SESSION_CREDIT_HARD_STOP
+        with patch("odds_fetcher._get") as mock_get:
+            result = self._module.fetch_game_lines("basketball_nba")
+        assert result == []
+        mock_get.assert_not_called()
+
+    def test_fetch_blocked_when_billing_reserve_low(self):
+        self._module.quota.remaining = BILLING_RESERVE - 1
+        with patch("odds_fetcher._get") as mock_get:
+            result = self._module.fetch_game_lines("basketball_nba")
+        assert result == []
+        mock_get.assert_not_called()
+
+    def test_fetch_blocked_when_daily_cap_hit(self):
+        self._module.quota.daily_log.record(18000)
+        self._module.quota.daily_log.record(18000 - DAILY_CREDIT_CAP)
+        with patch("odds_fetcher._get") as mock_get:
+            result = self._module.fetch_game_lines("basketball_nba")
+        assert result == []
+        mock_get.assert_not_called()
+
+    def test_fetch_proceeds_when_guards_clear(self):
+        mock_resp = [{"id": "g1", "home_team": "Lakers", "away_team": "Celtics",
+                      "commence_time": "2026-02-18T00:00:00Z", "bookmakers": []}]
+        with patch("odds_fetcher._get", return_value=mock_resp):
+            result = self._module.fetch_game_lines("basketball_nba")
+        assert result == mock_resp

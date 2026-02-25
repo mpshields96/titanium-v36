@@ -16,6 +16,7 @@ Book preference: DraftKings → FanDuel → BetMGM → BetRivers → Caesars →
 DO NOT add betting math or Streamlit calls to this file.
 """
 
+import json
 import logging
 import os
 import time
@@ -27,6 +28,88 @@ import requests
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.the-odds-api.com/v4/sports"
+
+# ---------------------------------------------------------------------------
+# Quota budget constants
+#
+# PERMANENT USER DIRECTIVE (2026-02-24): NEVER exceed 1,000 API credits per day.
+# Applies to ALL usage — live fetches, testing, experiments. No exceptions.
+#
+# Subscription: 20,000 credits/month ($30/month plan)
+# Monthly target: ≤ 10,000 credits/month (50% = always safe)
+#
+#   DAILY_CREDIT_CAP           — HARD limit: ≤1,000 credits per calendar day (UTC)
+#   SESSION_CREDIT_SOFT_LIMIT  — warn in logs when session usage hits this
+#   SESSION_CREDIT_HARD_STOP   — stop ALL fetches for the session when hit
+#   BILLING_RESERVE            — global floor: never let remaining drop below this
+# ---------------------------------------------------------------------------
+DAILY_CREDIT_CAP: int = 1_000          # PERMANENT: never exceed per calendar day
+SESSION_CREDIT_SOFT_LIMIT: int = 300   # Warn when session uses this many credits
+SESSION_CREDIT_HARD_STOP: int = 500    # Stop fetching for the session at this count
+BILLING_RESERVE: int = 1_000          # Never let remaining drop below this
+
+# ---------------------------------------------------------------------------
+# Daily credit log — persisted across restarts
+# ---------------------------------------------------------------------------
+
+_DAILY_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "daily_quota.json")
+
+
+class DailyCreditLog:
+    """Persist daily credit usage to a JSON file so the cap survives app restarts.
+
+    Resets automatically at midnight UTC when the date changes.
+    File lives at project root: daily_quota.json (gitignored).
+    """
+
+    def __init__(self, log_path: str = _DAILY_LOG_PATH) -> None:
+        self._path = log_path
+        self._data = self._load()
+
+    def _today_str(self) -> str:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    def _load(self) -> dict:
+        today = self._today_str()
+        try:
+            with open(self._path) as f:
+                data = json.load(f)
+            if data.get("date") == today:
+                return data
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            pass
+        return {"date": today, "start_remaining": None, "used_today": 0}
+
+    def _save(self) -> None:
+        try:
+            with open(self._path, "w") as f:
+                json.dump(self._data, f)
+        except OSError as exc:
+            logger.warning("DailyCreditLog._save failed: %s", exc)
+
+    def record(self, remaining: int) -> None:
+        """Update daily usage from a fresh API remaining count."""
+        today = self._today_str()
+        if today != self._data.get("date"):
+            self._data = {"date": today, "start_remaining": remaining, "used_today": 0}
+        elif self._data["start_remaining"] is None:
+            self._data["start_remaining"] = remaining
+            self._data["used_today"] = 0
+        else:
+            used = self._data["start_remaining"] - remaining
+            self._data["used_today"] = max(0, used)
+        self._save()
+
+    def is_daily_cap_hit(self) -> bool:
+        """Return True if today's usage has reached DAILY_CREDIT_CAP (1,000)."""
+        return self._data.get("used_today", 0) >= DAILY_CREDIT_CAP
+
+    def used_today(self) -> int:
+        return self._data.get("used_today", 0)
+
+    def report(self) -> str:
+        cap_warn = " ⛔DAILY_CAP" if self.is_daily_cap_hit() else ""
+        return f"daily={self.used_today()}/{DAILY_CREDIT_CAP}{cap_warn}"
 
 # Book preference order — DraftKings first, then fallbacks
 PREFERRED_BOOKS = ["draftkings", "fanduel", "betmgm", "betrivers", "caesars"]
@@ -67,27 +150,80 @@ SPORT_KEYS = {
 # ---------------------------------------------------------------------------
 
 class QuotaTracker:
-    """Track API usage across the session so we don't blow the quota."""
+    """Track API usage and enforce credit budget limits.
 
-    def __init__(self):
+    Three independent guards (all checked in is_session_hard_stop):
+      1. daily_log.is_daily_cap_hit()             → PERMANENT: ≤1,000 credits/day
+      2. session_used >= SESSION_CREDIT_HARD_STOP  → per-process session cap (500)
+      3. remaining < BILLING_RESERVE               → global billing floor (1,000)
+
+    session_used resets to 0 on process restart (intentional).
+    daily_log persists to daily_quota.json and resets at midnight UTC.
+    """
+
+    def __init__(self) -> None:
         self.used: int = 0
         self.remaining: Optional[int] = None
         self.last_cost: int = 0
+        self.session_used: int = 0
+        self.daily_log: DailyCreditLog = DailyCreditLog()
 
     def update(self, headers: dict) -> None:
         try:
+            prev_remaining = self.remaining
             self.remaining = int(headers.get("x-requests-remaining", self.remaining or 0))
             self.used = int(headers.get("x-requests-used", self.used))
             self.last_cost = int(headers.get("x-requests-last", 0))
+            # Track session spend from delta in remaining (robust to API gaps)
+            if prev_remaining is not None and self.remaining is not None:
+                delta = prev_remaining - self.remaining
+                if delta > 0:
+                    self.session_used += delta
+            elif self.last_cost > 0:
+                self.session_used += self.last_cost
+            # Update daily log with fresh remaining count
+            self.daily_log.record(self.remaining)
         except (ValueError, TypeError):
             pass
 
     def report(self) -> str:
+        soft_warn = " SOFT_LIMIT" if self.session_used >= SESSION_CREDIT_SOFT_LIMIT else ""
+        hard_stop = " HARD_STOP" if self.is_session_hard_stop() else ""
         return (
             f"API quota | used={self.used} "
+            f"session={self.session_used}(/{SESSION_CREDIT_HARD_STOP}){soft_warn}{hard_stop} "
             f"remaining={self.remaining} "
-            f"last_call_cost={self.last_cost}"
+            f"last_call={self.last_cost} | "
+            f"{self.daily_log.report()}"
         )
+
+    def is_low(self, threshold: int = BILLING_RESERVE) -> bool:
+        """Return True if billing-period remaining is below threshold."""
+        if self.remaining is None:
+            return False
+        return self.remaining < threshold
+
+    def is_session_soft_limit(self) -> bool:
+        """Return True if session has consumed >= SESSION_CREDIT_SOFT_LIMIT credits."""
+        return self.session_used >= SESSION_CREDIT_SOFT_LIMIT
+
+    def is_session_hard_stop(self) -> bool:
+        """Return True if all fetches must stop.
+
+        Triggers on ANY of:
+          1. Daily cap hit (1,000 credits today — PERMANENT rule)
+          2. Session hard stop (500 credits this process)
+          3. Billing reserve floor (< 1,000 remaining on account)
+        """
+        if self.daily_log.is_daily_cap_hit():
+            logger.warning(
+                "DAILY_CREDIT_CAP hit — used %d/%d credits today (UTC). No fetches until midnight.",
+                self.daily_log.used_today(), DAILY_CREDIT_CAP,
+            )
+            return True
+        if self.session_used >= SESSION_CREDIT_HARD_STOP:
+            return True
+        return self.is_low(BILLING_RESERVE)
 
 
 # Module-level tracker — imported by app.py for display
@@ -266,6 +402,14 @@ def fetch_game_lines(sport_key: str) -> list:
         { id, sport_key, commence_time, home_team, away_team, bookmakers }
         Returns empty list on any failure.
     """
+    if quota.is_session_hard_stop():
+        logger.warning(
+            "fetch_game_lines: blocked — session=%d/%d remaining=%s daily=%d/%d",
+            quota.session_used, SESSION_CREDIT_HARD_STOP,
+            quota.remaining, quota.daily_log.used_today(), DAILY_CREDIT_CAP,
+        )
+        return []
+
     markets = MARKETS.get(sport_key)
     if not markets:
         logger.error("fetch_game_lines: unknown sport_key '%s'", sport_key)

@@ -33,6 +33,8 @@ Design decisions:
 Promoted from R&D Session 14 to v36 Session 14.
 """
 
+import html as _html
+
 from edge_calculator import BetCandidate, sharp_to_size
 
 
@@ -360,7 +362,7 @@ def render_bet_card(bet: BetCandidate, rank: int = 0) -> str:
         f'<div style="font-size:0.78rem;color:#9CA3AF;margin-top:3px;">'
         f'Kelly <span style="color:{text};font-weight:600;">{bet.kelly_size:.2f}u</span>'
         f'&nbsp;&nbsp;'
-        f'Book <span style="color:#9CA3AF;">{bet.book}</span>'
+        f'Book <span style="color:#9CA3AF;">{_html.escape(str(bet.book or ""))}</span>'
         f'</div>'
     )
 
@@ -416,7 +418,7 @@ def render_bet_card(bet: BetCandidate, rank: int = 0) -> str:
         f'border-radius:3px;'
         f'letter-spacing:0.07em;'
         f'margin-right:6px;'
-        f'">{bet.sport}</span>'
+        f'">{_html.escape(bet.sport)}</span>'
         f'<span style="'
         f'font-size:0.62rem;'
         f'color:#6B7280;'
@@ -424,7 +426,7 @@ def render_bet_card(bet: BetCandidate, rank: int = 0) -> str:
         f'padding:1px 6px;'
         f'border-radius:3px;'
         f'letter-spacing:0.07em;'
-        f'">{bet.market_type.upper()}</span>'
+        f'">{_html.escape(bet.market_type).upper()}</span>'
     )
 
     html = f"""<div style="
@@ -462,7 +464,7 @@ def render_bet_card(bet: BetCandidate, rank: int = 0) -> str:
 
       <!-- Matchup -->
       <div style="font-size:0.72rem;color:#6B7280;margin-bottom:2px;">
-        {bet.matchup}
+        {_html.escape(bet.matchup)}
       </div>
 
       <!-- Target (main bet line) -->
@@ -473,7 +475,7 @@ def render_bet_card(bet: BetCandidate, rank: int = 0) -> str:
         margin-bottom:4px;
         line-height:1.3;
       ">
-        {bet.target}
+        {_html.escape(bet.target)}
         <span style="
           font-size:0.88rem;
           font-weight:600;
