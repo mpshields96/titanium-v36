@@ -87,7 +87,7 @@ AUDIT OUTPUT FORMAT:
 If flagging: write it to REVIEW_LOG.md AND tell the user directly.
 
 CURRENT STATE (end of V37 Reviewer Session 3 — 2026-02-25):
-- v36: 190/190 tests. Last commit: [V37 R3 — pending]. Deployed on Streamlit Cloud.
+- v36: 190/190 tests. Last commit: c106da1. Deployed on Streamlit Cloud.
 - Sandbox: 1067/1067 tests. Session 25 cont. complete. 12 live kill switches.
   Session 26 pending: nhl_data promotion to v36 (V37_INBOX PENDING).
 - SHARP_THRESHOLD: 45. RLM fires: 0/5. Do not raise.
@@ -188,7 +188,7 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 
 ### v36 current state (deployed production)
 - Tests: **190/190** passing ✅
-- Last commit: V37 R3 — inactivity tracking + 190/190 tests (2026-02-25). Pushed. Streamlit Cloud deploying.
+- Last commit: `c106da1` — V37 R3: inactivity tracking + 190/190 tests (2026-02-25). Pushed. Streamlit Cloud deploying.
 - New in V37 R3:
   - `app.py` — `_touch_activity()` added (writes `data/last_activity.json` on every page load)
   - `tests/test_app_utils.py` — 5 new tests for `_touch_activity()`
