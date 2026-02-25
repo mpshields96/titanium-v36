@@ -17,6 +17,7 @@ python3 -m pytest tests/ -v          # Run all tests (must pass before any sessi
 python3 ncaab_parser.py              # Live NCAAB pipeline test (1 API call)
 streamlit run app.py                 # Launch UI locally (Session 5+)
 grep -n "def calculate_edges" edge_calculator.py  # One def only — dead stub removed Session 13 cleanup
+grep -n "html.escape\|_html.escape" pages/*.py   # XSS audit — verify escape coverage after any sandbox UI page change
 ```
 
 ## Non-Negotiable Betting Rules
@@ -150,6 +151,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - `st.Page(icon=...)` requires real emoji or Material shortcodes — Unicode geometric chars (◈ ◇) crash the app
 - **Streamlit 1.54+:** `st.markdown(unsafe_allow_html=True)` sandboxes large HTML into a `<code>` block. Use `st.html()` for full HTML documents/slates. `st.markdown` is safe only for small inline fragments.
 - **`st.html()` XSS escaping:** Wrap all user/API strings in `_html.escape()` before f-string interpolation. Use `import html as _html` (alias required — `html` is a local variable name in app.py and bet_card_renderer.py). Streamlit 1.54+ `st.html()` runs in an allow-scripts iframe — stored XSS is live, not theoretical.
+- **Pure widget pages skip `_html.escape()`:** Pages using only `st.metric`, `st.line_chart`, `st.dataframe` don't inject into HTML templates — no escape needed. Audit question: does this file call `st.html()` with API/user string interpolation?
 - **eff_data multi-sport:** call `eff_data.update(build_efficiency_data(raw_games))` unconditionally per sport — never gate inside `if sport == "X"` or efficiency data silently won't reach rank_bets() for other sports.
 - **Equity curve charts:** `st.line_chart(df, color="#14B8A6", height=180)` — pass pd.DataFrame with named index. Works on Streamlit Cloud, no extra deps. Used in `page_pnl_tracker()`.
 - **P&L session cache:** `"pnl_data"` key is independent of `"bet_history_data"` — bust with `st.session_state.pop("pnl_data", None)` + `st.rerun()` after any outcome write.
