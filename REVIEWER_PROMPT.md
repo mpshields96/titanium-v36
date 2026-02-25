@@ -86,17 +86,17 @@ AUDIT OUTPUT FORMAT:
 "APPROVED — no issues." OR "FLAG: [specific concern] on [file:line or decision]."
 If flagging: write it to REVIEW_LOG.md AND tell the user directly.
 
-CURRENT STATE (end of V37 Reviewer Session 2 — 2026-02-25):
-- v36: 185/185 tests. Last commit: 05b140d. Deployed on Streamlit Cloud.
-- Sandbox: 1062/1062 tests. 25 sessions complete. 12 live kill switches.
-  Session 26 pending: inactivity auto-stop + DAILY_CREDIT_CAP in core/odds_fetcher.py.
+CURRENT STATE (end of V37 Reviewer Session 3 — 2026-02-25):
+- v36: 190/190 tests. Last commit: [V37 R3 — pending]. Deployed on Streamlit Cloud.
+- Sandbox: 1067/1067 tests. Session 25 cont. complete. 12 live kill switches.
+  Session 26 pending: nhl_data promotion to v36 (V37_INBOX PENDING).
 - SHARP_THRESHOLD: 45. RLM fires: 0/5. Do not raise.
 - Supabase tables (v36): bet_history, price_history, clv_history — all live.
 - Sandbox uses SQLite (free). No Supabase subscription.
 - ODDS_API quota: ⚠️ ~1 remaining (exhausted — billing cycle reset pending). No live calls.
 - R&D chat (titanium-experimental): RETIRED. Archive only.
 - REVIEW_LOG.md: active flags — NFL Backup QB stub, STANDARD tier threshold.
-- Active flags for sandbox Session 26: see REVIEW_LOG.md ACTIVE FLAGS section.
+  All quota/inactivity/HTML escape items resolved.
 
 GATE DATES TO WATCH:
 - B2 injury leverage: 2026-03-04 (espn_stability.log check — error rate <5%, avg NBA >50 records)
@@ -133,7 +133,7 @@ API QUOTA — NON-NEGOTIABLE:
 - Sandbox: same rule. APScheduler is the correct mechanism for polling. Manual loops are not.
 
 END EVERY SESSION:
-1. python3 -m pytest tests/ -v (v36) — confirm 185/185 still passing
+1. python3 -m pytest tests/ -v (v36) — confirm 190/190 still passing
 2. Update SESSION_STATE.md if anything changed in v36
 3. /claude-md-management:revise-claude-md if new patterns learned
 4. /wrap-up
@@ -154,7 +154,7 @@ Loading screen tip: /sc:load at session start pulls PROJECT_INDEX.md + SESSION_S
 # Last updated: 2026-02-24 (V37 Reviewer Session 2 — WRAP-UP)
 
 ### STARTUP SEQUENCE UPDATE (test count changed)
-Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 185/185 still passing**
+Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 190/190 still passing**
 
 ### WHEN TO OPEN A NEW TITANIUM V36 REVIEWER CHAT
 Open a new chat when ANY of the following are true:
@@ -173,6 +173,10 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
   v36 tests: 163 → 185 (+22 DailyCreditLog/QuotaTracker/fetch guard tests).
   New REVIEW_LOG.md sections: Quota Guard ✅, Inactivity Auto-Stop spec (sandbox P0).
   REVIEW_LOG.md supplemental audit: Session 25 UI Extension (NFL backup QB stub flag + STANDARD tier threshold flag).
+- **V37 Session 3** (2026-02-25): `_touch_activity()` added to v36 app.py. `test_app_utils.py` created (5 tests).
+  Sandbox Session 25 cont. audited (APPROVED — inactivity auto-stop, 1067 tests).
+  All V37_INBOX tasks resolved: inactivity ✅, HTML escape ✅, originator_engine N/A ✅, nhl_data ⏳ NEXT.
+  v36 tests: 185 → 190 (+5 activity tracking tests).
 
 ### Sandbox current state (last confirmed)
 - Sessions complete: **25** (Session 26 not yet started)
@@ -183,16 +187,16 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
   `pages/00_guide.py` (onboarding), `SYSTEM_GUIDE.md`, nav fix, HTML injection fix
 
 ### v36 current state (deployed production)
-- Tests: **185/185** passing ✅
-- Last commit: `2ebddf1` — V37 R2: quota guards + XSS fix (2026-02-24). Pushed. Streamlit Cloud deploying.
-- New/modified this session:
-  - `app.py` — HTML injection (XSS) fix for all st.html() f-strings
-  - `bet_card_renderer.py` — HTML injection (XSS) fix for all HTML f-strings
-  - `odds_fetcher.py` — DailyCreditLog class + full quota guard enforcement (22 new tests)
-  - `tests/test_odds_fetcher.py` — 22 new tests + setup_method quota isolation pattern
-  - `CLAUDE.md` — DAILY_CREDIT_CAP=1000 rule added to API Quota section + scheduler warning
-  - `CLAUDE.local.md` — KNOWN STATE updated: 185 tests, quota exhausted, incident documented
-  - `.gitignore` — `daily_quota.json` added
+- Tests: **190/190** passing ✅
+- Last commit: V37 R3 — inactivity tracking + 190/190 tests (2026-02-25). Pushed. Streamlit Cloud deploying.
+- New in V37 R3:
+  - `app.py` — `_touch_activity()` added (writes `data/last_activity.json` on every page load)
+  - `tests/test_app_utils.py` — 5 new tests for `_touch_activity()`
+  - `CLAUDE.md` — V37 R3 session row added
+  - `.gitignore` — `data/last_activity.json` added
+- Previously in V37 R2 (also committed):
+  - `app.py` + `bet_card_renderer.py` — HTML injection (XSS) fix
+  - `odds_fetcher.py` — DailyCreditLog + full quota guard enforcement
 - Streamlit Cloud: auto-deploys from main branch. Still live.
 - ⚠️ ODDS_API quota: ~1 credit remaining (exhausted — billing cycle reset pending)
 

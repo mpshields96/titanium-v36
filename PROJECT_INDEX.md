@@ -3,7 +3,7 @@ Generated: 2026-02-24 (V37 Reviewer Session 2 — quota guards + XSS fix)
 
 ## Quick Start
 ```bash
-python3 -m pytest tests/ -v          # 185 tests — must pass before each session
+python3 -m pytest tests/ -v          # 190 tests — must pass before each session
 python3 run_pipeline.py              # Full pipeline CLI test (needs ODDS_API_KEY env var)
 python3 ncaab_parser.py              # NCAAB collar-filter pipeline test (1 API call)
 streamlit run app.py                 # Launch Streamlit UI locally
@@ -354,7 +354,8 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | `test_clv_store.py` | 19 | record_clv_open, update_clv_close, fetch_clv_for_events, get_clv_summary (Session 22) |
 | `test_soccer_consensus.py` | 13 | american_to_implied, 3-way fair probs, std_dev, validation (Session 24) |
 | `test_parlay_builder.py` | 15 | _american_to_decimal, _parlay_ev, build_parlay_combos, format_parlay_table (Session 24) |
-| **Total** | **185** | all passing |
+| `test_app_utils.py` | 5 | _touch_activity: writes file, overwrites existing, creates parent dir, handles OSError, absolute path (V37 R3) |
+| **Total** | **190** | all passing |
 
 ---
 
@@ -381,8 +382,9 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | 25 | ✅ | Architecture transition: v36 chat → Reviewer/Auditor role. R&D chat RETIRED. Agentic sandbox is primary builder. |
 | V37 S1 | ✅ | Reviewer role activated. Two-AI coordination via REVIEW_LOG.md confirmed live. Sandbox Sessions 23+24 APPROVED. Schema review for Advanced Analytics written. REVIEWER_PROMPT.md created. v36 compatibility rule established. |
 | V37 R2 | ✅ | XSS fix (app.py + bet_card_renderer.py, `_html.escape()`). `DailyCreditLog` + enforcing `QuotaTracker` in `odds_fetcher.py` (DAILY_CREDIT_CAP=1000 persistent across restarts). Quota incident root-caused + documented. Inactivity auto-stop spec → REVIEW_LOG.md + V37_INBOX.md. 22 new tests → **185 total**. |
+| V37 R3 | ✅ | `_touch_activity()` in app.py (writes `data/last_activity.json` on every page load — future scheduler hook). `test_app_utils.py` (5 new tests). Sandbox Session 25 cont. audited APPROVED. All V37_INBOX tasks resolved. 5 new tests → **190 total**. |
 
-Last commit: this session (XSS fix + quota guards) · Tests: **185 passing** · Quota: ⚠️ ~1 remaining (exhausted — resets next billing cycle)
-V37 Reviewer Session 2 complete (2026-02-24). Sandbox Session 26 pending (inactivity auto-stop + DAILY_CREDIT_CAP in sandbox).
+Last commit: V37 R3 (inactivity tracking + 190/190 tests) · Tests: **190 passing** · Quota: ⚠️ ~1 remaining (exhausted — resets next billing cycle)
+V37 Reviewer Session 3 complete (2026-02-25). Sandbox Session 26 pending (nhl_data promotion).
 **NEW REVIEWER CHAT:** Paste REVIEWER_PROMPT.md contents as opening message. No other context needed.
 B2 gate opens 2026-03-04 — check espn_stability.log on that date. SHARP_THRESHOLD raise gated at 5 live RLM fires (0/5).

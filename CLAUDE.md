@@ -107,6 +107,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 24 | ✅ Done | GAP 4 soccer 3-way fix: data/soccer_consensus.py promoted, edge_calculator.py moneyline branched on _is_soccer. EXP 5: data/parlay_builder.py + page_parlay_builder() + 🔗 nav. 28 new tests — 163/163 |
 | 25 | ✅ Done | Architecture: agentic sandbox (~/ClaudeCode/agentic-rd-sandbox/) promoted to primary builder. v36 chat transitions to Reviewer/Auditor role. R&D chat RETIRED. SYNC.md INBOX updated. API quota rule locked. No code changes. |
 | V37 R2 | ✅ Done | XSS fix (app.py + bet_card_renderer.py _html.escape), DailyCreditLog + enforcing QuotaTracker in odds_fetcher.py (DAILY_CREDIT_CAP=1000), 22 new tests — 185/185. Quota incident root cause documented. Inactivity auto-stop spec written to REVIEW_LOG.md + V37_INBOX.md. |
+| V37 R3 | ✅ Done | _touch_activity() in app.py (inactivity tracking, 5 new tests), test_app_utils.py (NEW), data/last_activity.json gitignored — 190/190 tests. Session 25 cont. audited APPROVED. originator_engine N/A (not wired). All V37_INBOX tasks resolved. |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental

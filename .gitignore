@@ -18,6 +18,9 @@ __pycache__/
 # API quota daily log — runtime state, not source code
 daily_quota.json
 
+# Activity tracking — runtime state, never commit
+data/last_activity.json
+
 # Claude Code internals — never commit these
 .claude/
 .playwright-mcp/

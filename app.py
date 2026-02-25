@@ -14,8 +14,11 @@ DO NOT add API calls, math, or betting logic to this file.
 """
 
 import os
+import json
+import time
 import html as _html
 from datetime import datetime
+from pathlib import Path
 
 import streamlit as st
 
@@ -24,6 +27,27 @@ from bet_ranker import rank_bets
 from bet_card_renderer import render_bet_card, render_slate_header, render_slate_footer
 from data.efficiency_feed import build_efficiency_data
 from odds_fetcher import fetch_game_lines, get_quota_status, cache_open_prices, compute_rlm
+
+
+# ---------------------------------------------------------------------------
+# Activity tracking — inactivity auto-stop pattern
+# Writes last_activity.json on every page load. No scheduler in v36 reads this
+# yet, but the file is available if a scheduler is ever added.
+# ---------------------------------------------------------------------------
+
+_ACTIVITY_FILE = Path(__file__).resolve().parent / "data" / "last_activity.json"
+
+
+def _touch_activity() -> None:
+    """Update last-user-activity timestamp. Called on every Streamlit page load."""
+    try:
+        _ACTIVITY_FILE.parent.mkdir(exist_ok=True)
+        _ACTIVITY_FILE.write_text(json.dumps({"ts": time.time()}))
+    except OSError:
+        pass
+
+
+_touch_activity()
 
 
 # ---------------------------------------------------------------------------
