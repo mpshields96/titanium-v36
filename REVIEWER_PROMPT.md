@@ -86,17 +86,17 @@ AUDIT OUTPUT FORMAT:
 "APPROVED — no issues." OR "FLAG: [specific concern] on [file:line or decision]."
 If flagging: write it to REVIEW_LOG.md AND tell the user directly.
 
-CURRENT STATE (end of v36 Session 25 — 2026-02-24):
-- v36: 163/163 tests. Last commit: a2a9b45. Deployed on Streamlit Cloud.
-- Sandbox: 933/933 tests. 18 sessions complete. Trinity fixed. 12 live kill switches.
-  Last known pending: NBA B2B home/road split gate (need 10+ B2B instances).
+CURRENT STATE (end of V37 Reviewer Session 2 — 2026-02-25):
+- v36: 185/185 tests. Last commit: 05b140d. Deployed on Streamlit Cloud.
+- Sandbox: 1062/1062 tests. 25 sessions complete. 12 live kill switches.
+  Session 26 pending: inactivity auto-stop + DAILY_CREDIT_CAP in core/odds_fetcher.py.
 - SHARP_THRESHOLD: 45. RLM fires: 0/5. Do not raise.
 - Supabase tables (v36): bet_history, price_history, clv_history — all live.
 - Sandbox uses SQLite (free). No Supabase subscription.
-- ODDS_API quota: ~16,663 remaining. 1 call/sport on production EXECUTE SCAN only.
+- ODDS_API quota: ⚠️ ~1 remaining (exhausted — billing cycle reset pending). No live calls.
 - R&D chat (titanium-experimental): RETIRED. Archive only.
-- REVIEW_LOG.md: initialized 2026-02-24. No outstanding flags.
-- REVIEWER_ONBOARDING.md: written. Paste into sandbox chat to activate coordination.
+- REVIEW_LOG.md: active flags — NFL Backup QB stub, STANDARD tier threshold.
+- Active flags for sandbox Session 26: see REVIEW_LOG.md ACTIVE FLAGS section.
 
 GATE DATES TO WATCH:
 - B2 injury leverage: 2026-03-04 (espn_stability.log check — error rate <5%, avg NBA >50 records)
