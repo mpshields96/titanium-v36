@@ -102,7 +102,7 @@ class DailyCreditLog:
         self._save()
 
     def is_daily_cap_hit(self) -> bool:
-        """Return True if today's usage has reached DAILY_CREDIT_CAP (1,000)."""
+        """Return True if today's usage has reached DAILY_CREDIT_CAP."""
         return self._data.get("used_today", 0) >= DAILY_CREDIT_CAP
 
     def used_today(self) -> int:
@@ -154,9 +154,9 @@ class QuotaTracker:
     """Track API usage and enforce credit budget limits.
 
     Three independent guards (all checked in is_session_hard_stop):
-      1. daily_log.is_daily_cap_hit()             → PERMANENT: ≤1,000 credits/day
-      2. session_used >= SESSION_CREDIT_HARD_STOP  → per-process session cap (500)
-      3. remaining < BILLING_RESERVE               → global billing floor (1,000)
+      1. daily_log.is_daily_cap_hit()             → PERMANENT: usage >= DAILY_CREDIT_CAP
+      2. session_used >= SESSION_CREDIT_HARD_STOP  → per-process session cap
+      3. remaining < BILLING_RESERVE               → global billing floor
 
     session_used resets to 0 on process restart (intentional).
     daily_log persists to daily_quota.json and resets at midnight UTC.
@@ -212,9 +212,9 @@ class QuotaTracker:
         """Return True if all fetches must stop.
 
         Triggers on ANY of:
-          1. Daily cap hit (1,000 credits today — PERMANENT rule)
-          2. Session hard stop (500 credits this process)
-          3. Billing reserve floor (< 1,000 remaining on account)
+          1. Daily cap hit: today's usage >= DAILY_CREDIT_CAP — PERMANENT rule
+          2. Session hard stop: session_used >= SESSION_CREDIT_HARD_STOP
+          3. Billing reserve floor: remaining < BILLING_RESERVE
         """
         if self.daily_log.is_daily_cap_hit():
             logger.warning(
