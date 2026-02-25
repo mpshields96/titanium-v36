@@ -151,10 +151,10 @@ Loading screen tip: /sc:load at session start pulls PROJECT_INDEX.md + SESSION_S
 ## SECTION 2 — CURRENT STATE EXPANSION
 # This section is MUTABLE. Update at the end of every session that uses this file.
 # It layers on top of Section 1. Where Section 2 contradicts Section 1, Section 2 wins.
-# Last updated: 2026-02-25 (V37 Reviewer Session 4 continued)
+# Last updated: 2026-02-25 (V37 Reviewer Session 6)
 
 ### STARTUP SEQUENCE UPDATE (test count changed)
-Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 251/251 still passing**
+Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 257/257 still passing**
 
 ### WHEN TO OPEN A NEW TITANIUM V36 REVIEWER CHAT
 Open a new chat when ANY of the following are true:
@@ -176,33 +176,27 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 4** (2026-02-25): nhl_data.py promoted to v36 (data/nhl_data.py, nhl_kill_switch(), goalie poll in app.py, 35+7 tests).
   DAILY_CREDIT_CAP 1000→100, BILLING_RESERVE 1000→50 (temp drought). Speculative tier added (sharp_to_size SPECULATIVE_0.25U, orange card, orange banner, kelly cap 0.25u, +7 tests). Sandbox Grade Tier System (Session 27) APPROVED. Sandbox directive written.
   v36 tests: 190 → 251 (+61 total across all session 4 work).
+- **V37 Session 5** (2026-02-25): Totals dedup cross-line guard: `_deduplicate_markets()` in bet_ranker.py — totals key drops abs(line), uses (event_id, market_type) only. +6 TestTotalsDedupCrossLine. Layer 1 totals fix (Session 29) spec written to REVIEW_LOG.md. Full Math > Narrative compliance sweep: CLEAN. Session 27 cont. go-live config reviewed APPROVED. v36 tests: 251 → 257. Commit: deedf13.
+- **V37 Session 6** (2026-02-25): No v36 code changes. Resumed from context compression. Wrote V37 AUDIT block for Sandbox Session 29 to REVIEW_LOG.md. Marked Session 29 ✅ DONE in V37_INBOX.md. APPROVED: Layer 1 modal line pinning verified, RLM direction fix verified, dead code deletion (run_nemesis/calculate_edge/Poisson precompute) approved. Updated CLAUDE.md session log (added V37 R4+R5), added totals dedup key to Architecture Decisions. REVIEWER_PROMPT.md updated.
 
 ### Sandbox current state (last confirmed)
-- Sessions complete: **27** (Session 27 built Grade Tier System)
-- Tests: **1099/1099** passing ✅
+- Sessions complete: **29** (Session 29 did full audit + core bug fixes)
+- Tests: **1079/1079** passing ✅ (−24 from dead code removal in Session 29)
 - Architecture: `core/` subpackage, SQLite, APScheduler, 8 Streamlit pages
 - Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
-- New in Session 26: DC fallback mode (min_edge=2.0% when no Grade A bets), DAILY_CREDIT_CAP=100, test isolation fix
 - New in Session 27: Grade Tier System (A/B/C/NEAR_MISS), `assign_grade()` in math_engine, grade-aware UI + Log Bet
+- New in Session 29: `_canonical_totals_books()` (Layer 1 modal line pinning), RLM direction fix (signed drift), `run_nemesis()` deleted, `calculate_edge()` deleted, dead Poisson precompute deleted
 
 ### v36 current state (deployed production)
-- Tests: **251/251** passing ✅
-- Last commit: pending (V37 Session 4 changes not yet committed — commit before closing)
-- New in V37 Session 4:
-  - `data/nhl_data.py` — NHL goalie starter detection (free nhle API)
-  - `edge_calculator.py` — `nhl_kill_switch()`, `BetCandidate.calibration`, `sharp_to_size()` SPECULATIVE_0.25U
-  - `bet_card_renderer.py` — SPECULATIVE_0.25U tier config (orange)
-  - `bet_ranker.py` — calibration_threshold=40.0 retry, kelly cap 0.25u for speculative bets
-  - `app.py` — NHL goalie poll, SPECULATIVE MODE banner, BILLING_RESERVE lowered to 50 (temp)
-  - `odds_fetcher.py` — DAILY_CREDIT_CAP=100, SOFT_LIMIT=30, HARD_STOP=80, BILLING_RESERVE=50 (TEMP until 2026-03-01)
-  - `tests/test_nhl_data.py` — 35 tests
-  - `tests/test_validation.py` — +7 nhl_kill_switch + +6 calibration + +7 speculative (20 new)
+- Tests: **257/257** passing ✅
+- Last commit: `deedf13` — V37 R5: totals dedup cross-line guard — 257/257 tests. Pushed to main.
+- New in V37 R5: `bet_ranker._deduplicate_markets()` totals key = `(event_id, market_type)` only — abs(line) dropped. +6 TestTotalsDedupCrossLine.
 - ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
 - ⚠️ ODDS_API: ~1 credit on main key, ~485 on test key. Resets 2026-03-01.
 
 ### Active flags in REVIEW_LOG.md
-- No active flags. All previous flags (NFL backup QB stub, STANDARD tier threshold) cleared in Session 26.
-- Sandbox directive written: Grade Tier + speculative tier spec for sandbox to implement in Session 28+.
+- 🟡 FLAG [V37 R5] — Stale docstrings in `is_session_hard_stop()` (both v36 + sandbox): references old cap values (1000/500/1000); actuals are 100/80/50 (v36) and 300/200/150 (sandbox). Low priority — update docstrings to reference constant names.
+- All previous critical flags cleared (totals bug fixed Layer 1+2, RLM direction fixed, dead code deleted).
 
 ### Quota incident (2026-02-24 — permanent awareness)
 - Monthly quota (20,000) burned to ~1 credit remaining in 6 days

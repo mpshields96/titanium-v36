@@ -108,6 +108,8 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | 25 | ✅ Done | Architecture: agentic sandbox (~/ClaudeCode/agentic-rd-sandbox/) promoted to primary builder. v36 chat transitions to Reviewer/Auditor role. R&D chat RETIRED. SYNC.md INBOX updated. API quota rule locked. No code changes. |
 | V37 R2 | ✅ Done | XSS fix (app.py + bet_card_renderer.py _html.escape), DailyCreditLog + enforcing QuotaTracker in odds_fetcher.py (DAILY_CREDIT_CAP=1000), 22 new tests — 185/185. Quota incident root cause documented. Inactivity auto-stop spec written to REVIEW_LOG.md + V37_INBOX.md. |
 | V37 R3 | ✅ Done | _touch_activity() in app.py (inactivity tracking, 5 new tests), test_app_utils.py (NEW), data/last_activity.json gitignored — 190/190 tests. Session 25 cont. audited APPROVED. originator_engine N/A (not wired). All V37_INBOX tasks resolved. |
+| V37 R4 | ✅ Done | data/nhl_data.py (NEW, 35 tests), nhl_kill_switch() in edge_calculator.py, BetCandidate.calibration field, rank_bets() calibration_threshold param, SPECULATIVE tier in sharp_to_size() + bet_card_renderer.py, quota guards 1000→100/30/80, calibration→speculative banner in app.py. Session 27 audited APPROVED — 251/251 tests. |
+| V37 R5 | ✅ Done | Totals dedup cross-line guard: _deduplicate_markets() key drops abs(line) for totals markets — Over 7.0 + Under 6.5 same game now share one dedup bucket. +6 TestTotalsDedupCrossLine. Session 29 audited APPROVED (Layer 1 modal line pinning + RLM direction fix + dead code deletion, sandbox 1079/1079) — 257/257 tests. |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -155,6 +157,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - **Soccer 3-way vig:** `_is_soccer` check in `parse_game_markets()` uses the uppercase routing key set (`EPL`, `MLS`, etc.) — NOT `sport_key.startswith("soccer_")` (that's the API format, not available inside parse_game_markets). Draw outcome name in Odds API is exactly `"Draw"` (confirmed in soccer_3way_probe.py line 154).
 - **Parlay builder call site:** `build_parlay_combos()` takes `list[dict]`, not `list[BetCandidate]`. Always convert: `[vars(b) for b in ranked_bets]`. Do NOT change parlay_builder.py to accept dataclasses — one file = one job, no v36-specific imports in data/ modules.
 - **Parlay Builder data source:** `st.session_state["results"]` (the ranked BetCandidate list). Page is inert until pipeline runs. Same pattern as Odds Comparison using `st.session_state["raw_games"]`.
+- **Totals dedup key excludes line:** `_deduplicate_markets()` uses `(event_id, market_type)` for totals — `abs(line)` intentionally dropped (V37 R5). Books hang different lines (6.5 vs 7.0) for same game; including the line allows Over 7.0 AND Under 6.5 to survive dedup simultaneously — a mathematical impossibility. Highest-edge side wins regardless of line. Do NOT re-add the line to totals keys.
 
 ## If Starting a New Chat Session
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)
