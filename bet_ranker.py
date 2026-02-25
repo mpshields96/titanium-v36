@@ -177,10 +177,18 @@ def _deduplicate_markets(bets: list[BetCandidate]) -> list[BetCandidate]:
     Market identity: (event_id, market_type, abs(line))
     Example: Celtics -4.5 and Wizards +4.5 → same market, keep higher edge.
     Moneylines: both ML bets from same game share event_id + "moneyline" + 0.0 → deduped.
+
+    Totals: line is EXCLUDED from key. Books often hang different lines (6.5 vs 7.0)
+    for the same game. Including the line would allow Over 7.0 AND Under 6.5 from
+    the same game to survive dedup (different keys) — a mathematical impossibility.
+    Totals key = (event_id, market_type) only — keeps highest-edge side regardless of line.
     """
     market_groups: dict[tuple, list[BetCandidate]] = {}
     for bet in bets:
-        key = (bet.event_id, bet.market_type, round(abs(bet.line), 1))
+        if bet.market_type in ("totals", "total"):
+            key = (bet.event_id, bet.market_type)  # drop line — same game = same total market
+        else:
+            key = (bet.event_id, bet.market_type, round(abs(bet.line), 1))
         market_groups.setdefault(key, []).append(bet)
 
     result = []

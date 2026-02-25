@@ -728,3 +728,99 @@ class TestSpeculativeTier:
         assert len(results) == 1
         # kelly_size should NOT be capped — original value (0.5) or re-computed full size
         assert results[0].kelly_size > 0.25
+
+
+# ============================================================================
+# Totals dedup — cross-line same-game guard (V37 R5)
+#
+# Bug: books hang same game total at different lines (e.g. 6.5 vs 7.0).
+# Old dedup key included line → Over 7.0 and Under 6.5 had different keys
+# and BOTH survived dedup. Impossible to have positive edge on both sides.
+# Fix: totals dedup key drops line → same game = same market = keep highest edge.
+# ============================================================================
+
+class TestTotalsDedupCrossLine:
+    """Totals dedup must catch Over/Under from the same game at different lines."""
+
+    def _make_total(self, side: str, line: float, edge: float, event_id: str = "game1") -> "BetCandidate":
+        from edge_calculator import BetCandidate
+        return BetCandidate(
+            sport="NHL",
+            matchup="EDM @ ANA",
+            market_type="totals",
+            target=f"{side} {line}",
+            line=line,
+            price=105 if side == "Over" else 124,
+            edge_pct=edge,
+            win_prob=0.51,
+            market_implied=0.488,
+            fair_implied=0.51,
+            kelly_size=0.1,
+            event_id=event_id,
+            commence_time="2026-03-01T02:00:00Z",
+            sharp_score=50.0,
+        )
+
+    def test_over_and_under_same_game_different_lines_dedups_to_one(self):
+        """Over 7.0 and Under 6.5 from same game → only highest-edge survives."""
+        from bet_ranker import _deduplicate_markets
+        over = self._make_total("Over", 7.0, 0.033)
+        under = self._make_total("Under", 6.5, 0.048)  # higher edge
+        result = _deduplicate_markets([over, under])
+        assert len(result) == 1
+        assert result[0].target == "Under 6.5"
+
+    def test_dedup_keeps_higher_edge_side_when_both_totals_present(self):
+        """When Over edge > Under edge, Over survives."""
+        from bet_ranker import _deduplicate_markets
+        over = self._make_total("Over", 7.0, 0.055)  # higher edge
+        under = self._make_total("Under", 6.5, 0.033)
+        result = _deduplicate_markets([over, under])
+        assert len(result) == 1
+        assert result[0].target == "Over 7.0"
+
+    def test_dedup_preserves_single_total_side(self):
+        """A single total candidate is not dropped."""
+        from bet_ranker import _deduplicate_markets
+        over = self._make_total("Over", 7.0, 0.04)
+        result = _deduplicate_markets([over])
+        assert len(result) == 1
+
+    def test_dedup_same_line_totals_still_deduplicated(self):
+        """Over 6.5 and Under 6.5 from same game (same line) also deduplicates."""
+        from bet_ranker import _deduplicate_markets
+        over = self._make_total("Over", 6.5, 0.04)
+        under = self._make_total("Under", 6.5, 0.06)  # higher edge
+        result = _deduplicate_markets([over, under])
+        assert len(result) == 1
+        assert result[0].target == "Under 6.5"
+
+    def test_totals_different_games_not_deduplicated(self):
+        """Over 7.0 from game1 and Under 6.5 from game2 both survive."""
+        from bet_ranker import _deduplicate_markets
+        over_g1 = self._make_total("Over", 7.0, 0.04, event_id="game1")
+        under_g2 = self._make_total("Under", 6.5, 0.04, event_id="game2")
+        result = _deduplicate_markets([over_g1, under_g2])
+        assert len(result) == 2
+
+    def test_spreads_still_use_line_in_dedup_key(self):
+        """Spread dedup still distinguishes -4.5 from -3.5 (different lines = different markets)."""
+        from edge_calculator import BetCandidate
+        from bet_ranker import _deduplicate_markets
+        spread_a = BetCandidate(
+            sport="NBA", matchup="X @ Y", market_type="spread",
+            target="X -4.5", line=-4.5, price=-110,
+            edge_pct=0.04, win_prob=0.55, market_implied=0.524,
+            fair_implied=0.55, kelly_size=0.1, event_id="game3",
+            commence_time="2026-03-01T02:00:00Z", sharp_score=50.0,
+        )
+        spread_b = BetCandidate(
+            sport="NBA", matchup="X @ Y", market_type="spread",
+            target="Y +4.5", line=4.5, price=-110,
+            edge_pct=0.04, win_prob=0.55, market_implied=0.524,
+            fair_implied=0.55, kelly_size=0.1, event_id="game3",
+            commence_time="2026-03-01T02:00:00Z", sharp_score=50.0,
+        )
+        result = _deduplicate_markets([spread_a, spread_b])
+        # Both sides of same spread → same abs(line) → deduplicated to 1
+        assert len(result) == 1

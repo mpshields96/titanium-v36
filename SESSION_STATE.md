@@ -252,21 +252,29 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: V37 Reviewer Session 4 (continued) — 2026-02-25
-Last git commit: pending (V37 R4 changes staged, not yet committed)
-Tests: **251/251 passing** (+61 from Session 4 work)
+Last completed: V37 Reviewer Session 5 — 2026-02-25
+Last git commit: b8fe260 (V37 R4). V37 R5 changes pending commit.
+Tests: **257/257 passing** (+6 from V37 R5 totals dedup fix)
 Quota: ⚠️ EXHAUSTED (~1 credit on main key). Test key (~485 remaining). Resets 2026-03-01.
 BILLING_RESERVE: **50** (temporarily lowered from 1000 — restore after 2026-03-01 reset)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
 ### Architecture (V37 — two-AI system)
-- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (1072+ tests)
+- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (1099+ tests)
 - **Reviewer/Auditor:** This chat — reviews sandbox sessions, flags issues, decides promotions to v36
 - **R&D chat:** RETIRED. titanium-experimental/ archived.
 - **Live product:** v36 on Streamlit Cloud
 - **Coordination:** REVIEW_LOG.md + V37_INBOX.md in agentic-rd-sandbox/ (sandbox writes → reviewer reads)
 - **Startup document:** REVIEWER_PROMPT.md at /Users/matthewshields/Projects/titanium-v36/REVIEWER_PROMPT.md
+
+### What was done in V37 Reviewer Session 5 (2026-02-25)
+1. **CRITICAL BUG FIX — Totals dedup cross-line guard**: `bet_ranker.py:183` — totals dedup key now drops `abs(line)`. Over 7.0 and Under 6.5 from same game now share same dedup bucket; highest-edge side survives. +6 tests in `TestTotalsDedupCrossLine`.
+2. **Root cause analysis written** to REVIEW_LOG.md: two-failure breakdown of totals consensus line-mixing bug. Sandbox directed to implement Layer 1 (modal line pinning in `consensus_fair_prob()`).
+3. **Math > Narrative sweep**: Full ecosystem scan — CLEAN. No narrative inputs in scoring, kill switches, or grade tiers.
+4. **Session 27 cont. go-live config reviewed**: APPROVED. Sandbox credit limits and analytics gate change are correct.
+5. **V37_INBOX Session 28 task**: Marked DONE.
+6. **Test count: 251 → 257** (+6 dedup tests)
 
 ### What was done in V37 Reviewer Session 4 (2026-02-25)
 1. **DAILY_CREDIT_CAP 1000 → 100** in odds_fetcher.py (user directive: permanent ceiling on 20K plan)
@@ -274,14 +282,14 @@ RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — incremen
 3. **Zero-bets speculative protocol**: rank_bets() calibration_threshold=40.0 retry; bets scoring 40–44 returned with calibration=True and kelly capped at 0.25u
 4. **Three-tier SPECULATIVE UI**: sharp_to_size() returns SPECULATIVE_0.25U for scores < 45; orange bet card config added; SPECULATIVE MODE banner in app.py
 5. **nhl_data.py promoted to v36**: data/nhl_data.py, nhl_kill_switch() in edge_calculator.py, parse_game_markets() updated, inline NHL goalie poll in run_pipeline()
-6. **Sandbox directive written** to REVIEW_LOG.md: full spec for sandbox to implement same three-tier system
-7. **Test count: 190 → 251** (+61 total across all work this session)
+6. **Test count: 190 → 251** (+61 total across all work this session)
 
 ### Pending for next session
-- Restore BILLING_RESERVE from 50 → 1_000 after 2026-03-01 quota reset
-- B2 gate check: 2026-03-04 — check /Users/matthewshields/Projects/titanium-experimental/results/espn_stability.log
-- Stress test (3/1/26): run full pipeline scan to generate real bets for model calibration
-- Sandbox: implement speculative tier per REVIEW_LOG.md directive
+- **2026-03-01**: Restore `BILLING_RESERVE` 50 → 1_000 and `DAILY_CREDIT_CAP` 100 → 1_000 in v36 odds_fetcher.py
+- **2026-03-01**: Run full live pipeline stress test for model calibration (quota resets)
+- **2026-03-04**: B2 gate check — /Users/matthewshields/Projects/titanium-experimental/results/espn_stability.log
+- **Sandbox (CRITICAL)**: Layer 1 totals fix — modal line pinning in consensus_fair_prob() before next live session
+- **v36 (deferred)**: Fix stale docstrings in odds_fetcher.py is_session_hard_stop() (line 105, 158-159)
 
 ### What was built in Session 24
 1. **GAP 4 — Soccer 3-outcome fix (CRITICAL)**
