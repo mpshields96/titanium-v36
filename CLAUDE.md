@@ -79,6 +79,8 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - `data/price_history_store.py`: `from odds_fetcher import _extract_open_prices` must stay deferred (inside function body) — same circular import reason
 - Before removing a function parameter, grep all call sites first: `grep -rn "function_name(" .` — easy to miss cross-file callers (e.g. `sharp_to_size` had callers in `bet_ranker.py`)
 - Edit tool `old_string` failures: if a file was already partially edited this session, grep for current text before editing — the previously-matched string may no longer exist exactly
+- **V37_INBOX ✅ DONE = sandbox committed** — task has a commit hash, already pushed. Validate by grepping for the artifact + running pytest. No need to re-implement or wait.
+- **Reviewer flag-clearing rule:** After writing APPROVED audit for a sandbox fix, also explicitly update REVIEW_LOG.md ACTIVE FLAGS — change 🔴/🟡 to ✅ CLEARED. The audit block alone does NOT clear the flag.
 - End every session: `/sc:save` → `/claude-md-management:revise-claude-md` → `git commit`
 - **MANDATORY — Loading screen tip:** End EVERY response (not just session-end) with a one-line tip in the format `Loading screen tip: ...` — one relevant `/sc:` command or tool reminder. This is a non-negotiable UX behavior. New sessions must not wait to be reminded of this rule.
 
@@ -110,6 +112,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | V37 R3 | ✅ Done | _touch_activity() in app.py (inactivity tracking, 5 new tests), test_app_utils.py (NEW), data/last_activity.json gitignored — 190/190 tests. Session 25 cont. audited APPROVED. originator_engine N/A (not wired). All V37_INBOX tasks resolved. |
 | V37 R4 | ✅ Done | data/nhl_data.py (NEW, 35 tests), nhl_kill_switch() in edge_calculator.py, BetCandidate.calibration field, rank_bets() calibration_threshold param, SPECULATIVE tier in sharp_to_size() + bet_card_renderer.py, quota guards 1000→100/30/80, calibration→speculative banner in app.py. Session 27 audited APPROVED — 251/251 tests. |
 | V37 R5 | ✅ Done | Totals dedup cross-line guard: _deduplicate_markets() key drops abs(line) for totals markets — Over 7.0 + Under 6.5 same game now share one dedup bucket. +6 TestTotalsDedupCrossLine. Session 29 audited APPROVED (Layer 1 modal line pinning + RLM direction fix + dead code deletion, sandbox 1079/1079) — 257/257 tests. |
+| V37 R7 | ✅ Done | Session 30-B PRECONDITION blocks validated (all 5 present in math_engine.py), v36 stale docstrings fixed (QuotaTracker/is_daily_cap_hit/is_session_hard_stop — constant names not hardcoded values), REVIEW_LOG.md active flags cleared — 257/257 tests. |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
