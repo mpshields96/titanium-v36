@@ -57,7 +57,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - NHL sparse coverage (h2h only, few books) is normal for games >3 days out; spreads/totals open closer to game day
 
 ## API Quota — DO NOT BURN (non-negotiable)
-- **DAILY HARD CAP: 1,000 credits/day — permanent user rule, no exceptions, ever. Includes testing and experimentation.**
+- **DAILY HARD CAP: 100 credits/day — permanent user rule, no exceptions, ever (revised down V37 R4). Includes testing and experimentation.**
 - Quota is a hard finite resource. 10% → 45% burned in a single day is unacceptable.
 - **R&D live API calls require explicit user approval before every run.** No exceptions.
 - Default for ALL R&D probe/validation scripts: use saved fixture JSON, not live endpoints.
@@ -114,6 +114,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 | V37 R4 | ✅ Done | data/nhl_data.py (NEW, 35 tests), nhl_kill_switch() in edge_calculator.py, BetCandidate.calibration field, rank_bets() calibration_threshold param, SPECULATIVE tier in sharp_to_size() + bet_card_renderer.py, quota guards 1000→100/30/80, calibration→speculative banner in app.py. Session 27 audited APPROVED — 251/251 tests. |
 | V37 R5 | ✅ Done | Totals dedup cross-line guard: _deduplicate_markets() key drops abs(line) for totals markets — Over 7.0 + Under 6.5 same game now share one dedup bucket. +6 TestTotalsDedupCrossLine. Session 29 audited APPROVED (Layer 1 modal line pinning + RLM direction fix + dead code deletion, sandbox 1079/1079) — 257/257 tests. |
 | V37 R7 | ✅ Done | Session 30-B PRECONDITION blocks validated (all 5 present in math_engine.py), v36 stale docstrings fixed (QuotaTracker/is_daily_cap_hit/is_session_hard_stop — constant names not hardcoded values), REVIEW_LOG.md active flags cleared — 257/257 tests. |
+| V37 R8 | ✅ Done | Session 31-B audited: DB init fix APPROVED (price_history.db path bug), SQLite MCP read-only rule established, props quota isolation rule, Pinnacle widget removal approved — 257/257 tests. |
 
 ## R&D → V36 Promotion Rules
 - R&D sandbox: /Users/matthewshields/Projects/titanium-experimental
@@ -163,6 +164,8 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - **Parlay builder call site:** `build_parlay_combos()` takes `list[dict]`, not `list[BetCandidate]`. Always convert: `[vars(b) for b in ranked_bets]`. Do NOT change parlay_builder.py to accept dataclasses — one file = one job, no v36-specific imports in data/ modules.
 - **Parlay Builder data source:** `st.session_state["results"]` (the ranked BetCandidate list). Page is inert until pipeline runs. Same pattern as Odds Comparison using `st.session_state["raw_games"]`.
 - **Totals dedup key excludes line:** `_deduplicate_markets()` uses `(event_id, market_type)` for totals — `abs(line)` intentionally dropped (V37 R5). Books hang different lines (6.5 vs 7.0) for same game; including the line allows Over 7.0 AND Under 6.5 to survive dedup simultaneously — a mathematical impossibility. Highest-edge side wins regardless of line. Do NOT re-add the line to totals keys.
+- **`init_price_history_db()` must be called with no args** — `_DEFAULT_DB_PATH` resolves to `price_history.db`. Passing any path arg silently creates the schema inside the wrong DB. No exception raised. (Bug: scheduler.py was passing db_path — fixed V37 R8, sandbox commit 19927bd)
+- **SQLite MCP stays read-only for bet_history:** Claude generates `log_bet()` call with params visible to user → user executes in UI. No LLM write access to financial records — one hallucinated param corrupts a live bet record with no undo.
 
 ## If Starting a New Chat Session
 1. Paste the contents of `SESSION_STATE.md` into the chat (this is the resume document)
