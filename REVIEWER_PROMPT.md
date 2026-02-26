@@ -179,26 +179,28 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 5** (2026-02-25): Totals dedup cross-line guard: `_deduplicate_markets()` in bet_ranker.py — totals key drops abs(line), uses (event_id, market_type) only. +6 TestTotalsDedupCrossLine. Layer 1 totals fix (Session 29) spec written to REVIEW_LOG.md. Full Math > Narrative compliance sweep: CLEAN. Session 27 cont. go-live config reviewed APPROVED. v36 tests: 251 → 257. Commit: deedf13.
 - **V37 Session 6** (2026-02-25): No v36 code changes. Resumed from context compression. Wrote V37 AUDIT block for Sandbox Session 29 to REVIEW_LOG.md. Marked Session 29 ✅ DONE in V37_INBOX.md. APPROVED: Layer 1 modal line pinning verified, RLM direction fix verified, dead code deletion (run_nemesis/calculate_edge/Poisson precompute) approved. Updated CLAUDE.md session log (added V37 R4+R5), added totals dedup key to Architecture Decisions. REVIEWER_PROMPT.md updated.
 - **V37 Session 7** (2026-02-25): MCP joint verdicts + Session 30-B. SQLite MCP installed (.mcp.json committed). Sequential Thinking MCP skipped (budget). PRECONDITION docstrings directive written to V37_INBOX.md. Sandbox executed Session 30-B (commit 70bd822) — validated all 5 contract blocks present + correct. Fixed v36 stale docstrings (QuotaTracker/is_daily_cap_hit/is_session_hard_stop — constant names not hardcoded values). Cleared all REVIEW_LOG.md active flags (totals bug + stale docstrings). CLAUDE.md updated with flag-clearing rule + V37_INBOX ✅ DONE pattern. Last v36 commit: 6b65c73. 257/257 passing.
-- **V37 Session 8** (2026-02-25): Session 31-B audited. DB init fix (commit 19927bd) APPROVED — price_history schema was being created inside line_history.db (silent corruption). Positions written to REVIEW_LOG.md: MCP read-only (option b), props APPROVED w/conditions (separate quota/DailyCreditLog), Pinnacle widget removal APPROVED. CLAUDE.md updated: quota cap 1000→100 fix, init_price_history_db no-arg rule, SQLite MCP read-only rule. Last v36 commit: 52fd3e7. 257/257 passing.
+- **V37 Session 8** (2026-02-25): Audited Sessions 31-B, 32, 33, 34 — all APPROVED. CLAUDE.md updated (quota cap 1000→100, init_price_history_db no-arg rule, SQLite MCP read-only rule, R8 log). REVIEWER_PROMPT.md Section 2 updated. Sandbox adopted both V37 docstring suggestions from S32 audit in S34 immediately. Last v36 commit: b1900cb. 257/257 passing.
 
-### Sandbox current state (last confirmed)
-- Sessions complete: **30 (full — UI modernisation) + 30-B (PRECONDITION docstrings) + 31 (DB init fix)**
-- Tests: **1079/1079** passing ✅
+### Sandbox current state (last confirmed — end of Session 34)
+- Sessions complete: **31 (DB fix), 32 (CreditLedger), 33 (UI polish), 34 (housekeeping)**
+- Tests: **1106/1106** passing ✅
 - Architecture: `core/` subpackage, SQLite, APScheduler, 8 Streamlit pages, `.mcp.json` with SQLite MCP
 - Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
-- Session 30 UI: pages/01_live_lines, 04_bet_tracker, 07_analytics — visionOS aesthetic (IBM Plex, gradient cards, rgba borders). APPROVED.
-- Session 31: DB init fix (app.py `_init_dbs()` + scheduler.py no-arg). Session 32 scope cleared.
+- CreditLedger: dynamic daily budget (`_days_until_billing`, `daily_allowance`, 4-guard stack). APPROVED.
+- S33 UI: CST game times, Pinnacle removed from 05_rd_output, collar legend fixed, guide rewritten.
+- S34 housekeeping: stale gate text fixed, Pinnacle removed from 04_bet_tracker dropdown, V37 docstring suggestions adopted.
+- Props (separate quota, on-demand): APPROVED in principle — builds in Session 32+.
 
 ### v36 current state (deployed production)
 - Tests: **257/257** passing ✅
-- Last commit: `52fd3e7` — V37 R8: CLAUDE.md learnings (quota cap, DB init rule, MCP read-only). Pushed to main.
+- Last commit: `b1900cb` — V37 R8: REVIEWER_PROMPT.md Section 2. Pushed to main.
 - ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
 - ⚠️ ODDS_API: ~1 credit on main key, ~485 on test key. Resets 2026-03-01.
 
 ### Active flags in REVIEW_LOG.md
-- ✅ All active flags cleared as of V37 Session 7.
-- Sandbox low-pri: `core/odds_fetcher.py:114,242-244` stale docstrings — address in next routine cleanup.
-- No blocking flags. Sandbox Session 32 cleared to proceed.
+- ✅ All active flags cleared. No blocking flags.
+- Sandbox low-pri (carried): `core/odds_fetcher.py:114,242-244` stale docstrings. Low urgency.
+- No blocking flags. Sandbox Session 35+ cleared to proceed.
 
 ### Quota incident (2026-02-24 — permanent awareness)
 - Monthly quota (20,000) burned to ~1 credit remaining in 6 days
