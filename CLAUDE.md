@@ -80,6 +80,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - `data/price_history_store.py`: `from odds_fetcher import _extract_open_prices` must stay deferred (inside function body) — same circular import reason
 - Before removing a function parameter, grep all call sites first: `grep -rn "function_name(" .` — easy to miss cross-file callers (e.g. `sharp_to_size` had callers in `bet_ranker.py`)
 - Edit tool `old_string` failures: if a file was already partially edited this session, grep for current text before editing — the previously-matched string may no longer exist exactly
+- **Date-sensitive test fixtures**: any fixture that hardcodes a date (e.g. `"2026-02-25"`) will silently fail the next day if the function under test uses `datetime.now(utc)`. Fix pattern: add `_today_str: Optional[str] = None` to the function (same as `_days_until_billing`), pass the fixture date in the test. See `get_starters_for_odds_game` — fixed 2026-02-26.
 - **V37_INBOX ✅ DONE = sandbox committed** — task has a commit hash, already pushed. Validate by grepping for the artifact + running pytest. No need to re-implement or wait.
 - **Reviewer flag-clearing rule:** After writing APPROVED audit for a sandbox fix, also explicitly update REVIEW_LOG.md ACTIVE FLAGS — change 🔴/🟡 to ✅ CLEARED. The audit block alone does NOT clear the flag.
 - End every session: `/sc:save` → `/claude-md-management:revise-claude-md` → `git commit`
