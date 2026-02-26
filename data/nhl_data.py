@@ -332,6 +332,7 @@ def get_starters_for_odds_game(
     home_team_name: str,
     game_start_utc: Optional[datetime] = None,
     session: Optional[requests.Session] = None,
+    _today_str: Optional[str] = None,
 ) -> Optional[dict]:
     """
     Given Odds API team names and scheduled start time, fetch starter info.
@@ -373,7 +374,7 @@ def get_starters_for_odds_game(
         return None
 
     # Fetch today's schedule to find the matching game ID
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = _today_str or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     scheduled_games = get_nhl_game_ids_for_date(today_str, session=session)
 
     game_id = None

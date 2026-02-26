@@ -329,7 +329,10 @@ class TestGetStartersForOddsGame:
             _schedule_response(away_abbrev="BOS", home_abbrev="NYR"),
             _boxscore_with_goalies(),
         )
-        result = get_starters_for_odds_game("Boston Bruins", "New York Rangers", session=session)
+        result = get_starters_for_odds_game(
+            "Boston Bruins", "New York Rangers",
+            session=session, _today_str="2026-02-25",
+        )
         assert result is not None
         assert result["away"]["starter_confirmed"] is True
 
@@ -366,5 +369,6 @@ class TestGetStartersForOddsGame:
             "Boston Bruins", "New York Rangers",
             game_start_utc=near_start,
             session=session,
+            _today_str="2026-02-25",
         )
         assert result is not None
