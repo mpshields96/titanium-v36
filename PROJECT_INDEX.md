@@ -383,8 +383,12 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | V37 S1 | ✅ | Reviewer role activated. Two-AI coordination via REVIEW_LOG.md confirmed live. Sandbox Sessions 23+24 APPROVED. Schema review for Advanced Analytics written. REVIEWER_PROMPT.md created. v36 compatibility rule established. |
 | V37 R2 | ✅ | XSS fix (app.py + bet_card_renderer.py, `_html.escape()`). `DailyCreditLog` + enforcing `QuotaTracker` in `odds_fetcher.py` (DAILY_CREDIT_CAP=1000 persistent across restarts). Quota incident root-caused + documented. Inactivity auto-stop spec → REVIEW_LOG.md + V37_INBOX.md. 22 new tests → **185 total**. |
 | V37 R3 | ✅ | `_touch_activity()` in app.py (writes `data/last_activity.json` on every page load — future scheduler hook). `test_app_utils.py` (5 new tests). Sandbox Session 25 cont. audited APPROVED. All V37_INBOX tasks resolved. 5 new tests → **190 total**. |
+| V37 R4 | ✅ | `data/nhl_data.py` NEW (NHL goalie starters, ESPN poll, 35 tests). `nhl_kill_switch()` in `edge_calculator.py`. `BetCandidate.calibration` field. SPECULATIVE tier in `sharp_to_size()` + card renderer (0.25u, orange badge). Quota: DAILY_CREDIT_CAP 1000→100, BILLING_RESERVE 1000→50 (temp). 251 total tests. |
+| V37 R5 | ✅ | Totals dedup cross-line guard: `_deduplicate_markets()` drops `abs(line)` for totals — Over 7.0 + Under 6.5 same game share one bucket. +6 `TestTotalsDedupCrossLine`. Sandbox Session 29 APPROVED (Layer 1 modal line pinning). **257 total tests**. |
+| V37 R6–R7 | ✅ | Sandbox Sessions 29–30 audited APPROVED. Stale `QuotaTracker` docstrings fixed in v36. REVIEW_LOG active flags cleared. 257 tests. |
+| V37 R8 | ✅ | Sandbox Sessions 31-B–35 audited. DB init fix APPROVED. Props architecture rulings (stay in `odds_fetcher.py`, 422 no-retry, key warning). NHL `_today_str` test fix. CLAUDE.md: 5 new rules. Session 36 directive written. 257 tests. |
+| V37 R9 (auto) | ✅ | Doc maintenance: PROJECT_INDEX quota constants corrected, SESSION_STATE deferred items closed, MASTER_ROADMAP session log + gate dates updated. 257 tests. |
 
-Last commit: V37 R3 (inactivity tracking + 190/190 tests) · Tests: **190 passing** · Quota: ⚠️ ~1 remaining (exhausted — resets next billing cycle)
-V37 Reviewer Session 3 complete (2026-02-25). Sandbox Session 26 pending (nhl_data promotion).
+Last commit: `81172ca` (2026-02-26) · Tests: **257 passing** · Quota: ⚠️ ~1 remaining (exhausted — resets 2026-03-01)
 **NEW REVIEWER CHAT:** Paste REVIEWER_PROMPT.md contents as opening message. No other context needed.
 B2 gate opens 2026-03-04 — check espn_stability.log on that date. SHARP_THRESHOLD raise gated at 5 live RLM fires (0/5).
