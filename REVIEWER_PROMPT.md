@@ -151,7 +151,7 @@ Loading screen tip: /sc:load at session start pulls PROJECT_INDEX.md + SESSION_S
 ## SECTION 2 — CURRENT STATE EXPANSION
 # This section is MUTABLE. Update at the end of every session that uses this file.
 # It layers on top of Section 1. Where Section 2 contradicts Section 1, Section 2 wins.
-# Last updated: 2026-02-26 (V37 Reviewer Session 10)
+# Last updated: 2026-02-26 (V37 Reviewer Session 10 — end of day wrap)
 
 ### STARTUP SEQUENCE UPDATE (test count changed)
 Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 257/257 still passing**
@@ -182,21 +182,23 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 8** (2026-02-25): Audited Sessions 31-B, 32, 33, 34 — all APPROVED. CLAUDE.md updated (quota cap 1000→100, init_price_history_db no-arg rule, SQLite MCP read-only rule, R8 log). REVIEWER_PROMPT.md Section 2 updated. Sandbox adopted both V37 docstring suggestions from S32 audit in S34 immediately. Last v36 commit: b1900cb. 257/257 passing.
 - **V37 Session 8+ (autonomous)**: Fixed 2 failing v36 NHL tests (date-sensitivity — `_today_str` injection). Wrote Session 35 props directive. Sandbox built Session 35 (PropsQuotaTracker, fetch_props_for_event, 08_player_props.py, +48 tests). Issued 4 rulings: file placement APPROVED (odds_fetcher.py), session cap APPROVED (DailyCreditLog gate before second account), 422 no-retry APPROVED, key fallback ACCEPTABLE with warning. Wrote Session 36 directive (props DailyCreditLog + warning log + fixture). CLAUDE.md props rules added. Last v36 commit: 29a2200. 257/257 passing.
 - **V37 Session 9 (2026-02-26 autonomous)**: Doc sweep + Sessions 36/36cont/37/37cont audits. Fixed stale quota constants in PROJECT_INDEX. Fixed SESSION_STATE stale refs. MASTER_ROADMAP S32-S37 log. PROMOTION_SPEC MODULE 3 promoted. S36 (APPROVED), S36 cont. (APPROVED, props gate MET), S37 protocol (APPROVED), S37 cont. paper bets (🟡 FLAGGED — missing tests + days_to_game mismatch). B2 gate superseded: ESPN log stale, new gate = injury_data.py static model. Session 38A + 38 directives issued. GSD: DO NOT INSTALL. Last v36 commit: aa5bb4c. 257/257 passing.
-- **V37 Session 10 (2026-02-26 autonomous)**: S37 cont. C (38A fix — APPROVED, flag cleared), S38 (result_resolver 3 bug fixes — APPROVED), S39 (coordination + scheduler 5→30 min — APPROVED). EXP 6 gate: 0 → 4 resolved bets. CLV gap noted (no Odds API close_price at resolution — known). REVIEW_LOG.md updated. No v36 code changes. 257/257 passing.
+- **V37 Session 10 (2026-02-26 autonomous)**: S37C+S38+S39+S40+S41 all APPROVED. S38A flag cleared. S40: injury_data.py WIRED — B2 gate ✅ WIRED. S41: S40 regression fix (parse_game_markets() injury_leverage param) + auto paper-bet scan in scheduler. EXP 6: 0→4 resolved bets. CLV gap noted (known). Tests: sandbox 1244→1264. No v36 code changes. 257/257 passing.
 
-### Sandbox current state (last confirmed — Session 39 APPROVED, all flags clear)
-- Sessions complete: **39 (coordination + scheduler 5→30 min + iPhone notify scripts)**
-- S35 (1154). S36/36cont. S37 protocol. S37 cont. (paper bets). S37 cont. B (result_resolver 1224). S37 cont. C (S38A fix 1235). S38 (result_resolver bugs 1244). S39 coordination.
-- Tests: **1244/1244** ✅ | origin up to date (3f4d65a)
+### Sandbox current state (last confirmed — Sessions 40+41 APPROVED, all flags clear)
+- Sessions complete: **41 (injury_leverage regression fix + auto paper-bet scan)**
+- ...S38 (result_resolver bugs 1244). S39 coordination. S40 injury_data.py wired (1251). S41 S40-fix + auto-scan (1264).
+- Tests: **1264/1264** ✅ | commits: S40=f2ee1ee, S41=9e99854. Sandbox needs git push (GitHub token).
 - Architecture: `core/` subpackage, SQLite, APScheduler, 8+1 pages (08_player_props.py)
-- `core/result_resolver.py` (live-validated): ESPN scoreboard auto-resolves paper bets. 3 bugs fixed (UTC offset, NCAAB groups, abbreviation expansion). 4/4 resolved on first live run.
+- `core/result_resolver.py` (live-validated): ESPN scoreboard auto-resolves paper bets.
+- `core/injury_data.py` WIRED: `compute_injury_leverage_from_event()` in scheduler.py. Currently returns 0.0 always (Odds API has no `_injuries` key) — injection point for future live feed.
+- Auto paper-bet scan: `_auto_paper_bet_scan()` in scheduler.py — auto-logs Grade A/B bets after each successful fetch. Dedup via `event_id + market_type + target`. `notes="auto-paper"`.
 - Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
 - Props: Gate MET. `ODDS_API_KEY_PROPS` can be activated.
 - Skills: `titanium-session-wrap` + `titanium-context-monitor` in `~/.claude/skills/`
 
 ### v36 current state (deployed production)
 - Tests: **257/257** passing ✅
-- Last commit: `aa5bb4c` — B2 gate superseded (ESPN log stale → injury_data.py static model). Pushed to main.
+- Last commit: `0813f1c` — V37 R10 wrap (S39 APPROVED, scheduler 5→30 min, CLV gap noted). Pushed to main.
 - ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
 - ⚠️ ODDS_API: ~1 credit on main key. Resets 2026-03-01.
 - DAILY_CREDIT_CAP=100 is **permanent** (not restored after March 1)
@@ -206,7 +208,7 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - ✅ S37 cont. C (38A completion): APPROVED.
 - ✅ S38 (result_resolver 3 bugs): APPROVED. 4/4 live-validated.
 - ✅ Props DailyCreditLog gate MET. Second API account can be activated.
-- ⏳ S38 B2 gate directive: `injury_data.py` wiring still PENDING. Session 38 directive in V37_INBOX.
+- ✅ S38 B2 gate directive: `injury_data.py` WIRED — Session 40 (commit f2ee1ee). B2 gate ✅ WIRED.
 - ⚠️ CLV gap noted (S39): `auto_resolve_pending()` resolves via ESPN — no Odds API close_price at resolution. CLV=N/A on all 4 resolved bets. Known limitation, not blocking EXP 6 gate.
 - Sandbox low-pri (carried): `core/odds_fetcher.py` stale docstrings.
 
@@ -234,7 +236,7 @@ Migration: `ALTER TABLE ... ADD COLUMN` (not recreate). Source-agnostic analytic
 | Gate | Condition | Current | Status |
 |------|-----------|---------|--------|
 | SHARP_THRESHOLD raise (45→50) | RLM fires ≥5 live sessions | 0/5 | ❌ NOT MET |
-| B2 injury leverage (v36) | espn_stability.log date ≥ 2026-03-04 SUPERSEDED — see note | Gate replaced: injury_data.py static model (no ESPN) — Session 38 directive issued | ⏳ IN PROGRESS |
+| B2 injury leverage (v36) | espn_stability.log gate SUPERSEDED — static model, no gate required | `compute_injury_leverage_from_event()` wired — Session 40, commit f2ee1ee. Returns 0.0 (no `_injuries` in Odds API). Injection point ready for future feed. | ✅ WIRED |
 | EXP 6 market efficiency | 50+ resolved bets in bet_history | 4/50 (first live run — S38) | ❌ NOT MET |
 | NBA B2B home/road split (sandbox) | 10+ B2B instances observed | 0/10 | ❌ NOT MET |
 | CLV bets sample | 30+ tracked bets | 0/30 | ❌ NOT MET |

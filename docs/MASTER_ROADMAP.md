@@ -1,6 +1,6 @@
 # TITANIUM V36.1 — Master Roadmap & To-Do List
 # Created: Session 20 (2026-02-19)
-# Last updated: V37 Reviewer Session 9 autonomous (2026-02-26)
+# Last updated: V37 Reviewer Session 10 end-of-day wrap (2026-02-26)
 # Source: /sc:analyze edge_calculator.py + sport coverage audit
 # This is the authoritative checklist. Update status as items complete.
 # Accessible by: v36 reviewer chat, agentic sandbox, any future Claude session.
@@ -255,7 +255,9 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
-| V37 R10 (2026-02-26) | S37C+S38+S39 all APPROVED. S38A flag cleared. S39: scheduler 5→30 min (credit budget), iPhone notify scripts, CLV gap noted. EXP6: 0→4 resolved bets. 257/257. |
+| V37 R10 (2026-02-26) | S37C+S38+S39+S40+S41 all APPROVED. S38A flag cleared. B2 gate ✅ WIRED (S40). S41: S40 regression fix + auto paper-bet scan. EXP6: 0→4 resolved bets. CLV gap noted. 257/257. |
+| Sandbox S41 (2026-02-27) | S40 regression fix: `parse_game_markets()` missing `injury_leverage` param → TypeError. Added `injury_leverage: float = 0.0` to signature + all 4 `calculate_sharp_score()` call sites. Auto paper-bet scan: `_auto_paper_bet_scan()` in scheduler.py, dedup via `event_id + market_type + target`. `event_id` column + `is_bet_already_logged()` in line_logger.py. 1264/1264 tests (+13). Commits 9e99854. |
+| Sandbox S40 (2026-02-26) | V37 S38 directive: `compute_injury_leverage_from_event()` in scheduler.py. `from core.injury_data import evaluate_injury_impact` — static positional model, no ESPN. `game["_injuries"]` injection point (always empty from Odds API → always 0.0 in production). Wired into `01_live_lines.py`. B2 gate ✅ WIRED. +7 tests. 1251/1251. Commit f2ee1ee. |
 | Sandbox S39 (2026-02-26) | Coordination + credit conservation. Scheduler 5→30 min (`poll_interval_minutes`). grade col migration applied retroactively. iPhone notify scripts tracked. CLV=N/A gap noted (ESPN resolve only). 1244/1244 tests. |
 | Sandbox S38 (2026-02-26) | result_resolver 3 live-run bug fixes + 9 regression tests. UTC date offset (`range(-1, window+1)`), NCAAB `_ESPN_EXTRA_PARAMS` (groups=50), abbreviation expansion (fragment-only). Live run: OKC WIN, CLE LOSS, UIC WIN, Colorado St WIN ($97.88 paper). 1244/1244 tests. |
 | V37 R9 cont. (2026-02-26) | S36-S37 cont. B all audited. S37 cont. paper bets FLAGGED (missing tests). S37 cont. B (result_resolver) APPROVED. ESPN scoreboard precedent set (historical data = no gate). S38A + S38 directives issued. B2 gate superseded. 257/257. |
