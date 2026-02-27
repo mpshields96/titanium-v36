@@ -147,6 +147,9 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - louisiana_mode is a flag in parse_prop_markets, not a separate file
 - Soccer bulk markets: h2h,totals only (btts/h2h_3_way cause 422 on bulk endpoint)
 - All sports use fetch_batch_odds() — no per-event prop calls (API tier limitation)
+- **Props belong in `odds_fetcher.py`** — NOT a separate `props_fetcher.py`. CLAUDE.md rule: "odds_fetcher.py = ALL Odds API calls." Props are Odds API calls. (Decided V37 R8+, Session 35)
+- **Props `DailyCreditLog` gate**: do NOT activate `ODDS_API_KEY_PROPS` env var until a separate props `DailyCreditLog` is live. Without it, multi-session runaway is possible. Session cap alone is sufficient for MVP when props fall back to main key.
+- **Props 422 = no retry**: `requester.get()` direct, no `_fetch_with_backoff`. 422 on props endpoint = market not available on current tier — not transient, retrying wastes credits.
 - `_KILL_ROUTER` has no "nba" entry by design — NBA needs `schedule_rest` kwarg, handled by explicit branch in `calculate_edges()` before the router is hit. Do not add it back.
 - `data/__init__.py` must stay — Streamlit Cloud requires it for subpackage imports
 - `bet_card_renderer.py` uses inline styles only — Streamlit strips `<style>` tags from `st.markdown()` HTML
