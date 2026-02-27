@@ -176,7 +176,7 @@ Build after any in-season priority items.
 
 ## MODULE 3: `core/nhl_data.py` → v36
 
-### Status: READY — MEDIUM-HIGH priority (NHL in season, Feb 2026)
+### Status: ✅ PROMOTED — V37 R4 (2026-02-25)
 
 ### What it does
 Real-time goalie starter detection via free `api-web.nhle.com` API.
