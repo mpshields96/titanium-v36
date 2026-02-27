@@ -192,9 +192,10 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 
 ### v36 current state (deployed production)
 - Tests: **257/257** passing ✅
-- Last commit: `29a2200` — CLAUDE.md props architecture rules. Pushed to main.
+- Last commit: `39de791` — docs: fix stale quota constants + SESSION_STATE cleanup. Pushed to main.
 - ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
 - ⚠️ ODDS_API: ~1 credit on main key. Resets 2026-03-01.
+- DAILY_CREDIT_CAP=100 is **permanent** (not restored after March 1)
 
 ### Active flags in REVIEW_LOG.md
 - ✅ Session 35 APPROVED WITH RULINGS — all 4 flags resolved. Sandbox to commit.
