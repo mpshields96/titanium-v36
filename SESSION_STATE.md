@@ -261,7 +261,7 @@ Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
 ### Architecture (V37 — two-AI system)
-- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (1244 tests, sessions through 38)
+- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (1244 tests, sessions through 39)
 - **Reviewer/Auditor:** This chat — reviews sandbox sessions, flags issues, decides promotions to v36
 - **R&D chat:** RETIRED. titanium-experimental/ archived.
 - **Live product:** v36 on Streamlit Cloud

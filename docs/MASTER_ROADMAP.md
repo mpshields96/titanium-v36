@@ -255,7 +255,8 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
-| V37 R10 (2026-02-26) | S37 cont. C (38A fix — APPROVED): `_days_until_game(commence_time)` + 11 paper bet tests. S38 (result_resolver bugs — APPROVED): UTC offset fix, NCAAB groups param, "St"→"state" abbreviation expansion. 4/4 live-validated. EXP6: 0→4 resolved bets. 257/257. |
+| V37 R10 (2026-02-26) | S37C+S38+S39 all APPROVED. S38A flag cleared. S39: scheduler 5→30 min (credit budget), iPhone notify scripts, CLV gap noted. EXP6: 0→4 resolved bets. 257/257. |
+| Sandbox S39 (2026-02-26) | Coordination + credit conservation. Scheduler 5→30 min (`poll_interval_minutes`). grade col migration applied retroactively. iPhone notify scripts tracked. CLV=N/A gap noted (ESPN resolve only). 1244/1244 tests. |
 | Sandbox S38 (2026-02-26) | result_resolver 3 live-run bug fixes + 9 regression tests. UTC date offset (`range(-1, window+1)`), NCAAB `_ESPN_EXTRA_PARAMS` (groups=50), abbreviation expansion (fragment-only). Live run: OKC WIN, CLE LOSS, UIC WIN, Colorado St WIN ($97.88 paper). 1244/1244 tests. |
 | V37 R9 cont. (2026-02-26) | S36-S37 cont. B all audited. S37 cont. paper bets FLAGGED (missing tests). S37 cont. B (result_resolver) APPROVED. ESPN scoreboard precedent set (historical data = no gate). S38A + S38 directives issued. B2 gate superseded. 257/257. |
 | Sandbox S37 (2026-02-26) | Protocol + paper bets + auto-resolver. `result_resolver.py` (ESPN scoreboard, 62 tests). `_log_paper_bet`, `_paper_log_button` on live lines. S38A required: days_to_game fix + 3 tests. 1224/1224 tests. |

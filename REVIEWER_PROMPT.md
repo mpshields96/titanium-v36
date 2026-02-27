@@ -182,12 +182,12 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 8** (2026-02-25): Audited Sessions 31-B, 32, 33, 34 — all APPROVED. CLAUDE.md updated (quota cap 1000→100, init_price_history_db no-arg rule, SQLite MCP read-only rule, R8 log). REVIEWER_PROMPT.md Section 2 updated. Sandbox adopted both V37 docstring suggestions from S32 audit in S34 immediately. Last v36 commit: b1900cb. 257/257 passing.
 - **V37 Session 8+ (autonomous)**: Fixed 2 failing v36 NHL tests (date-sensitivity — `_today_str` injection). Wrote Session 35 props directive. Sandbox built Session 35 (PropsQuotaTracker, fetch_props_for_event, 08_player_props.py, +48 tests). Issued 4 rulings: file placement APPROVED (odds_fetcher.py), session cap APPROVED (DailyCreditLog gate before second account), 422 no-retry APPROVED, key fallback ACCEPTABLE with warning. Wrote Session 36 directive (props DailyCreditLog + warning log + fixture). CLAUDE.md props rules added. Last v36 commit: 29a2200. 257/257 passing.
 - **V37 Session 9 (2026-02-26 autonomous)**: Doc sweep + Sessions 36/36cont/37/37cont audits. Fixed stale quota constants in PROJECT_INDEX. Fixed SESSION_STATE stale refs. MASTER_ROADMAP S32-S37 log. PROMOTION_SPEC MODULE 3 promoted. S36 (APPROVED), S36 cont. (APPROVED, props gate MET), S37 protocol (APPROVED), S37 cont. paper bets (🟡 FLAGGED — missing tests + days_to_game mismatch). B2 gate superseded: ESPN log stale, new gate = injury_data.py static model. Session 38A + 38 directives issued. GSD: DO NOT INSTALL. Last v36 commit: aa5bb4c. 257/257 passing.
-- **V37 Session 10 (2026-02-26 autonomous)**: S37 cont. C (38A fix — APPROVED, flag cleared), S38 (result_resolver 3 bug fixes — APPROVED). EXP 6 gate: 0 → 4 resolved bets (live run: OKC WIN, CLE LOSS, UIC WIN, Colorado St WIN). S39 coordination-only (no audit needed). REVIEW_LOG.md updated. No v36 code changes. 257/257 passing.
+- **V37 Session 10 (2026-02-26 autonomous)**: S37 cont. C (38A fix — APPROVED, flag cleared), S38 (result_resolver 3 bug fixes — APPROVED), S39 (coordination + scheduler 5→30 min — APPROVED). EXP 6 gate: 0 → 4 resolved bets. CLV gap noted (no Odds API close_price at resolution — known). REVIEW_LOG.md updated. No v36 code changes. 257/257 passing.
 
-### Sandbox current state (last confirmed — Session 39 complete, all flags clear)
-- Sessions complete: **39 (coordination-only — push + inbox sync)**
-- S35 (1154). S36/36cont. S37 protocol. S37 cont. paper bets (1162). S37 cont. B result_resolver (1224). S37 cont. C S38A fix (1235). S38 result_resolver bugs (1244). S39 coordination.
-- Tests: **1244/1244** ✅ | origin up to date (e595a33)
+### Sandbox current state (last confirmed — Session 39 APPROVED, all flags clear)
+- Sessions complete: **39 (coordination + scheduler 5→30 min + iPhone notify scripts)**
+- S35 (1154). S36/36cont. S37 protocol. S37 cont. (paper bets). S37 cont. B (result_resolver 1224). S37 cont. C (S38A fix 1235). S38 (result_resolver bugs 1244). S39 coordination.
+- Tests: **1244/1244** ✅ | origin up to date (3f4d65a)
 - Architecture: `core/` subpackage, SQLite, APScheduler, 8+1 pages (08_player_props.py)
 - `core/result_resolver.py` (live-validated): ESPN scoreboard auto-resolves paper bets. 3 bugs fixed (UTC offset, NCAAB groups, abbreviation expansion). 4/4 resolved on first live run.
 - Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
@@ -207,6 +207,7 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - ✅ S38 (result_resolver 3 bugs): APPROVED. 4/4 live-validated.
 - ✅ Props DailyCreditLog gate MET. Second API account can be activated.
 - ⏳ S38 B2 gate directive: `injury_data.py` wiring still PENDING. Session 38 directive in V37_INBOX.
+- ⚠️ CLV gap noted (S39): `auto_resolve_pending()` resolves via ESPN — no Odds API close_price at resolution. CLV=N/A on all 4 resolved bets. Known limitation, not blocking EXP 6 gate.
 - Sandbox low-pri (carried): `core/odds_fetcher.py` stale docstrings.
 
 ### Quota incident (2026-02-24 — permanent awareness)
