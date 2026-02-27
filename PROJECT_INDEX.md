@@ -388,7 +388,8 @@ Tiers: NUCLEAR ≥90 = 2.0u · STANDARD ≥80 = 1.0u · LEAN ≥45 = 0.5u
 | V37 R6–R7 | ✅ | Sandbox Sessions 29–30 audited APPROVED. Stale `QuotaTracker` docstrings fixed in v36. REVIEW_LOG active flags cleared. 257 tests. |
 | V37 R8 | ✅ | Sandbox Sessions 31-B–35 audited. DB init fix APPROVED. Props architecture rulings (stay in `odds_fetcher.py`, 422 no-retry, key warning). NHL `_today_str` test fix. CLAUDE.md: 5 new rules. Session 36 directive written. 257 tests. |
 | V37 R9 (auto) | ✅ | Doc maintenance: PROJECT_INDEX quota constants corrected, SESSION_STATE deferred items closed, MASTER_ROADMAP session log + gate dates updated. 257 tests. |
+| V37 R9 cont. | ✅ | Sessions 36/36cont/37 audited (all APPROVED). Props gate MET. GSD: DO NOT INSTALL. REVIEWER_PROMPT.md + MASTER_ROADMAP finalized. 257 tests. |
 
-Last commit: `81172ca` (2026-02-26) · Tests: **257 passing** · Quota: ⚠️ ~1 remaining (exhausted — resets 2026-03-01)
+Last commit: `3911b02` (2026-02-26) · Tests: **257 passing** · Quota: ⚠️ ~1 remaining (exhausted — resets 2026-03-01)
 **NEW REVIEWER CHAT:** Paste REVIEWER_PROMPT.md contents as opening message. No other context needed.
 B2 gate opens 2026-03-04 — check espn_stability.log on that date. SHARP_THRESHOLD raise gated at 5 live RLM fires (0/5).
