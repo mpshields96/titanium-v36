@@ -1,9 +1,9 @@
 # TITANIUM V36.1 — Master Roadmap & To-Do List
 # Created: Session 20 (2026-02-19)
-# Last updated: Session 20 end-of-session / v36 Session 21 prep (2026-02-19)
+# Last updated: V37 Reviewer Session 9 autonomous (2026-02-26)
 # Source: /sc:analyze edge_calculator.py + sport coverage audit
 # This is the authoritative checklist. Update status as items complete.
-# Accessible by: v36 chat, R&D chat, any future Claude session.
+# Accessible by: v36 reviewer chat, agentic sandbox, any future Claude session.
 
 ---
 
@@ -243,16 +243,29 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 [x] = Complete
 
 ## GATE DATES
-- **ROLLING:** v36 30+ resolved bets → run `core/sharp_score_calibration.py` (R&D EXP 3)
+- **2026-03-01**: Restore `BILLING_RESERVE` 50 → 1_000 in v36 + sandbox `odds_fetcher.py` (quota drought ends)
+- **2026-03-04**: B2 ESPN injury endpoint stability check — `espn_stability.log` error rate < 5%, NBA records > 50 (GAP 2, CEILING 2, UI 3)
+- **ROLLING:** v36 30+ resolved bets → run `core/sharp_score_calibration.py` (R&D EXP 3; now sandbox)
 - **ROLLING:** RLM live sessions ≥ 5 → raise SHARP_THRESHOLD 45 → 50 (currently 0/5)
 - **ROLLING (any NBA game day):** Run `python3 core/pinnacle_probe.py` + `log_clv_snapshot()` (EXP 1, EXP 2)
-- 2026-03-04: B2 ESPN injury endpoint stability check (GAP 2, CEILING 2, UI 3)
 - 2026-03-27: MLB season starts (efficiency data already promoted — no action needed)
 - 2026-08-01: NFL/NCAAF season prep window opens (GAP 1, R&D EXP 4, R&D EXP 7)
 
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| V37 R9 autonomous (2026-02-26) | Doc cleanup: PROJECT_INDEX.md quota constants corrected (DAILY_CREDIT_CAP=100 permanent, SOFT=30, HARD=80, RESERVE=50 temp). SESSION_STATE.md deferred items closed. MASTER_ROADMAP gate dates updated. 257/257 tests. |
+| V37 R8 (2026-02-26) | Audited sandbox sessions 31-B through 35 (DB init fix, CreditLedger, UI polish, props). Props architecture rulings: stay in odds_fetcher.py, 422 no-retry APPROVED, key fallback warning required. NHL date-sensitivity test fix (`_today_str` injection). CLAUDE.md: quota 1000→100, DB init no-arg rule, SQLite MCP read-only, date-sensitive fixture pattern, props rules. 257/257 tests. |
+| Sandbox S35 (2026-02-26) | Player props: `PropsQuotaTracker`, `fetch_props_for_event()` in `odds_fetcher.py`. `PropCandidate` + `parse_props_candidates()` in `math_engine.py`. `08_player_props.py` on-demand UI. +48 tests (1106→1154). PENDING COMMIT awaiting final pytest count. |
+| Sandbox S34 (2026-02-25) | Housekeeping: stale ≥30→≥10 gate text, Pinnacle from book dropdown, KPI font fix, V37 docstrings in odds_fetcher.py. 1106/1106 tests. |
+| Sandbox S33 (2026-02-25) | UI polish: CST/CDT game times, Pinnacle probe widget removed, collar legend overlap fixed, guide rewritten for Claude-in-loop. 1106/1106 tests. |
+| Sandbox S32 (2026-02-25) | CreditLedger (SQLite-backed dynamic daily budget). QuotaTracker: `_days_until_billing()`, `daily_allowance()`, `is_daily_soft_limit()`, `is_daily_hard_stop()`. +27 tests (1079→1106). |
+| V37 R7 (2026-02-25) | Audited sessions 30-B (PRECONDITION blocks), fixed stale QuotaTracker docstrings in v36, cleared REVIEW_LOG active flags. 257/257 tests. |
+| V37 R6 (2026-02-25) | Audited sessions 29 (Layer 1 modal line pinning + RLM direction fix APPROVED), 30-A (NHL data + speculative tier APPROVED). 257/257 tests. |
+| V37 R5 (2026-02-25) | Totals dedup cross-line guard: `_deduplicate_markets()` key drops `abs(line)`. Over 7.0 + Under 6.5 same game → one bucket. +6 `TestTotalsDedupCrossLine` tests (251→257). |
+| V37 R4 (2026-02-25) | `data/nhl_data.py` promoted (NHL goalie starters, 35 tests). `nhl_kill_switch()` in `edge_calculator.py`. SPECULATIVE tier in `sharp_to_size()` + card renderer. Quota guards: DAILY_CREDIT_CAP 1000→100, BILLING_RESERVE 1000→50 (temp). 251 tests total. |
+| V37 R3 (2026-02-25) | `_touch_activity()` in `app.py` (inactivity auto-stop). `test_app_utils.py` NEW. `data/last_activity.json` gitignored. 190 tests. |
+| V37 R2 (2026-02-24) | XSS fix (`app.py` + `bet_card_renderer.py` — `_html.escape()`). `DailyCreditLog` + enforcing `QuotaTracker` in `odds_fetcher.py` (DAILY_CREDIT_CAP=1000 at the time). +22 tests (185 total). |
 | v36 S25 (2026-02-24) | **Architecture decision:** Agentic sandbox (`~/ClaudeCode/agentic-rd-sandbox/`) promoted to primary builder — 933 tests, 18 sessions, Trinity fixed, 12 live kill switches, active RLM, SQLite (no Supabase cost). v36 chat → Reviewer/Auditor role. R&D chat (titanium-experimental) RETIRED. No code changes this session. |
 | v36 S24 (2026-02-19) | GAP 4 soccer 3-way fix: `data/soccer_consensus.py` promoted, `edge_calculator.py` moneyline section branched on `_is_soccer`. EXP 5: `data/parlay_builder.py` promoted, `page_parlay_builder()` + 🔗 nav entry. 28 new tests (163 total). |
 | v36 S23 (2026-02-19) | CLAUDE.md Session 22 learnings, PROJECT_INDEX.md updated (135 tests, 3 new modules), session handoffs prepared |
