@@ -182,25 +182,29 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 8** (2026-02-25): Audited Sessions 31-B, 32, 33, 34 — all APPROVED. CLAUDE.md updated (quota cap 1000→100, init_price_history_db no-arg rule, SQLite MCP read-only rule, R8 log). REVIEWER_PROMPT.md Section 2 updated. Sandbox adopted both V37 docstring suggestions from S32 audit in S34 immediately. Last v36 commit: b1900cb. 257/257 passing.
 - **V37 Session 8+ (autonomous)**: Fixed 2 failing v36 NHL tests (date-sensitivity — `_today_str` injection). Wrote Session 35 props directive. Sandbox built Session 35 (PropsQuotaTracker, fetch_props_for_event, 08_player_props.py, +48 tests). Issued 4 rulings: file placement APPROVED (odds_fetcher.py), session cap APPROVED (DailyCreditLog gate before second account), 422 no-retry APPROVED, key fallback ACCEPTABLE with warning. Wrote Session 36 directive (props DailyCreditLog + warning log + fixture). CLAUDE.md props rules added. Last v36 commit: 29a2200. 257/257 passing.
 
-### Sandbox current state (last confirmed — Session 35 APPROVED, pending commit)
-- Sessions complete: **35 (props feature — pending commit)**
-- Tests: **~1130+** (exact count TBC — sandbox to confirm before push)
+### Sandbox current state (last confirmed — Session 36 APPROVED, Session 37 directive live)
+- Sessions complete: **36 (meta-skills: titanium-session-wrap + titanium-context-monitor)**
+- Session 35 committed (props feature, commits 9252e8f+cdc6e6f+586ea20). SESSION_LOG still says "Pending" — documentation drift.
+- Tests: **1154/1154** (from Session 35 — Session 36 added no new tests)
 - Architecture: `core/` subpackage, SQLite, APScheduler, 8+1 pages (08_player_props.py added)
 - Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
 - Props: `PropsQuotaTracker` + `fetch_props_for_event()` in `odds_fetcher.py`. On-demand page live.
-  **Gate**: DailyCreditLog for props required before `ODDS_API_KEY_PROPS` is activated (Session 36).
+  **Gate**: DailyCreditLog for props STILL UNBUILT — re-issued as Session 37 directive.
+- Skills added: `titanium-session-wrap` + `titanium-context-monitor` in `~/.claude/skills/`
 
 ### v36 current state (deployed production)
 - Tests: **257/257** passing ✅
-- Last commit: `39de791` — docs: fix stale quota constants + SESSION_STATE cleanup. Pushed to main.
+- Last commit: `155d1db` — PROMOTION_SPEC MODULE 3 marked promoted. Pushed to main.
 - ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
 - ⚠️ ODDS_API: ~1 credit on main key. Resets 2026-03-01.
 - DAILY_CREDIT_CAP=100 is **permanent** (not restored after March 1)
 
 ### Active flags in REVIEW_LOG.md
-- ✅ Session 35 APPROVED WITH RULINGS — all 4 flags resolved. Sandbox to commit.
+- ✅ Session 35 APPROVED WITH RULINGS — all 4 flags resolved. Committed.
+- ✅ Session 36 APPROVED — meta-skills only, no violations. GSD verdict: DO NOT INSTALL.
+- ⚠️ Session 37 directive PENDING: Props DailyCreditLog + warning log + fixture probe (HIGH PRIORITY — re-issue of skipped Session 36 directive).
 - Sandbox low-pri (carried): `core/odds_fetcher.py:114,242-244` stale docstrings. Low urgency.
-- Session 36 directive written: props DailyCreditLog + warning log + fixture probe.
+- ⚠️ SESSION_LOG.md: Session 35 still shows "Pending" — sandbox has docs drift to fix.
 
 ### Quota incident (2026-02-24 — permanent awareness)
 - Monthly quota (20,000) burned to ~1 credit remaining in 6 days
