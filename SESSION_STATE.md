@@ -252,8 +252,8 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: V37 Reviewer Session 9 (autonomous) — 2026-02-26
-Last git commit: `01b2c79` (REVIEWER_PROMPT.md + Session 36 directive)
+Last completed: V37 Reviewer Session 9 cont. — 2026-02-26
+Last git commit: `1b89636` (PROJECT_INDEX V37 R9 cont. row — Sessions 36/36cont/37 all audited)
 Tests: **257/257 passing**
 Quota: ⚠️ EXHAUSTED (~1 credit on main key). Test key (~485 remaining). Resets 2026-03-01.
 BILLING_RESERVE: **50** (temporarily lowered from 1000 — restore after 2026-03-01 reset; DAILY_CREDIT_CAP=100 is permanent)
@@ -261,7 +261,7 @@ Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
 ### Architecture (V37 — two-AI system)
-- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (1099+ tests)
+- **Primary builder:** Agentic sandbox at ~/ClaudeCode/agentic-rd-sandbox/ (1162 tests, sessions through 37)
 - **Reviewer/Auditor:** This chat — reviews sandbox sessions, flags issues, decides promotions to v36
 - **R&D chat:** RETIRED. titanium-experimental/ archived.
 - **Live product:** v36 on Streamlit Cloud
