@@ -180,27 +180,26 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 6** (2026-02-25): No v36 code changes. Resumed from context compression. Wrote V37 AUDIT block for Sandbox Session 29 to REVIEW_LOG.md. Marked Session 29 ✅ DONE in V37_INBOX.md. APPROVED: Layer 1 modal line pinning verified, RLM direction fix verified, dead code deletion (run_nemesis/calculate_edge/Poisson precompute) approved. Updated CLAUDE.md session log (added V37 R4+R5), added totals dedup key to Architecture Decisions. REVIEWER_PROMPT.md updated.
 - **V37 Session 7** (2026-02-25): MCP joint verdicts + Session 30-B. SQLite MCP installed (.mcp.json committed). Sequential Thinking MCP skipped (budget). PRECONDITION docstrings directive written to V37_INBOX.md. Sandbox executed Session 30-B (commit 70bd822) — validated all 5 contract blocks present + correct. Fixed v36 stale docstrings (QuotaTracker/is_daily_cap_hit/is_session_hard_stop — constant names not hardcoded values). Cleared all REVIEW_LOG.md active flags (totals bug + stale docstrings). CLAUDE.md updated with flag-clearing rule + V37_INBOX ✅ DONE pattern. Last v36 commit: 6b65c73. 257/257 passing.
 - **V37 Session 8** (2026-02-25): Audited Sessions 31-B, 32, 33, 34 — all APPROVED. CLAUDE.md updated (quota cap 1000→100, init_price_history_db no-arg rule, SQLite MCP read-only rule, R8 log). REVIEWER_PROMPT.md Section 2 updated. Sandbox adopted both V37 docstring suggestions from S32 audit in S34 immediately. Last v36 commit: b1900cb. 257/257 passing.
+- **V37 Session 8+ (autonomous)**: Fixed 2 failing v36 NHL tests (date-sensitivity — `_today_str` injection). Wrote Session 35 props directive. Sandbox built Session 35 (PropsQuotaTracker, fetch_props_for_event, 08_player_props.py, +48 tests). Issued 4 rulings: file placement APPROVED (odds_fetcher.py), session cap APPROVED (DailyCreditLog gate before second account), 422 no-retry APPROVED, key fallback ACCEPTABLE with warning. Wrote Session 36 directive (props DailyCreditLog + warning log + fixture). CLAUDE.md props rules added. Last v36 commit: 29a2200. 257/257 passing.
 
-### Sandbox current state (last confirmed — end of Session 34)
-- Sessions complete: **31 (DB fix), 32 (CreditLedger), 33 (UI polish), 34 (housekeeping)**
-- Tests: **1106/1106** passing ✅
-- Architecture: `core/` subpackage, SQLite, APScheduler, 8 Streamlit pages, `.mcp.json` with SQLite MCP
+### Sandbox current state (last confirmed — Session 35 APPROVED, pending commit)
+- Sessions complete: **35 (props feature — pending commit)**
+- Tests: **~1130+** (exact count TBC — sandbox to confirm before push)
+- Architecture: `core/` subpackage, SQLite, APScheduler, 8+1 pages (08_player_props.py added)
 - Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
-- CreditLedger: dynamic daily budget (`_days_until_billing`, `daily_allowance`, 4-guard stack). APPROVED.
-- S33 UI: CST game times, Pinnacle removed from 05_rd_output, collar legend fixed, guide rewritten.
-- S34 housekeeping: stale gate text fixed, Pinnacle removed from 04_bet_tracker dropdown, V37 docstring suggestions adopted.
-- Props (separate quota, on-demand): APPROVED in principle — builds in Session 32+.
+- Props: `PropsQuotaTracker` + `fetch_props_for_event()` in `odds_fetcher.py`. On-demand page live.
+  **Gate**: DailyCreditLog for props required before `ODDS_API_KEY_PROPS` is activated (Session 36).
 
 ### v36 current state (deployed production)
 - Tests: **257/257** passing ✅
-- Last commit: `b1900cb` — V37 R8: REVIEWER_PROMPT.md Section 2. Pushed to main.
+- Last commit: `29a2200` — CLAUDE.md props architecture rules. Pushed to main.
 - ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
-- ⚠️ ODDS_API: ~1 credit on main key, ~485 on test key. Resets 2026-03-01.
+- ⚠️ ODDS_API: ~1 credit on main key. Resets 2026-03-01.
 
 ### Active flags in REVIEW_LOG.md
-- ✅ All active flags cleared. No blocking flags.
+- ✅ Session 35 APPROVED WITH RULINGS — all 4 flags resolved. Sandbox to commit.
 - Sandbox low-pri (carried): `core/odds_fetcher.py:114,242-244` stale docstrings. Low urgency.
-- No blocking flags. Sandbox Session 35+ cleared to proceed.
+- Session 36 directive written: props DailyCreditLog + warning log + fixture probe.
 
 ### Quota incident (2026-02-24 — permanent awareness)
 - Monthly quota (20,000) burned to ~1 credit remaining in 6 days
