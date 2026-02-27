@@ -252,8 +252,8 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: V37 Reviewer Session 9 cont. — 2026-02-26
-Last git commit: `1b89636` (PROJECT_INDEX V37 R9 cont. row — Sessions 36/36cont/37 all audited)
+Last completed: V37 Reviewer Session 9 cont. — 2026-02-26 (ongoing)
+Last git commit: `485bf6d` (REVIEWER_PROMPT — S37 cont flagged, S38A+S38 directives issued)
 Tests: **257/257 passing**
 Quota: ⚠️ EXHAUSTED (~1 credit on main key). Test key (~485 remaining). Resets 2026-03-01.
 BILLING_RESERVE: **50** (temporarily lowered from 1000 — restore after 2026-03-01 reset; DAILY_CREDIT_CAP=100 is permanent)
