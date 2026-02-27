@@ -181,30 +181,31 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 7** (2026-02-25): MCP joint verdicts + Session 30-B. SQLite MCP installed (.mcp.json committed). Sequential Thinking MCP skipped (budget). PRECONDITION docstrings directive written to V37_INBOX.md. Sandbox executed Session 30-B (commit 70bd822) — validated all 5 contract blocks present + correct. Fixed v36 stale docstrings (QuotaTracker/is_daily_cap_hit/is_session_hard_stop — constant names not hardcoded values). Cleared all REVIEW_LOG.md active flags (totals bug + stale docstrings). CLAUDE.md updated with flag-clearing rule + V37_INBOX ✅ DONE pattern. Last v36 commit: 6b65c73. 257/257 passing.
 - **V37 Session 8** (2026-02-25): Audited Sessions 31-B, 32, 33, 34 — all APPROVED. CLAUDE.md updated (quota cap 1000→100, init_price_history_db no-arg rule, SQLite MCP read-only rule, R8 log). REVIEWER_PROMPT.md Section 2 updated. Sandbox adopted both V37 docstring suggestions from S32 audit in S34 immediately. Last v36 commit: b1900cb. 257/257 passing.
 - **V37 Session 8+ (autonomous)**: Fixed 2 failing v36 NHL tests (date-sensitivity — `_today_str` injection). Wrote Session 35 props directive. Sandbox built Session 35 (PropsQuotaTracker, fetch_props_for_event, 08_player_props.py, +48 tests). Issued 4 rulings: file placement APPROVED (odds_fetcher.py), session cap APPROVED (DailyCreditLog gate before second account), 422 no-retry APPROVED, key fallback ACCEPTABLE with warning. Wrote Session 36 directive (props DailyCreditLog + warning log + fixture). CLAUDE.md props rules added. Last v36 commit: 29a2200. 257/257 passing.
-- **V37 Session 9 (2026-02-26 autonomous)**: Doc maintenance sweep + Sessions 36/36cont/37 audits. Fixed stale quota constants in PROJECT_INDEX. Fixed SESSION_STATE stale refs (titanium-experimental removed, B2 path updated). MASTER_ROADMAP updated (V37 R2-R9 + S32-S37 session log). PROMOTION_SPEC MODULE 3 marked promoted. Audited S36 meta-skills (APPROVED), S36 cont. (APPROVED, props gate MET), S37 (APPROVED — process-only: session-wrap + context-monitor wired). GSD: DO NOT INSTALL. Last v36 commit: fc56aad. 257/257 passing.
+- **V37 Session 9 (2026-02-26 autonomous)**: Doc sweep + Sessions 36/36cont/37/37cont audits. Fixed stale quota constants in PROJECT_INDEX. Fixed SESSION_STATE stale refs. MASTER_ROADMAP S32-S37 log. PROMOTION_SPEC MODULE 3 promoted. S36 (APPROVED), S36 cont. (APPROVED, props gate MET), S37 protocol (APPROVED), S37 cont. paper bets (🟡 FLAGGED — missing tests + days_to_game mismatch). B2 gate superseded: ESPN log stale, new gate = injury_data.py static model. Session 38A + 38 directives issued. GSD: DO NOT INSTALL. Last v36 commit: aa5bb4c. 257/257 passing.
 
-### Sandbox current state (last confirmed — Session 37 APPROVED)
-- Sessions complete: **37 (protocol: session-wrap + context-monitor wired as mandatory)**
-- Session 35 (1154 tests). Session 36 meta-skills. Session 36 cont. (1162 tests). Session 37 (process-only, 1162 tests unchanged).
-- Tests: **1162/1162** ✅ | 6 commits ahead of origin (sandbox pushes at next session end)
+### Sandbox current state (last confirmed — Session 37 cont. FLAGGED)
+- Sessions complete: **37 cont. (paper bet one-click logging on live lines page)**
+- Session 35 (1154). Session 36 meta-skills. Session 36 cont. (1162). Session 37 protocol. Session 37 cont. paper bets (1162, no test delta).
+- Tests: **1162/1162** ✅ | 7 commits ahead of origin
 - Architecture: `core/` subpackage, SQLite, APScheduler, 8+1 pages (08_player_props.py)
 - Kill switches LIVE (12): NBA B2B, NFL wind, NCAAB 3PT, Soccer drift + 3-way, NHL goalie, Tennis surface, PDO, KOTC
 - Props: `PropsQuotaTracker` + `fetch_props_for_event()` + `PropsQuotaTracker.daily_log` (DailyCreditLog). On-demand page live.
   **Gate MET**: `ODDS_API_KEY_PROPS` second account can now be activated.
 - Skills: `titanium-session-wrap` + `titanium-context-monitor` in `~/.claude/skills/`
+- **⚠️ PROTOCOL ISSUE**: Sandbox wrote a "V37 AUDIT" block in commit `2290a2e`. Audit blocks are reviewer-only. Noted in REVIEW_LOG.md.
 
 ### v36 current state (deployed production)
 - Tests: **257/257** passing ✅
-- Last commit: `2337c31` — REVIEWER_PROMPT.md Session 36 cont. APPROVED, props gate met. Pushed to main.
+- Last commit: `aa5bb4c` — B2 gate superseded (ESPN log stale → injury_data.py static model). Pushed to main.
 - ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
 - ⚠️ ODDS_API: ~1 credit on main key. Resets 2026-03-01.
 - DAILY_CREDIT_CAP=100 is **permanent** (not restored after March 1)
 
 ### Active flags in REVIEW_LOG.md
-- ✅ Sessions 35, 36, 36 cont., 37 ALL APPROVED. No active flags.
+- 🟡 **Session 37 cont. FLAGGED**: `_log_paper_bet` + `_paper_log_button` have ZERO tests. `days_to_game` uses wrong field (`rest_days` not game time). Session 38A directive issued to sandbox.
 - ✅ Props DailyCreditLog gate MET. Second API account can be activated.
 - Sandbox low-pri (carried): `core/odds_fetcher.py:114,242-244` stale docstrings. Low urgency.
-- Sandbox low-pri: SESSION_LOG.md has no Session 37 entry; process-only sessions still need log entries.
+- Sandbox low-pri: SESSION_LOG.md missing Session 37 entry.
 
 ### Quota incident (2026-02-24 — permanent awareness)
 - Monthly quota (20,000) burned to ~1 credit remaining in 6 days
