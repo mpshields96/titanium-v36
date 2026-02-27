@@ -255,9 +255,11 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| V37 R9 cont. (2026-02-26) | Session 36 / 36 cont. audits (both APPROVED). GSD verdict: DO NOT INSTALL. REVIEWER_PROMPT.md Section 2 finalized. MASTER_ROADMAP S35→S36 session log updated. 257/257 tests. |
 | V37 R9 autonomous (2026-02-26) | Doc cleanup: PROJECT_INDEX.md quota constants corrected (DAILY_CREDIT_CAP=100 permanent, SOFT=30, HARD=80, RESERVE=50 temp). SESSION_STATE.md deferred items closed. MASTER_ROADMAP gate dates updated. 257/257 tests. |
 | V37 R8 (2026-02-26) | Audited sandbox sessions 31-B through 35 (DB init fix, CreditLedger, UI polish, props). Props architecture rulings: stay in odds_fetcher.py, 422 no-retry APPROVED, key fallback warning required. NHL date-sensitivity test fix (`_today_str` injection). CLAUDE.md: quota 1000→100, DB init no-arg rule, SQLite MCP read-only, date-sensitive fixture pattern, props rules. 257/257 tests. |
-| Sandbox S35 (2026-02-26) | Player props: `PropsQuotaTracker`, `fetch_props_for_event()` in `odds_fetcher.py`. `PropCandidate` + `parse_props_candidates()` in `math_engine.py`. `08_player_props.py` on-demand UI. +48 tests (1106→1154). PENDING COMMIT awaiting final pytest count. |
+| Sandbox S35 (2026-02-26) | Player props: `PropsQuotaTracker`, `fetch_props_for_event()` in `odds_fetcher.py`. `PropCandidate` + `parse_props_candidates()` in `math_engine.py`. `08_player_props.py` on-demand UI. +48 tests (1106→1154). Committed 9252e8f. |
+| Sandbox S36 (2026-02-26) | Meta-skills: `titanium-session-wrap` + `titanium-context-monitor` in `~/.claude/skills/`. Props DailyCreditLog gate met: `PropsQuotaTracker.daily_log` wired, `data/props_daily_log.json`, `get_props_api_key()` warning log, `tests/fixtures/props_sample.json`. +8 tests (1154→1162). Committed 5e188b3. |
 | Sandbox S34 (2026-02-25) | Housekeeping: stale ≥30→≥10 gate text, Pinnacle from book dropdown, KPI font fix, V37 docstrings in odds_fetcher.py. 1106/1106 tests. |
 | Sandbox S33 (2026-02-25) | UI polish: CST/CDT game times, Pinnacle probe widget removed, collar legend overlap fixed, guide rewritten for Claude-in-loop. 1106/1106 tests. |
 | Sandbox S32 (2026-02-25) | CreditLedger (SQLite-backed dynamic daily budget). QuotaTracker: `_days_until_billing()`, `daily_allowance()`, `is_daily_soft_limit()`, `is_daily_hard_stop()`. +27 tests (1079→1106). |
