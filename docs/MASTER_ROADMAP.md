@@ -255,8 +255,8 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
-| V37 R9 cont. (2026-02-26) | S36/36cont/37/37cont audited. S37 cont FLAGGED (paper bet missing tests). B2 gate superseded (ESPN log stale → injury_data.py static model). S38A + S38 directives issued. 257/257 tests. |
-| Sandbox S37 (2026-02-26) | Protocol: session-wrap + context-monitor wired as mandatory. Paper bet one-click logging (`_log_paper_bet`, `_paper_log_button`) on live lines page. 1162 tests. ⚠️ No tests for paper bet functions (S38A directive). |
+| V37 R9 cont. (2026-02-26) | S36-S37 cont. B all audited. S37 cont. paper bets FLAGGED (missing tests). S37 cont. B (result_resolver) APPROVED. ESPN scoreboard precedent set (historical data = no gate). S38A + S38 directives issued. B2 gate superseded. 257/257. |
+| Sandbox S37 (2026-02-26) | Protocol + paper bets + auto-resolver. `result_resolver.py` (ESPN scoreboard, 62 tests). `_log_paper_bet`, `_paper_log_button` on live lines (⚠️ no tests — S38A required). 1224/1224 tests. |
 | V37 R9 autonomous (2026-02-26) | Doc cleanup: PROJECT_INDEX.md quota constants corrected (DAILY_CREDIT_CAP=100 permanent, SOFT=30, HARD=80, RESERVE=50 temp). SESSION_STATE.md deferred items closed. MASTER_ROADMAP gate dates updated. 257/257 tests. |
 | V37 R8 (2026-02-26) | Audited sandbox sessions 31-B through 35 (DB init fix, CreditLedger, UI polish, props). Props architecture rulings: stay in odds_fetcher.py, 422 no-retry APPROVED, key fallback warning required. NHL date-sensitivity test fix (`_today_str` injection). CLAUDE.md: quota 1000→100, DB init no-arg rule, SQLite MCP read-only, date-sensitive fixture pattern, props rules. 257/257 tests. |
 | Sandbox S35 (2026-02-26) | Player props: `PropsQuotaTracker`, `fetch_props_for_event()` in `odds_fetcher.py`. `PropCandidate` + `parse_props_candidates()` in `math_engine.py`. `08_player_props.py` on-demand UI. +48 tests (1106→1154). Committed 9252e8f. |
