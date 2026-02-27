@@ -151,7 +151,7 @@ Loading screen tip: /sc:load at session start pulls PROJECT_INDEX.md + SESSION_S
 ## SECTION 2 — CURRENT STATE EXPANSION
 # This section is MUTABLE. Update at the end of every session that uses this file.
 # It layers on top of Section 1. Where Section 2 contradicts Section 1, Section 2 wins.
-# Last updated: 2026-02-25 (V37 Reviewer Session 7)
+# Last updated: 2026-02-26 (V37 Reviewer Session 9)
 
 ### STARTUP SEQUENCE UPDATE (test count changed)
 Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 257/257 still passing**
@@ -181,6 +181,7 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 7** (2026-02-25): MCP joint verdicts + Session 30-B. SQLite MCP installed (.mcp.json committed). Sequential Thinking MCP skipped (budget). PRECONDITION docstrings directive written to V37_INBOX.md. Sandbox executed Session 30-B (commit 70bd822) — validated all 5 contract blocks present + correct. Fixed v36 stale docstrings (QuotaTracker/is_daily_cap_hit/is_session_hard_stop — constant names not hardcoded values). Cleared all REVIEW_LOG.md active flags (totals bug + stale docstrings). CLAUDE.md updated with flag-clearing rule + V37_INBOX ✅ DONE pattern. Last v36 commit: 6b65c73. 257/257 passing.
 - **V37 Session 8** (2026-02-25): Audited Sessions 31-B, 32, 33, 34 — all APPROVED. CLAUDE.md updated (quota cap 1000→100, init_price_history_db no-arg rule, SQLite MCP read-only rule, R8 log). REVIEWER_PROMPT.md Section 2 updated. Sandbox adopted both V37 docstring suggestions from S32 audit in S34 immediately. Last v36 commit: b1900cb. 257/257 passing.
 - **V37 Session 8+ (autonomous)**: Fixed 2 failing v36 NHL tests (date-sensitivity — `_today_str` injection). Wrote Session 35 props directive. Sandbox built Session 35 (PropsQuotaTracker, fetch_props_for_event, 08_player_props.py, +48 tests). Issued 4 rulings: file placement APPROVED (odds_fetcher.py), session cap APPROVED (DailyCreditLog gate before second account), 422 no-retry APPROVED, key fallback ACCEPTABLE with warning. Wrote Session 36 directive (props DailyCreditLog + warning log + fixture). CLAUDE.md props rules added. Last v36 commit: 29a2200. 257/257 passing.
+- **V37 Session 9 (2026-02-26 autonomous)**: Doc maintenance sweep + Session 36 / 36 cont. audits. Fixed stale quota constants in PROJECT_INDEX (1000→100, 300→30, 500→80, 1000→50). Fixed SESSION_STATE stale refs (titanium-experimental removed, B2 path updated, deferred items closed). MASTER_ROADMAP updated (V37 R2-R9 + S32-S35 session log, gate dates, GAP 2 path). PROMOTION_SPEC MODULE 3 marked promoted. Audited Session 36 meta-skills (APPROVED, ⚠️ PROCESS FLAG — directive skipped). Audited Session 36 cont. (APPROVED, props gate MET). Re-issued directive as S37 — sandbox completed same session. GSD verdict: DO NOT INSTALL. Last v36 commit: 2337c31. 257/257 passing.
 
 ### Sandbox current state (last confirmed — Session 36 cont. APPROVED)
 - Sessions complete: **36 cont. (Props DailyCreditLog + warning log + fixture probe)**
@@ -194,7 +195,7 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 
 ### v36 current state (deployed production)
 - Tests: **257/257** passing ✅
-- Last commit: `2794f35` — REVIEWER_PROMPT.md Session 36 state. Pushed to main.
+- Last commit: `2337c31` — REVIEWER_PROMPT.md Session 36 cont. APPROVED, props gate met. Pushed to main.
 - ⚠️ BILLING_RESERVE=50 TEMPORARILY — restore to 1_000 after 2026-03-01 quota reset
 - ⚠️ ODDS_API: ~1 credit on main key. Resets 2026-03-01.
 - DAILY_CREDIT_CAP=100 is **permanent** (not restored after March 1)
