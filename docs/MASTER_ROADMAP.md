@@ -17,15 +17,16 @@
 - **Deadline:** Before NFL season Aug 2026. Low urgency until then.
 - **Owner:** R&D builds standalone module. v36 promotes when tested.
 
-### GAP 2: Injury Leverage — ESPN B2 Wire-In [~] ← R&D pre-wire complete (Session 29)
-- **Status:** `get_nba_injury_leverage_for_game(bet_team, opp_team)` built in R&D `kill_switch_feed.py`.
+### GAP 2: Injury Leverage — ESPN B2 Wire-In [~] ← Sandbox pre-wire complete (Session 29)
+- **Status:** `get_nba_injury_leverage_for_game(bet_team, opp_team)` built in sandbox `core/kill_switch_feed.py`.
   4/4 synthetic tests pass. Zero live API calls needed for validation.
   Convention: opp injured = positive Sharp Score signal. Bet team injured = 0.0 (kill switch path).
-- **Gate:** Check `results/espn_stability.log` on or after **2026-03-04**.
+- **Gate:** Check `results/espn_stability.log` in `titanium-experimental/results/` on or after **2026-03-04**.
   - Error rate < 5% AND avg NBA record count > 50 consistently → promote.
   - If Olympic break suppressed counts → extend 3 weeks post-resumption.
 - **Where it lands in v36:** `run_pipeline()` builds `sit_data` dict → `rank_bets(situational_data=sit_data)`.
-  Full wire-in spec in HANDOFF.md "R&D Session 29 Instructions → For v36 Session 29".
+  Promote from `agentic-rd-sandbox/core/kill_switch_feed.py` → v36 `data/kill_switch_feed.py`.
+  Import path diff: sandbox uses `from core.X import` → v36 uses `from X import`.
 - **Impact:** Up to +5 pts on Sharp Score for games with significant opp injuries.
 - **NCAAB:** Permanently stub — ESPN endpoint returns 0 college records.
 
