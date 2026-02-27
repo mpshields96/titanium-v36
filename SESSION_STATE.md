@@ -252,11 +252,11 @@ Notes:
 - 85/85 tests passing throughout
 
 ## CURRENT STATE
-Last completed: V37 Reviewer Session 5 — 2026-02-25
-Last git commit: b8fe260 (V37 R4). V37 R5 changes pending commit.
-Tests: **257/257 passing** (+6 from V37 R5 totals dedup fix)
+Last completed: V37 Reviewer Session 9 (autonomous) — 2026-02-26
+Last git commit: `01b2c79` (REVIEWER_PROMPT.md + Session 36 directive)
+Tests: **257/257 passing**
 Quota: ⚠️ EXHAUSTED (~1 credit on main key). Test key (~485 remaining). Resets 2026-03-01.
-BILLING_RESERVE: **50** (temporarily lowered from 1000 — restore after 2026-03-01 reset)
+BILLING_RESERVE: **50** (temporarily lowered from 1000 — restore after 2026-03-01 reset; DAILY_CREDIT_CAP=100 is permanent)
 Streamlit Cloud: deployed, auto-deploys from main
 RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — increment each session RLM fires)
 
@@ -285,11 +285,11 @@ RLM live sessions observed: 0 (gate for SHARP_THRESHOLD raise to 50 — incremen
 6. **Test count: 190 → 251** (+61 total across all work this session)
 
 ### Pending for next session
-- **2026-03-01**: Restore `BILLING_RESERVE` 50 → 1_000 and `DAILY_CREDIT_CAP` 100 → 1_000 in v36 odds_fetcher.py
+- **2026-03-01**: Restore `BILLING_RESERVE` 50 → 1_000 in v36 odds_fetcher.py (DAILY_CREDIT_CAP stays at 100 permanently)
 - **2026-03-01**: Run full live pipeline stress test for model calibration (quota resets)
 - **2026-03-04**: B2 gate check — /Users/matthewshields/Projects/titanium-experimental/results/espn_stability.log
-- **Sandbox (CRITICAL)**: Layer 1 totals fix — modal line pinning in consensus_fair_prob() before next live session
-- **v36 (deferred)**: Fix stale docstrings in odds_fetcher.py is_session_hard_stop() (line 105, 158-159)
+- **Sandbox**: Layer 1 totals fix ✅ DONE (Session 29 — modal line pinning in consensus_fair_prob())
+- **v36**: Stale docstrings in odds_fetcher.py ✅ DONE (V37 R7 — constant names not hardcoded values)
 
 ### What was built in Session 24
 1. **GAP 4 — Soccer 3-outcome fix (CRITICAL)**

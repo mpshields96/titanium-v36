@@ -71,7 +71,7 @@ All three tables gated behind `is_configured()` in their respective store module
 ### odds_fetcher.py — API + RLM Cache + Quota Guards (V37 R2)
 No math, no UI. HTTP calls + session-scoped price cache + persistent daily credit enforcement.
 
-**Quota constants:** `DAILY_CREDIT_CAP=1000` · `SESSION_CREDIT_SOFT_LIMIT=300` · `SESSION_CREDIT_HARD_STOP=500` · `BILLING_RESERVE=1000`
+**Quota constants:** `DAILY_CREDIT_CAP=100` (permanent) · `SESSION_CREDIT_SOFT_LIMIT=30` · `SESSION_CREDIT_HARD_STOP=80` · `BILLING_RESERVE=50` (temp — restore to 1_000 after 2026-03-01)
 
 | Function | Returns | Notes |
 |----------|---------|-------|
@@ -90,7 +90,7 @@ No math, no UI. HTTP calls + session-scoped price cache + persistent daily credi
 
 **Classes:**
 - `DailyCreditLog` **(V37 R2)** — persistent JSON log (`daily_quota.json`). Survives process restarts. `is_daily_cap_hit()` → blocks when `used_today >= DAILY_CREDIT_CAP`.
-- `QuotaTracker` **(V37 R2 — now enforcing)** — tracks session_used + calls `daily_log.record()` per update. `is_session_hard_stop()` checks: (1) daily cap, (2) session >= 500, (3) remaining < BILLING_RESERVE. `is_session_soft_limit()` warns at 300 session credits.
+- `QuotaTracker` **(V37 R2 — now enforcing)** — tracks session_used + calls `daily_log.record()` per update. `is_session_hard_stop()` checks: (1) daily cap, (2) session >= 80 (SESSION_CREDIT_HARD_STOP), (3) remaining < BILLING_RESERVE. `is_session_soft_limit()` warns at 30 session credits.
 
 **Test isolation:** `quota` is a module-level singleton. Any test class calling fetch functions needs `setup_method` resetting `quota.remaining=18000`, `quota.session_used=0`, `quota.daily_log._data["used_today"]=0`. Without this, BILLING_RESERVE guard fires and `_get()` returns `[]`.
 
