@@ -44,7 +44,7 @@ Threshold: **45 pts** (raised 40→45 Session 13, ~7.8% real edge required). Rai
 - Kill switches operate on structural mathematical inputs only (rest days, wind, 3PT rate, drift).
 - Situational Sharp Score inputs must have a live computable source to be non-zero.
   - rest_edge: ✅ live (schedule-derived rest days, NBA only)
-  - injury_leverage: ❌ stubs exist (kill_switch_feed.py) — always 0.0, data_live=False. ESPN B2 (R&D Session 16): usage% scoring resolved, remaining gate = 2-week stability log (~2026-03-04). NCAAB: no ESPN endpoint — permanently stub.
+  - injury_leverage: ❌ stubs exist (kill_switch_feed.py) — always 0.0, data_live=False. ESPN B2 gate (R&D Session 16) SUPERSEDED: espn_stability.log stale (last entry 2026-02-19, R&D retired). New gate: sandbox wires static positional model (core/injury_data.py — no ESPN, no unofficial API) + V37 APPROVED. Session 38 directive issued. NCAAB: no positional model planned — permanently stub.
   - motivation: ❌ not wired — always 0
   - matchup_score: ❌ not wired — always 0
 - Do NOT add narrative-driven inputs (home crowd, "hostile environment", "young roster") to any scoring component. These are rat poison.

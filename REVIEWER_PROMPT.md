@@ -230,7 +230,7 @@ Migration: `ALTER TABLE ... ADD COLUMN` (not recreate). Source-agnostic analytic
 | Gate | Condition | Current | Status |
 |------|-----------|---------|--------|
 | SHARP_THRESHOLD raise (45→50) | RLM fires ≥5 live sessions | 0/5 | ❌ NOT MET |
-| B2 injury leverage (v36) | espn_stability.log date ≥ 2026-03-04, error <5%, NBA >50 records | 0 entries meeting gate | ❌ NOT MET |
+| B2 injury leverage (v36) | espn_stability.log date ≥ 2026-03-04 SUPERSEDED — see note | Gate replaced: injury_data.py static model (no ESPN) — Session 38 directive issued | ⏳ IN PROGRESS |
 | EXP 6 market efficiency | 50+ resolved bets in bet_history | 0 | ❌ NOT MET |
 | NBA B2B home/road split (sandbox) | 10+ B2B instances observed | 0/10 | ❌ NOT MET |
 | CLV bets sample | 30+ tracked bets | 0/30 | ❌ NOT MET |
