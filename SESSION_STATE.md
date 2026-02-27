@@ -318,7 +318,7 @@ Then: python3 -m pytest tests/ -v (confirm 163/163)
 Session 25 priorities — all current v36 work is gated:
 - B2 injury leverage: gate 2026-03-04. espn_stability.log has 10 entries, all 2026-02-19 — gate not met yet.
   R&D Session 29 pre-wire COMPLETE: `get_nba_injury_leverage_for_game()` built in R&D kill_switch_feed.py.
-  Wire-in spec in HANDOFF.md "R&D Session 29 Instructions → For v36 Session 29". Ready to promote when gate opens.
+  Wire-in spec: sandbox `kill_switch_feed.py` + `math_engine.py`. Gate: 2026-03-04. Ready to promote when gate opens.
 - Sharp Score calibration: gate 30+ resolved bets in bet_history (currently 0).
 - CLV close: update_clv_close() built but not wired — future when closing prices available.
 - Pinnacle / alternate lines: H2 tier (~$30/mo). User decision.
@@ -445,7 +445,7 @@ Feature B2 — ESPN Unofficial Injury API:
   - NCAAB: 0 records — endpoint does not cover college basketball
   - Blocker 1: Position weights hit cap (5.0) on 3/5 teams tested — needs usage% cross-reference
   - Blocker 2: Unofficial endpoint — needs 2+ weeks stability monitoring before v36 promotion
-  - R&D file: titanium-experimental/core/espn_injury_fetcher.py (do not promote yet)
+  - Sandbox file: agentic-rd-sandbox/core/kill_switch_feed.py (B2 pre-wire in get_nba_injury_leverage_for_game — do not promote yet)
   - v36 stubs remain as-is until both blockers resolved
 
 ## SESSION 15 GOAL ✅ COMPLETE
@@ -468,7 +468,7 @@ Session 16 scope: B + F1 (~4 hrs). C deferred. F2 to R&D.
 1. Read PROJECT_INDEX.md — 229 lines, covers all modules, functions, Sharp Score formula, kill switches, test counts. 94% token reduction vs reading all source files.
 2. Run: python3 -m pytest tests/ -v — confirm 85/85 before touching anything.
 3. Then read SESSION_STATE.md CHECKPOINT block for exact system state.
-4. For R&D context: read ~/Projects/titanium-experimental/HANDOFF.md (authoritative spec) and ~/Projects/titanium-experimental/SESSION_STATE.md (R&D current state + next tasks).
+4. For sandbox context: read REVIEW_LOG.md + SESSION_LOG.md in ~/ClaudeCode/agentic-rd-sandbox/ (R&D chat RETIRED as of Session 25 — titanium-experimental/ is archived).
 
 ## CHECKPOINT — Session 13 cleanup (2026-02-18)
 State: CLEAN. All code committed. 85/85 tests green.
