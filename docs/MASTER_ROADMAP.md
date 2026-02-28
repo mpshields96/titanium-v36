@@ -255,6 +255,8 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| V37 R12 (2026-02-28) | S42 CLV Capture APPROVED: `capture_close_price()` + `_extract_best_price()` + `_capture_close_prices()`. Zero extra API credits. 2h window. CLV gap closed forward. RLM proxy confirmed. 1282 sandbox / 257 v36. |
+| Sandbox S42 CLV (2026-02-28) | CLV close-price capture: `capture_close_price()` (line_logger.py), `_extract_best_price()` + `_capture_close_prices()` (scheduler.py). CLOSE_PRICE_WINDOW_HOURS=2.0. Zero extra credits. `scripts/paper_bet_scan.py`. +18 tests (1264→1282). Commit 8c0f9a5. |
 | V37 R11 (2026-02-27) | S42 APPROVED: date-sensitive test fix (`TestDailyHardStop` `_today` injection). V37_INBOX S41 marked DONE. REVIEWER_PROMPT.md promotion candidate table updated (B2). 257/257. |
 | Sandbox S42 (2026-02-27) | Micro-fix: `TestDailyHardStop` → `is_daily_hard_stop(_today=date(2026,2,25))`. On billing day (Feb 28) real allowance = 10000 → assertion fails. Fix pins mid-cycle date. 1264/1264. Commit 4d44a3d. |
 | V37 R10 (2026-02-26) | S37C+S38+S39+S40+S41 all APPROVED. S38A flag cleared. B2 gate ✅ WIRED (S40). S41: S40 regression fix + auto paper-bet scan. EXP6: 0→4 resolved bets. CLV gap noted. 257/257. |
