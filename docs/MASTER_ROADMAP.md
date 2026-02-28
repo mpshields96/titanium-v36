@@ -255,6 +255,8 @@ See CEILING 3 above (also marked complete). Built v36 Session 20. Commit `361a90
 ## SESSION COMPLETION LOG
 | Session | Completed items |
 |---------|----------------|
+| V37 R11 (2026-02-27) | S42 APPROVED: date-sensitive test fix (`TestDailyHardStop` `_today` injection). V37_INBOX S41 marked DONE. REVIEWER_PROMPT.md promotion candidate table updated (B2). 257/257. |
+| Sandbox S42 (2026-02-27) | Micro-fix: `TestDailyHardStop` → `is_daily_hard_stop(_today=date(2026,2,25))`. On billing day (Feb 28) real allowance = 10000 → assertion fails. Fix pins mid-cycle date. 1264/1264. Commit 4d44a3d. |
 | V37 R10 (2026-02-26) | S37C+S38+S39+S40+S41 all APPROVED. S38A flag cleared. B2 gate ✅ WIRED (S40). S41: S40 regression fix + auto paper-bet scan. EXP6: 0→4 resolved bets. CLV gap noted. 257/257. |
 | Sandbox S41 (2026-02-27) | S40 regression fix: `parse_game_markets()` missing `injury_leverage` param → TypeError. Added `injury_leverage: float = 0.0` to signature + all 4 `calculate_sharp_score()` call sites. Auto paper-bet scan: `_auto_paper_bet_scan()` in scheduler.py, dedup via `event_id + market_type + target`. `event_id` column + `is_bet_already_logged()` in line_logger.py. 1264/1264 tests (+13). Commits 9e99854. |
 | Sandbox S40 (2026-02-26) | V37 S38 directive: `compute_injury_leverage_from_event()` in scheduler.py. `from core.injury_data import evaluate_injury_impact` — static positional model, no ESPN. `game["_injuries"]` injection point (always empty from Odds API → always 0.0 in production). Wired into `01_live_lines.py`. B2 gate ✅ WIRED. +7 tests. 1251/1251. Commit f2ee1ee. |

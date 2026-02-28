@@ -151,7 +151,7 @@ Loading screen tip: /sc:load at session start pulls PROJECT_INDEX.md + SESSION_S
 ## SECTION 2 — CURRENT STATE EXPANSION
 # This section is MUTABLE. Update at the end of every session that uses this file.
 # It layers on top of Section 1. Where Section 2 contradicts Section 1, Section 2 wins.
-# Last updated: 2026-02-26 (V37 Reviewer Session 10 — end of day wrap)
+# Last updated: 2026-02-27 (V37 Reviewer Session 11 — S42 audit)
 
 ### STARTUP SEQUENCE UPDATE (test count changed)
 Step 6 in Section 1 says "confirm 163/163 still passing" — now: **confirm 257/257 still passing**
@@ -182,6 +182,7 @@ The new chat will orient on Section 1 (framework) + Section 2 (current state) an
 - **V37 Session 8** (2026-02-25): Audited Sessions 31-B, 32, 33, 34 — all APPROVED. CLAUDE.md updated (quota cap 1000→100, init_price_history_db no-arg rule, SQLite MCP read-only rule, R8 log). REVIEWER_PROMPT.md Section 2 updated. Sandbox adopted both V37 docstring suggestions from S32 audit in S34 immediately. Last v36 commit: b1900cb. 257/257 passing.
 - **V37 Session 8+ (autonomous)**: Fixed 2 failing v36 NHL tests (date-sensitivity — `_today_str` injection). Wrote Session 35 props directive. Sandbox built Session 35 (PropsQuotaTracker, fetch_props_for_event, 08_player_props.py, +48 tests). Issued 4 rulings: file placement APPROVED (odds_fetcher.py), session cap APPROVED (DailyCreditLog gate before second account), 422 no-retry APPROVED, key fallback ACCEPTABLE with warning. Wrote Session 36 directive (props DailyCreditLog + warning log + fixture). CLAUDE.md props rules added. Last v36 commit: 29a2200. 257/257 passing.
 - **V37 Session 9 (2026-02-26 autonomous)**: Doc sweep + Sessions 36/36cont/37/37cont audits. Fixed stale quota constants in PROJECT_INDEX. Fixed SESSION_STATE stale refs. MASTER_ROADMAP S32-S37 log. PROMOTION_SPEC MODULE 3 promoted. S36 (APPROVED), S36 cont. (APPROVED, props gate MET), S37 protocol (APPROVED), S37 cont. paper bets (🟡 FLAGGED — missing tests + days_to_game mismatch). B2 gate superseded: ESPN log stale, new gate = injury_data.py static model. Session 38A + 38 directives issued. GSD: DO NOT INSTALL. Last v36 commit: aa5bb4c. 257/257 passing.
+- **V37 Session 11 (2026-02-27 autonomous)**: S42 APPROVED — date-sensitive `TestDailyHardStop` fix (`_today=date(2026,2,25)` injection, `tests/test_odds_fetcher.py`). V37_INBOX S41 DONE. Promotion candidate B2 updated. No math changes. 257/257 passing.
 - **V37 Session 10 (2026-02-26 autonomous)**: S37C+S38+S39+S40+S41 all APPROVED. S38A flag cleared. S40: injury_data.py WIRED — B2 gate ✅ WIRED. S41: S40 regression fix (parse_game_markets() injury_leverage param) + auto paper-bet scan in scheduler. EXP 6: 0→4 resolved bets. CLV gap noted (known). Tests: sandbox 1244→1264. No v36 code changes. 257/257 passing.
 
 ### Sandbox current state (last confirmed — Sessions 40+41 APPROVED, all flags clear)
@@ -274,6 +275,6 @@ Migration: `ALTER TABLE ... ADD COLUMN` (not recreate). Source-agnostic analytic
 | `core/originator_engine.py` | Trinity bug fixed | Has known bug (bet.line as mean) | Not wired in v36 — defer until simulation used |
 | `core/nhl_data.py` | Live | ✅ PROMOTED V37 R4 | Done |
 | `core/nba_pdo.py` | Live | None | nba_api package adds dep; scheduler integration required |
-| `core/injury_data.py` | Live (static table) | Stubs (return 0.0) | B2 gate: 2026-03-04 |
+| `core/injury_data.py` | Live (static table, wired in scheduler S40) | Stubs (return 0.0) | ✅ B2 gate WIRED (S40). Promote when v36 scheduler is promoted. |
 | `core/king_of_the_court.py` | Live | None | Low priority (DK promo tool) |
 | `core/analytics.py` | Live (Session 25) | None | Needs v36 Supabase bet_history 7-col migration first |
