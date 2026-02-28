@@ -253,7 +253,7 @@ Notes:
 
 ## CURRENT STATE
 Last completed: V37 Reviewer Session 12 — 2026-02-28 (S42 CLV Capture APPROVED)
-Last git commit: `pending R12 commit` (see below)
+Last git commit: `a36cc05` (V37 R12 — S42 CLV Capture APPROVED)
 Tests: **257/257 passing**
 Quota: ⚠️ EXHAUSTED (~1 credit on main key). Resets 2026-03-01.
 BILLING_RESERVE: **50** (temporarily lowered from 1000 — restore after 2026-03-01 reset; DAILY_CREDIT_CAP=100 is permanent)
